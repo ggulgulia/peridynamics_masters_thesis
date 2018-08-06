@@ -1,0 +1,11 @@
+*.out
+*.o
+*.swp
+*.swo
+*.swap
+*.pdf
+*.txt
+*.html
+*.csv
+*.vtk
+

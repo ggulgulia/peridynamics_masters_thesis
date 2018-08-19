@@ -49,7 +49,7 @@ def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
     builder.add_geometry(points = points, facets=facets, facet_markers = mp)
     mi = tri.MeshInfo()
     builder.set(mi)
-    mesh = tri.build(mi, max_volume=1e-1, generate_faces=True, min_angle=25,
+    mesh = tri.build(mi, max_volume=1e-1, generate_faces=True, min_angle=30,
             mesh_order=None, generate_neighbor_lists=True)
     
     pold = np.array(mesh.points).tolist()
@@ -61,6 +61,16 @@ def unit_square_mesh(subdiv=(5,5)):
 
 
 def get_elem_centroid(mesh):
+    """
+    TODO
+    input : 
+        mesh:  meshpy.triangle.MeshInfo
+               2D truangular mesh
+        
+    output:
+        elems_centroid : double list
+                         list of element centroid x,y cell_ID            
+    """
     elems = np.array(mesh.elements) 
     points = np.array(mesh.points)
     elems_centroid = []
@@ -93,6 +103,17 @@ def get_elem_areas(mesh):
     return element_areas
 
 def get_edge_lengths(mesh):
+    """
+    TODO
+    input : 
+        mesh: meshpy.triangle.MeshInfo
+              2D triangular mesh
+    
+    output:
+        edge_lengths : list of doubles
+                     List of edge lengths of all the edges (internal and external)
+                     in the mesh
+    """
     faces = np.array(mesh.faces)
     points = np.array(mesh.points)
     edge_lengths = []
@@ -108,11 +129,13 @@ def uniform_refine_triangles(mesh, factor=2):
     """
     TODO
     input : 
-        points:  FIGURE OUT THE TYPES NEEDED FOR inputs
-        elements:
+        mesh:  meshpy.triangle.MeshInfo
+               2D triangular mesh
         factor: int
+                Factor by which the input mesh has to be refined
     output:
         mesh : meshpy.triangle.MeshInfo()
+               Refined mesh 
     """
     points = np.array(mesh.points).tolist()
     elements = np.array(mesh.elements).tolist()
@@ -149,13 +172,30 @@ def uniform_refine_triangles(mesh, factor=2):
 
             # build old_face_to_new_faces
             old_face_to_new_faces[frozenset([a, b])] = [
-                    (face_points[i], face_points[i+1])
+                    [face_points[i], face_points[i+1]]
                     for i in range(factor)]
 
         if flipped:
             return face_points[::-1]
         else:
             return face_points
+
+    def face_dict_to_list(old_face_to_new_faces):
+        """TODO: Docstring for face_dict_to_list.
+        :returns: TODO
+
+        """
+        face_list = []
+        temp_list = []
+        
+        for val in old_face_to_new_faces.values():
+            temp_list.append(val)
+
+        for i in range(len(temp_list)):
+            for j in range(factor):
+                face_list.append(temp_list[i][j])
+        return face_list
+
 
     for a, b, c in elements:
         a_pt, b_pt, c_pt = [points[idx] for idx in [a, b, c]]
@@ -198,8 +238,14 @@ def uniform_refine_triangles(mesh, factor=2):
     new_mesh = tri.MeshInfo()
     new_mesh.set_points(new_points)
     new_mesh.elements.resize(len(new_elements))
+    #new_mesh.faces = old_face_to_new_faces
+    new_face_list = face_dict_to_list(old_face_to_new_faces)
+    new_mesh.faces.resize(len(new_face_list))
     for i, el in enumerate(new_elements):
         new_mesh.elements[i] = el
+
+    for i, f in enumerate(new_face_list):
+        new_mesh.faces[i] = new_face_list[i]
 
     return new_mesh 
 

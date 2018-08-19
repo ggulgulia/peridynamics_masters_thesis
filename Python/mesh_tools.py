@@ -141,6 +141,7 @@ def uniform_refine_triangles(mesh, factor=2):
     elements = np.array(mesh.elements).tolist()
     new_points = points[:]
     new_elements = []
+    new_face = []
     old_face_to_new_faces = {}
     face_point_dict = {}
 
@@ -170,31 +171,13 @@ def uniform_refine_triangles(mesh, factor=2):
 
             face_point_dict[a, b] = face_points
 
-            # build old_face_to_new_faces
-            old_face_to_new_faces[frozenset([a, b])] = [
-                    [face_points[i], face_points[i+1]]
-                    for i in range(factor)]
+            for i in range(factor):
+                new_face.append([face_points[i], face_points[i+1]])
 
         if flipped:
             return face_points[::-1]
         else:
             return face_points
-
-    def face_dict_to_list(old_face_to_new_faces):
-        """TODO: Docstring for face_dict_to_list.
-        :returns: TODO
-
-        """
-        face_list = []
-        temp_list = []
-        
-        for val in old_face_to_new_faces.values():
-            temp_list.append(val)
-
-        for i in range(len(temp_list)):
-            for j in range(factor):
-                face_list.append(temp_list[i][j])
-        return face_list
 
 
     for a, b, c in elements:
@@ -238,14 +221,12 @@ def uniform_refine_triangles(mesh, factor=2):
     new_mesh = tri.MeshInfo()
     new_mesh.set_points(new_points)
     new_mesh.elements.resize(len(new_elements))
-    #new_mesh.faces = old_face_to_new_faces
-    new_face_list = face_dict_to_list(old_face_to_new_faces)
-    new_mesh.faces.resize(len(new_face_list))
+    new_mesh.faces.resize(len(new_face))
     for i, el in enumerate(new_elements):
         new_mesh.elements[i] = el
 
-    for i, f in enumerate(new_face_list):
-        new_mesh.faces[i] = new_face_list[i]
+    for i, f in enumerate(new_face):
+        new_mesh.faces[i] = new_face[i]
 
     return new_mesh 
 

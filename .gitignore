@@ -1,4 +1,5 @@
 *.out
+Python/__pycache__/
 *.dat
 *.o
 *.swp

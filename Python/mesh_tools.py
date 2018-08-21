@@ -75,7 +75,7 @@ def get_elem_centroid(mesh):
     points = np.array(mesh.points)
     elems_centroid = []
 
-    elem_id = -1
+    elem_id = 0
     for a, b,c in elems:
         [a_pt,b_pt,c_pt] = [points[idx] for idx in [a,b,c]]
         loc_elem_cent = [0.0, 0.0, elem_id]
@@ -137,96 +137,99 @@ def uniform_refine_triangles(mesh, factor=2):
         mesh : meshpy.triangle.MeshInfo()
                Refined mesh 
     """
-    points = np.array(mesh.points).tolist()
-    elements = np.array(mesh.elements).tolist()
-    new_points = points[:]
-    new_elements = []
-    new_face = []
-    old_face_to_new_faces = {}
-    face_point_dict = {}
+    if factor == 1:
+        return mesh
+    else:
+        points = np.array(mesh.points).tolist()
+        elements = np.array(mesh.elements).tolist()
+        new_points = points[:]
+        new_elements = []
+        new_face = []
+        old_face_to_new_faces = {}
+        face_point_dict = {}
 
-    points_per_edge = factor+1
+        points_per_edge = factor+1
 
-    def get_refined_face(a, b):
-        if a > b:
-            a, b = b, a
-            flipped = True
-        else:
-            flipped = False
+        def get_refined_face(a, b):
+            if a > b:
+                a, b = b, a
+                flipped = True
+            else:
+                flipped = False
 
-        try:
-            face_points = face_point_dict[a, b]
-        except KeyError:
-            a_pt, b_pt = [points[idx] for idx in [a, b]]
-            dx = [(b_pt[0] - a_pt[0])/factor, (b_pt[1] - a_pt[1])/factor ]
+            try:
+                face_points = face_point_dict[a, b]
+            except KeyError:
+                a_pt, b_pt = [points[idx] for idx in [a, b]]
+                dx = [(b_pt[0] - a_pt[0])/factor, (b_pt[1] - a_pt[1])/factor ]
 
-            # build subdivided facet
-            face_points = [a]
+                # build subdivided facet
+                face_points = [a]
 
+                for i in range(1, points_per_edge-1):
+                    face_points.append(len(new_points))
+                    new_points.append([(a_pt[0] + dx[0]*i), (a_pt[1] + dx[1]*i)])
+
+                face_points.append(b)
+
+                face_point_dict[a, b] = face_points
+
+                for i in range(factor):
+                    new_face.append([face_points[i], face_points[i+1]])
+
+            if flipped:
+                return face_points[::-1]
+            else:
+                return face_points
+
+
+        for a, b, c in elements:
+            a_pt, b_pt, c_pt = [points[idx] for idx in [a, b, c]]
+            dr = [(b_pt[0] - a_pt[0])/factor, (b_pt[1] - a_pt[1])/factor]
+            ds = [(c_pt[0] - a_pt[0])/factor, (c_pt[1] - a_pt[1])/factor]
+
+            ab_refined, bc_refined, ac_refined = [
+                    get_refined_face(*pt_indices)
+                    for pt_indices in [(a, b), (b, c), (a, c)]]
+
+            el_point_dict = {}
+
+            # fill out edges of el_point_dict
+            for i in range(points_per_edge):
+                el_point_dict[i, 0] = ab_refined[i]
+                el_point_dict[0, i] = ac_refined[i]
+                el_point_dict[points_per_edge-1-i, i] = bc_refined[i]
+
+            # fill out interior of el_point_dict
             for i in range(1, points_per_edge-1):
-                face_points.append(len(new_points))
-                new_points.append([(a_pt[0] + dx[0]*i), (a_pt[1] + dx[1]*i)])
+                for j in range(1, points_per_edge-1-i):
+                    el_point_dict[i, j] = len(new_points)
+                    new_points.append([(a_pt[0] + dr[0]*i + ds[0]*j), (a_pt[1] + dr[1]*i + ds[1]*j)])
 
-            face_points.append(b)
-
-            face_point_dict[a, b] = face_points
-
-            for i in range(factor):
-                new_face.append([face_points[i], face_points[i+1]])
-
-        if flipped:
-            return face_points[::-1]
-        else:
-            return face_points
-
-
-    for a, b, c in elements:
-        a_pt, b_pt, c_pt = [points[idx] for idx in [a, b, c]]
-        dr = [(b_pt[0] - a_pt[0])/factor, (b_pt[1] - a_pt[1])/factor]
-        ds = [(c_pt[0] - a_pt[0])/factor, (c_pt[1] - a_pt[1])/factor]
-
-        ab_refined, bc_refined, ac_refined = [
-                get_refined_face(*pt_indices)
-                for pt_indices in [(a, b), (b, c), (a, c)]]
-
-        el_point_dict = {}
-
-        # fill out edges of el_point_dict
-        for i in range(points_per_edge):
-            el_point_dict[i, 0] = ab_refined[i]
-            el_point_dict[0, i] = ac_refined[i]
-            el_point_dict[points_per_edge-1-i, i] = bc_refined[i]
-
-        # fill out interior of el_point_dict
-        for i in range(1, points_per_edge-1):
-            for j in range(1, points_per_edge-1-i):
-                el_point_dict[i, j] = len(new_points)
-                new_points.append([(a_pt[0] + dr[0]*i + ds[0]*j), (a_pt[1] + dr[1]*i + ds[1]*j)])
-
-        # generate elements
-        for i in range(0, points_per_edge-1):
-            for j in range(0, points_per_edge-1-i):
-                new_elements.append((
-                    el_point_dict[i, j],
-                    el_point_dict[i+1, j],
-                    el_point_dict[i, j+1],
-                    ))
-                if i+1+j+1 <= factor:
+            # generate elements
+            for i in range(0, points_per_edge-1):
+                for j in range(0, points_per_edge-1-i):
                     new_elements.append((
-                        el_point_dict[i+1, j+1],
+                        el_point_dict[i, j],
                         el_point_dict[i+1, j],
                         el_point_dict[i, j+1],
                         ))
+                    if i+1+j+1 <= factor:
+                        new_elements.append((
+                            el_point_dict[i+1, j+1],
+                            el_point_dict[i+1, j],
+                            el_point_dict[i, j+1],
+                            ))
 
-    new_mesh = tri.MeshInfo()
-    new_mesh.set_points(new_points)
-    new_mesh.elements.resize(len(new_elements))
-    new_mesh.faces.resize(len(new_face))
-    for i, el in enumerate(new_elements):
-        new_mesh.elements[i] = el
+        new_mesh = tri.MeshInfo()
+        new_mesh.set_points(new_points)
+        new_mesh.elements.resize(len(new_elements))
+        new_mesh.faces.resize(len(new_face))
+        for i, el in enumerate(new_elements):
+            new_mesh.elements[i] = el
 
-    for i, f in enumerate(new_face):
-        new_mesh.faces[i] = new_face[i]
+        for i, f in enumerate(new_face):
+            new_mesh.faces[i] = new_face[i]
 
-    return new_mesh 
+        return new_mesh 
 

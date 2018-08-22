@@ -1,7 +1,8 @@
 import meshpy.triangle as tri
 from mesh_tools import *
+from helper import *
+import influence_function_manager as ifm
 from meshpy.geometry import bounding_box
-import math
 
 
 def peridym_set_horizon(mesh, horizon=None):
@@ -33,28 +34,14 @@ def peridym_set_horizon(mesh, horizon=None):
     else:
         return mesh, horizon
 
-def compute_distance(coord1, coord2):
-    """
-    computes the (abs value) of distance
-    between the two coordinates 'coord1' and 'coord2'
-    (for 2D only)
-    input:
-    ------
-        coord1, coord2 : list of floats
-            two coordinates in a 2D space
-    returns:
-    --------
-        distance float:
-            distance between coord1 and coord2
-
-
-    """
-    return  math.sqrt((coord1[0] - coord2[0])**2 + (coord1[1] - coord2[1])**2)
-
-
 
 def peridym_compute_neighbors(mesh, horizon):
-    """TODO: Docstring for peridym_compute_neighbors.
+    """
+    given a mesh and a horizon, this function
+    rturns for each node in the mesh the 
+    neighborhood list where each node has all
+    the neighboring elements that fall within
+    the horizon (horizon is a float value)
 
     input
     -----
@@ -65,25 +52,96 @@ def peridym_compute_neighbors(mesh, horizon):
     -------
         neighbor_list: np.array
             list of peridynamic neighbors for the 
-            given peridynamic horizon
+            given peridynamic horizon. This list contains 
+            for each node, its neighbors in the peridynamic
+            horizon 
     """
-    print("computing the neighbor list of the mesh for horizon size of %f" %horizon)
-    neighbor_list = []
+    print("computing the neighbor list of the mesh (with the trial function) for horizon size of %f" %horizon)
+    neighbor_lst = []
 
     elems = np.array(mesh.elements)
     points = np.array(mesh.points)
     elem_centroid = get_elem_centroid(mesh)
 
     for i in range(len(elems)):
-        temp = elem_centroid.copy()
-        temp.remove(elem_centroid[i])
+        #temp.remove(elem_centroid[i])
         curr_dist = 0.0
-        curr_neighbor_list = []
-        for j in range(len(temp)):
-            curr_dist = compute_distance(elem_centroid[i][0:2], temp[j][0:2])
+        curr_neighbor_lst = []
+
+        for j in range(i):
+            curr_dist = compute_distance(elem_centroid[i], elem_centroid[j])
             if curr_dist <= horizon : 
-                curr_neighbor_list.append(temp[j][2]) # appending the element ID to neighbor_list
+                curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
-        neighbor_list.append(curr_neighbor_list)
+        for j in range(i+1, len(elems)):
+            curr_dist = compute_distance(elem_centroid[i], elem_centroid[j])
+            if curr_dist <= horizon : 
+                curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
-    return neighbor_list
+        neighbor_lst.append(curr_neighbor_lst)
+
+    return neighbor_lst
+
+
+def peridym_initialize(mesh, horizon):
+    """
+    this function computes the bond vector coordinates
+    for each element in the neighborhood list of the 
+    mesh
+    
+    input:
+    ------
+        neighbor_list : list/np.arry of int
+            peridynamic neighborhood list
+        elem_centroid : list/np.array of doubles
+            coordinates of centroid of each element
+    returns
+    -------
+        bond_vector_list : np.array/list of doubles
+            bond vector for each element in neighborhood list 
+
+    """
+    nbr_lst = peridym_compute_neighbors(mesh, horizon)
+    elem_centroid = get_elem_centroid(mesh)
+    elem_area = get_elem_areas(mesh)
+
+    bnd_vector_lst = []
+    bnd_len_lst = []
+    infl_fld_lst = []
+
+    for i in range(len(elem_centroid)):
+        curr_node_coord = elem_centroid[i]
+        
+        #declare empty lists for current node neighbor
+        #attributes like neighbor bond vector, bond len,
+        #and influence field 
+        curr_node_bnd_lst = []
+        curr_node_bnd_len_lst = []
+        curr_node_infl_fld_lst = []
+        m = np.zeros(len(elem_centroid)) #m is wighted volume
+        #refer ch5 algo1  of handbook of peridynamic modelling
+        #by silling etal 
+
+        curr_node_nbr_lst = nbr_lst[i] 
+        for j in range(len(curr_node_nbr_lst)):
+            #curr_nbr_id = curr_node_nbr_lst[j]
+            curr_nbr_coord = elem_centroid[curr_node_nbr_lst[j]]
+            
+            curr_bnd_len = compute_distance(curr_nbr_coord, curr_node_coord)
+            
+            curr_infl  = ifm.gaussian_influence_function(curr_bnd_len, horizon)
+            
+            curr_bnd_vctr = vect_diff(curr_nbr_coord, curr_node_coord)
+            #curr_bnd_vctr = [curr_nbr_coord[0] -curr_node_coord[0], curr_nbr_coord[1]-curr_node_coord[1], curr_bond_len]
+            
+            m[i] += curr_infl*curr_bnd_len**2*elem_area[j]
+
+            curr_node_bnd_lst.append(curr_bnd_vctr)
+            curr_node_bnd_len_lst.append(curr_bnd_len)
+            curr_node_infl_fld_lst.append(curr_infl)
+
+        bnd_vector_lst.append(curr_node_bnd_lst)
+        bnd_len_lst.append(curr_node_bnd_len_lst)
+        infl_fld_lst.append(curr_node_infl_fld_lst)
+
+    return nbr_lst, bnd_vector_lst, bnd_len_lst, infl_fld_lst, m

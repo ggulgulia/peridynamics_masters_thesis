@@ -49,7 +49,7 @@ def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
     builder.add_geometry(points = points, facets=facets, facet_markers = mp)
     mi = tri.MeshInfo()
     builder.set(mi)
-    mesh = tri.build(mi, max_volume=1e-1, generate_faces=True, min_angle=30,
+    mesh = tri.build(mi, max_volume=5e-2, generate_faces=True, min_angle=35,
             mesh_order=None, generate_neighbor_lists=True)
     
     pold = np.array(mesh.points).tolist()
@@ -75,16 +75,14 @@ def get_elem_centroid(mesh):
     points = np.array(mesh.points)
     elems_centroid = []
 
-    elem_id = 0
     for a, b,c in elems:
         [a_pt,b_pt,c_pt] = [points[idx] for idx in [a,b,c]]
-        loc_elem_cent = [0.0, 0.0, elem_id]
+        loc_elem_cent = [0.0, 0.0]
 
         loc_elem_cent[0] = (a_pt[0] + b_pt[0] + c_pt[0])/3
         loc_elem_cent[1] = (a_pt[1] + b_pt[1] + c_pt[1])/3
 
         elems_centroid.append(loc_elem_cent)
-        elem_id +=1
     
     return elems_centroid
 

@@ -26,10 +26,10 @@ def peridym_initialize(mesh, horizon):
     elem_centroid = get_elem_centroid(mesh)
     elem_area = get_elem_areas(mesh)
 
-    bnd_vector_lst = []
-    bnd_len_lst = []
-    infl_fld_lst = []
-    m = np.zeros(len(elem_centroid)) #m is wighted volume
+    nbr_bnd_vector_lst = []
+    nbr_bnd_len_lst = []
+    nbr_infl_fld_lst = []
+    mw = np.zeros(len(elem_centroid)) #m is wighted volume
 
     for i in range(len(elem_centroid)):
         curr_node_coord = elem_centroid[i]
@@ -55,22 +55,22 @@ def peridym_initialize(mesh, horizon):
             curr_bnd_vctr = vect_diff(curr_nbr_coord, curr_node_coord)
             #curr_bnd_vctr = [curr_nbr_coord[0] -curr_node_coord[0], curr_nbr_coord[1]-curr_node_coord[1], curr_bond_len]
             
-            m[i] += curr_infl*curr_bnd_len**2*elem_area[idx]
+            mw[i] += curr_infl*curr_bnd_len**2*elem_area[idx]
 
             curr_node_bnd_lst.append(curr_bnd_vctr)
             curr_node_bnd_len_lst.append(curr_bnd_len)
             curr_node_infl_fld_lst.append(curr_infl)
 
-        bnd_vector_lst.append(curr_node_bnd_lst)
-        bnd_len_lst.append(curr_node_bnd_len_lst)
-        infl_fld_lst.append(curr_node_infl_fld_lst)
+        nbr_bnd_vector_lst.append(curr_node_bnd_lst)
+        nbr_bnd_len_lst.append(curr_node_bnd_len_lst)
+        nbr_infl_fld_lst.append(curr_node_infl_fld_lst)
 
-    return nbr_lst, bnd_vector_lst, bnd_len_lst, infl_fld_lst, m
+    return nbr_lst, nbr_bnd_vector_lst, nbr_bnd_len_lst, nbr_infl_fld_lst, mw
 
 
 def peridym_compute_extension(nbr_lst, nbr_bnd_vct_lst,
-                                nbr_bnd_ln_lst, infl_fld_lst, 
-                                mw, disp_vect):
+                                nbr_bnd_ln_lst, nbr_infl_fld_lst, 
+                                mw, disp_vect, elem_area):
     """
     routine for calculation of internal force density for a linear
     peridynamic solid material with gaussian influence function
@@ -84,7 +84,7 @@ def peridym_compute_extension(nbr_lst, nbr_bnd_vct_lst,
                           in the neighborhood list
         :nbr_bnd_ln_lst: length of all bonds in the nbr_lst 
         :inf_fld_lst: list of values of influence field for all nodes in discretization
-        :disp_vect: list of the positions of displaced nodes 
+        :disp_vect: list of the positions of displaced nodes in the mesh
     
     returns: 
     --------
@@ -98,31 +98,50 @@ def peridym_compute_extension(nbr_lst, nbr_bnd_vct_lst,
     """
 
     #no of nodes
-    length = len(nbr_lst)
+    length = len(disp_vect)
     force_vect = np.zeros(length, dtype=float) #internal force
     theta_vect = np.zeros(length, dtype=float) #dilatation
     e = [] #extension scalar state
-    rel_displ_lst = [] # eta in the pseudo code
+    rel_disp_lst = [] # eta in the pseudo code
     for i in range(length):
         curr_node_nbr_lst = nbr_lst[i]
 
-        curr_node_rel_displ_lst  = []
+        curr_node_rel_disp_lst  = []
         e_local = []
         for j, idx in enumerate(curr_node_nbr_lst):
-            rel_displ = displ_vect[idx] -  displ_vect[i]
+            rel_disp_vect = vect_diff(disp_vect[idx], disp_vect[i])
+            curr_node_rel_disp_lst.append(rel_disp_vect.tolist())
 
             curr_bnd_vct_coord = nbr_bnd_vct_lst[i][j]
-            curr_node_rel_displ.append(rel_displ)
 
-            bond_vect_plus_rel_displ = mod(vect_sum(curr_bnd_vct_coor, rel_displ)) #define mod function in helper
-            ee = (np.array(bond_vect_plus_rel_displ) - np.abs(curr_bnd_vct_coord)).tolist() 
+            bond_vect_plus_rel_disp = mod(vect_sum(curr_bnd_vct_coord, rel_disp_vect)) #define mod function in helper
+            ee = bond_vect_plus_rel_disp - mod(curr_bnd_vct_coord) 
             e_local.append(ee)
 
-            theta_vect[i] += 3*infl_fld_lst[i][j]*mod(curr_bnd_vct_coord)*ee*elem_area[idx] #define mod function in helper
+            theta_vect[i] += 3*nbr_infl_fld_lst[i][j]*mod(curr_bnd_vct_coord)*ee*elem_area[idx] #define mod function in helper
 
 
-        rel_displ_lst.append(curr_node_rel_displ_lst)
+        rel_disp_lst.append(curr_node_rel_disp_lst)
         e.append(e_local)
 
-    return rel_displ_lst, e
+    return rel_disp_lst, e, theta_vect
 
+def peridym_compute_globl_force_density(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst, 
+                                        nbr_infl_fld_lst, mw, nbr_rel_disp_lst, mw,
+                                        nbr_ext_scalar_st_lst, theta_vect, elem_area ):
+    """TODO: Docstring for peridym_compute_globl_force_density.
+
+    :nbr_lst: TODO
+    :nbr_bnd_vct_lst: TODO
+    :nbr_bnd_len_lst: TODO
+    :nbr_infl_fld_lst: TODO
+    :mw: TODO
+    :nbr_rel_disp_lst: TODO
+    :mw: TODO
+    :nbr_ext_scalar_st_lst: TODO
+    :theta_vect: TODO
+    :elem_area: TODO
+    :returns: TODO
+
+    """
+    pass

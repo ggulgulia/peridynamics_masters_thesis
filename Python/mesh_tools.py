@@ -51,9 +51,6 @@ def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
     builder.set(mi)
     mesh = tri.build(mi, max_volume=5e-2, generate_faces=True, min_angle=35,
             mesh_order=None, generate_neighbor_lists=True)
-    
-    pold = np.array(mesh.points).tolist()
-    elemsold = np.array(mesh.elements).tolist()
     return mesh
 
 def unit_square_mesh(subdiv=(5,5)):
@@ -231,3 +228,56 @@ def uniform_refine_triangles(mesh, factor=2):
 
         return new_mesh 
 
+
+def get_mesh_boundaries(mesh):
+    """Returns the boundary data of mesh
+    currently works only for rectangular 
+    mesh without any internal holes
+
+    TODO: return boundary data for a 
+    general mesh with arbitrary
+    holes
+
+    input:
+    -----
+        mesh: meshpy.MeshInfo
+    output:
+    ------
+        returns: TODO
+
+    """
+    boundary_data = {}
+    points = np.array(mesh.points)
+    corners = geo.bounding_box(points)
+
+    ll = corners[0][0]
+    rr = corners[1][0]
+    bb = corners[0][1]
+    tt = corners[1][1]
+
+    left = np.array(np.where(points[:,0]== ll)).flatten()
+    right = np.array(np.where(points[:,0]== rr)).flatten()
+    bottom = np.array(np.where(points[:,1] == bb)).flatten()
+    top = np.array(np.where(points[:,1] == tt)).flatten()
+
+    dim = len(points[0])
+    ll_bpnts = np.zeros((len(left),dim), dtype=float)
+    rr_bpnts = np.zeros((len(right),dim), dtype=float)
+    bb_bpnts = np.zeros((len(bottom),dim), dtype=float)
+    tt_bpnts = np.zeros((len(top),dim), dtype=float)
+
+    for i, idx in enumerate(left):
+        ll_bpnts[i] = points[idx]
+
+    for i, idx in enumerate(right):
+        rr_bpnts[i] = points[idx]
+
+    for i, idx in enumerate(bottom):
+        bb_bpnts[i] = points[idx]
+
+    for i, idx in enumerate(top):
+        tt_bpnts[i] = points[idx]
+
+
+    return np.array((left, right, bottom, top)), \
+            np.array((ll_bpnts, rr_bpnts, bb_bpnts, tt_bpnts))

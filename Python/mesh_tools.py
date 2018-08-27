@@ -9,6 +9,10 @@ from six.moves import range
 def plot_(mesh, interactive=False):
     mesh_points = np.array(mesh.points)
     mesh_tris = np.array(mesh.elements)
+    elems_cent = get_elem_centroid(mesh)
+
+    x,y = np.array(elems_cent).T
+    plt.scatter(x,y, color='r', marker='o')
     plt.triplot(mesh_points[:,0], mesh_points[:,1], mesh_tris)
     plt.show(block=interactive)
 
@@ -281,3 +285,72 @@ def get_mesh_boundaries(mesh):
 
     return np.array((left, right, bottom, top)), \
             np.array((ll_bpnts, rr_bpnts, bb_bpnts, tt_bpnts))
+
+
+def get_peridym_mesh_bounds(mesh):
+    """returns list of elements and a list
+    of the centroids of the corresponding
+    elements that lie next to the boundary 
+
+    TODO: this works only for unit square mesh
+    at the moement, generalize it to arbitrary
+    shape
+
+    input:
+    -----
+        mesh: meshpy.MeshInfo mesh object
+        
+    returns:
+    -------
+        ## see comments just before the return statement below ##
+
+    """
+    elems = np.array(mesh.elements).tolist()
+    elems_cent = get_elem_centroid(mesh)
+    pts = np.array(mesh.points)
+
+    corners = geo.bounding_box(pts)
+
+    ll = corners[0][0]
+    rr = corners[1][0]
+    bb = corners[0][1]
+    tt = corners[1][1]
+
+    lft_bnd_elems = []; rit_bnd_elems = []; btm_bnd_elems = []; top_bnd_elems = []
+    lft_elem_cent = []; rit_elem_cent = []; btm_elem_cent = []; top_elem_cent = []
+
+    j = 0
+    for a, b, c in elems:
+        if (pts[a][0] == ll) or(pts[b][0]==ll) or (pts[c][0]==ll):
+            lft_bnd_elems.append(elems[j])
+            lft_elem_cent.append(elems_cent[j])
+        j +=1
+        
+    j = 0
+    for a, b, c in elems:
+        if (pts[a][0] == rr) or(pts[b][0]==rr) or (pts[c][0]==rr):
+            rit_bnd_elems.append(elems[j])
+            rit_elem_cent.append(elems_cent[j])
+        j +=1
+    
+    j = 0
+    for a, b, c in elems:
+        if (pts[a][1] == bb) or(pts[b][1]==bb) or (pts[c][1]==bb):
+           btm_bnd_elems.append(elems[j])
+           btm_elem_cent.append(elems_cent[j])
+        j +=1
+
+    j = 0
+    for a, b, c in elems:
+        if (pts[a][1] == tt) or(pts[b][1]==tt) or (pts[c][1]==tt):
+            top_bnd_elems.append(elems[j])
+            top_elem_cent.append(elems_cent[j])
+        j +=1
+    
+    #returns 
+    # 1. list of all node numbers that forms the trinagles along the boundary
+    #    (above list is in the form of the list of list where the inner list 
+    #     represents node set belonging to a triangle on the boundary )
+    # 2. list of centroids of all such triangles
+    return [lft_bnd_elems, rit_bnd_elems, btm_bnd_elems, top_bnd_elems], \
+            [lft_elem_cent, rit_elem_cent, btm_elem_cent, top_elem_cent]

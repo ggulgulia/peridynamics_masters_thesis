@@ -1,4 +1,5 @@
 *.out
+*.pyc
 Python/__pycache__/
 *.dat
 *.o

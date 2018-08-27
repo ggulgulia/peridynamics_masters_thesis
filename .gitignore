@@ -1,4 +1,5 @@
 *.out
+test_*
 *.pyc
 Python/__pycache__/
 *.dat

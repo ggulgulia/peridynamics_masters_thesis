@@ -1,7 +1,7 @@
 import meshpy.triangle as tri
 from mesh_tools import *
 from helper import *
-import influence_function_manager as ifm
+import peridynamic_influence_function_manager as ifm
 from meshpy.geometry import bounding_box
 
 

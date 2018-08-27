@@ -1,7 +1,7 @@
 from mesh_tools import *
 from helper import *
-import influence_function_manager as ifm
-import compute_neighbors as nbrs
+import peridynamic_influence_function_manager as ifm
+import peridynamic_compute_neighbors as nbrs
 
 
 def peridym_initialize(mesh, horizon):

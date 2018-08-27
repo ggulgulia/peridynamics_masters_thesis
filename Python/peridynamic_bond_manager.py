@@ -26,7 +26,6 @@ def peridym_compute_extension(nbr_lst, nbr_bnd_vct_lst,
     e                       :list/np.array
                              extension scalar state in the neigborhood list
                              of all nodes 
-    -------
     """
 
     #no of nodes
@@ -58,3 +57,14 @@ def peridym_compute_extension(nbr_lst, nbr_bnd_vct_lst,
 
     return rel_disp_lst, e, theta_vct
 
+
+def peridym_compute_damage(mesh, horizon, disp_vct):
+    """TODO: Docstring for peridym_compute_damage.
+
+    :mesh: TODO
+    :horizon: TODO
+    :disp_vct: TODO
+    :returns: TODO
+
+    """
+    pass

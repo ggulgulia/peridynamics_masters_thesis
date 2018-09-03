@@ -68,7 +68,7 @@ def peridym_initialize(mesh, horizon):
     return nbr_lst, nbr_bnd_vector_lst, nbr_bnd_len_lst, nbr_infl_fld_lst, mw
 
 
-def peridym_compute_globl_force_density(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst, 
+def peridym_compute_global_force_density(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst, 
                                         nbr_infl_fld_lst, mw, nbr_rel_disp_lst,
                                         nbr_ext_scalar_st_lst, theta_vct, disp_vct,
                                         elem_area ):
@@ -120,7 +120,7 @@ def peridym_compute_globl_force_density(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_ls
 
         for j, idx in enumerate(curr_node_nbr_lst):
             eed = curr_ext[j] - theta_vct[i]*curr_bnd_len_lst[j]/3
-            t = (3*k*theta_vct[i]*curr_node_infl_fld_lst[j] + 15*mu*eed)*curr_bnd_len_lst[j]/mw[i]
+            t = (3*k*theta_vct[i]*curr_bnd_len_lst[j] + 15*mu*eed)*curr_node_infl_fld_lst[j]/mw[i]
             deformed_bnd_vct = np.array(vect_sum(curr_bnd_vct_lst[j], curr_node_rel_disp_lst[j]))
             deformed_bnd_unit_vct = deformed_bnd_vct/mod(deformed_bnd_vct)
 

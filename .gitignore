@@ -1,5 +1,6 @@
 *.out
 test_*
+*deprecated*
 *.pyc
 Python/__pycache__/
 *.dat

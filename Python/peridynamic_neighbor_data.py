@@ -1,70 +1,163 @@
+from mesh_tools import *
 from helper import *
+import peridynamic_influence_function_manager as ifm
+from meshpy.geometry import bounding_box
 
-def peridym_compute_extension(nbr_lst, nbr_bnd_vct_lst,
-                                nbr_bnd_ln_lst, nbr_infl_fld_lst, 
-                                mw, disp_vct, elem_area):
+
+def peridym_set_horizon(mesh, horizon=None):
+
     """
-    routine for calculation of internal force density for a linear
-    peridynamic solid material with gaussian influence function
-    Refer ch5, algo2 of Handbook of peridynamic modelling from
-    Silling etal
+    computes the optimal global horizon based on the given mesh,
+    if the mesh is too coarse, this method refines the mesh
+    and recomputes the horizon.
+    
+    optimal means that the horizon is 5 times the maximum lengnth
+    of the edge of a cell in descritization.
+    
+    global horizon means that entire domain has only single 
+    horizon value
     
     input:
     ------
-        nbr_lst             :peridynamic neighborhood list
-        nbr_bnd_vct_lst     :peridynamic coefficients of vector bond coordinates
-                             in the neighborhood list
-        nbr_bnd_ln_lst      :length of all bonds in the nbr_lst 
-        inf_fld_lst         :list of values of influence field for all nodes in discretization
-        disp_vct            :list of the positions of displaced nodes in the mesh
-    
-    returns: 
+        mesh    : meshpy.MeshInfo mesh
+        horizon : float, peridynamic horizon
+        
+    returns:
     --------
-    rel_displ_lst           :list/np.array 
-                            array of relative displacement
-                            in peridynamic neighborhood list
-    e                       :list/np.array
-                             extension scalar state in the neigborhood list
-                             of all nodes 
+        mesh : meshpy.MeshInfo mesh (useful if the mesh is refined)
+        horizon : float , global for the entire domain
+
     """
+    el = get_edge_lengths(mesh)
+    max_len = max(el)
+    if horizon is None:
+        horizon = 5*max_len
+        
+    p = np.array(mesh.points)
+    corner_min = np.min(p, axis=0)
+    corner_max = np.max(p, axis=0)
 
-    #no of nodes
-    length = len(disp_vct)
-    force_vect = np.zeros(length, dtype=float) #internal force
-    theta_vct = np.zeros(length, dtype=float) #dilatation
-    e = [] #extension scalar state
-    rel_disp_lst = [] # eta in the pseudo code
-    for i in range(length):
-        curr_node_nbr_lst = nbr_lst[i]
+    lx_max = abs(corner_min[0] - corner_max[0])
+    ly_max = abs(corner_min[1] - corner_max[1])
 
-        curr_node_rel_disp_lst  = []
-        e_local = []
+    if (horizon > 0.2*min(lx_max, ly_max)):
+        refine_factor = math.ceil(horizon/(0.2*min(ly_max, lx_max)))
+        print("cells are too coarse for peridynamic simulation\n",
+                    "refining the cells with refine factor of %i\n"
+                    %refine_factor)
+
+        mesh = uniform_refine_triangles(mesh, refine_factor)
+        return  peridym_set_horizon(mesh)
+    else:
+        return mesh, horizon
+
+
+def peridym_compute_neighbors(mesh, horizon):
+    """
+    given a mesh and a horizon, this function
+    rturns for each node in the mesh the 
+    neighborhood list where each node has all
+    the neighboring elements that fall within
+    the horizon (horizon is a float value)
+
+    input
+    -----
+    mesh : meshpy.triangle mesh
+    horizon : folat , length of peridynamic horizon
+
+    returns
+    -------
+        neighbor_list: np.array
+            list of peridynamic neighbors for the 
+            given peridynamic horizon. This list contains 
+            for each node, its neighbors in the peridynamic
+            horizon 
+    """
+    print("computing the neighbor list of the mesh (with the trial function) for horizon size of %f" %horizon)
+    neighbor_lst = []
+
+    elems = np.array(mesh.elements)
+    points = np.array(mesh.points)
+    elem_centroid = get_elem_centroid(mesh)
+
+    for i in range(len(elems)):
+        #temp.remove(elem_centroid[i])
+        curr_dist = 0.0
+        curr_neighbor_lst = []
+
+        for j in range(i):
+            curr_dist = compute_distance(elem_centroid[i], elem_centroid[j])
+            if curr_dist <= horizon : 
+                curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
+
+        for j in range(i+1, len(elems)):
+            curr_dist = compute_distance(elem_centroid[i], elem_centroid[j])
+            if curr_dist <= horizon : 
+                curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
+
+        neighbor_lst.append(curr_neighbor_lst)
+
+    return neighbor_lst
+
+
+   
+def peridym_get_neighbor_data(mesh, horizon):
+    """
+    this function computes the bond vector coordinates
+    for each element in the neighborhood list of the 
+    mesh
+    
+    input:
+    ------
+        mesh : meshpy.MeshInfo mesh data
+        horizon : float, peridynamic horizon
+    returns:
+    -------
+        nbr_lst         :
+        nbr_bnd_vct_lst : np.array/list of doubles
+            bond vector for each element in neighborhood list 
+        nbr_bnd_len_lst :
+        nbr_infl_fld_lst:
+        mw              :
+        
+
+    """
+    nbr_lst = peridym_compute_neighbors(mesh, horizon)
+    elem_centroid = get_elem_centroid(mesh)
+    elem_area = get_elem_areas(mesh)
+
+    nbr_bnd_vector_lst = []
+    nbr_bnd_len_lst = []
+    nbr_infl_fld_lst = []
+    mw = np.zeros(len(elem_centroid)) #m is wighted volume
+
+    for i in range(len(elem_centroid)):
+        curr_node_coord = elem_centroid[i]
+        
+        #declare empty lists for current node neighbor
+        #attributes like neighbor bond vector, bond len,
+        #and influence field 
+        curr_node_bnd_lst = []
+        curr_node_bnd_len_lst = []
+        curr_node_infl_fld_lst = []
+        #refer ch5 algo1  of handbook of peridynamic modelling
+        #by silling etal 
+
+        curr_node_nbr_lst = nbr_lst[i] 
         for j, idx in enumerate(curr_node_nbr_lst):
-            rel_disp_vct = vect_diff(disp_vct[idx], disp_vct[i])
-            curr_node_rel_disp_lst.append(rel_disp_vct.tolist())
+        
+            curr_nbr_coord = elem_centroid[idx]
+            curr_bnd_len = compute_distance(curr_nbr_coord, curr_node_coord)  
+            curr_infl  = ifm.gaussian_influence_function(curr_bnd_len, horizon)            
+            curr_bnd_vctr = vect_diff(curr_nbr_coord, curr_node_coord)            
+            mw[i] += curr_infl*curr_bnd_len**2*elem_area[idx]
 
-            curr_bnd_vct_coord = nbr_bnd_vct_lst[i][j]
+            curr_node_bnd_lst.append(curr_bnd_vctr)
+            curr_node_bnd_len_lst.append(curr_bnd_len)
+            curr_node_infl_fld_lst.append(curr_infl)
 
-            bond_vect_plus_rel_disp = mod(vect_sum(curr_bnd_vct_coord, rel_disp_vct)) #define mod function in helper
-            ee = bond_vect_plus_rel_disp - mod(curr_bnd_vct_coord) 
-            e_local.append(ee)
+        nbr_bnd_vector_lst.append(curr_node_bnd_lst)
+        nbr_bnd_len_lst.append(curr_node_bnd_len_lst)
+        nbr_infl_fld_lst.append(curr_node_infl_fld_lst)
 
-            theta_vct[i] += 3*nbr_infl_fld_lst[i][j]*mod(curr_bnd_vct_coord)*ee*elem_area[idx] #define mod function in helper
-
-
-        rel_disp_lst.append(curr_node_rel_disp_lst)
-        e.append(e_local)
-
-    return rel_disp_lst, e, theta_vct
-
-
-def peridym_compute_damage(mesh, horizon, disp_vct):
-    """TODO: Docstring for peridym_compute_damage.
-
-    :mesh: TODO
-    :horizon: TODO
-    :disp_vct: TODO
-    :returns: TODO
-
-    """
-    pass
+    return nbr_lst, nbr_bnd_vector_lst, nbr_bnd_len_lst, nbr_infl_fld_lst, mw

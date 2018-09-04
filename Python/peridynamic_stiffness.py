@@ -10,13 +10,30 @@ def compute_purturb_exten(node_num, purt_node, trv_lst, trv_bnd_vct_lst,
                           trv_bnd_len_lst, trv_infl_fld_lst, mwi, elem_cent, elem_area):
 
     """
-    returns the force state of the purturbed node
+    returns the extension data (e, ed, unit vector state Mij, i refers to reference
+    node, j refers to its corresponding neighbor in horizon with which node i makes
+    a bond)
 
-    :node_j_cent: TODO
-    :purt_node_j_cent: TODO
-    :returns: TODO
+    input:
+    ------
+        node_num           : TODO
+        purt_node          : np.array, (1,dim) centroid of purturbed node
+        trv_lst            : traversal list for and including purturbed node
+        trv_bnd_vct_lst    : traversal list of vectors of bonds
+        trv_bnd_len_lst    : traversal list for bond lengths
+        trv_infl_fld_lst   : traversal list for influence field
+        mwi                : weighted volume of purturbed node
+        elem_cent          : list of element centroid
+        elem_area          : list of element area
 
+    returns
+    -------
+        e                  : extension scalar state for trv_lst
+        eta                : deformend bond vector list for trv_lst
+        theta_i            : dilatation for purturbed node
+        Mij                : deformed unit vector state
     """
+
     e = []
     eta = []
     Mij = []
@@ -37,13 +54,18 @@ def compute_purturb_exten(node_num, purt_node, trv_lst, trv_bnd_vct_lst,
 
 def compute_ed(e, thetai, trv_bnd_len_lst):
     """
-    computes the deviatoric extension 
+    computes the deviatoric extension scalar state
 
-    :e: TODO
-    :thetai: TODO
-    :returns: TODO
-
+    input:
+    ------
+        e               : trv list like extension scalar state for single node 
+        thetai          : dilatation of corresponding node
+        trv_bnd_len_lst : traversal list of bond length for a purturbed node  
+    returns:
+    --------
+        ed              : trv list like deviatoric extension scalar state
     """
+
     ed = []
     for i in range(len(e)):
         ed_loc = e[i] - thetai*trv_bnd_len_lst[i]
@@ -52,18 +74,21 @@ def compute_ed(e, thetai, trv_bnd_len_lst):
     return ed 
 
 
-#T_i_pos = compute_T(k, mu, mw[i], theta_i_pos, trv_bnd_len_lst, trv_infl_fld_lst)
 def compute_T(k, mu, mwi, theta_i, trv_bnd_len_lst, trv_infl_fld_lst,ed, M):
     """
-    computes the force vector state at a given node i
+    computes the force density vector state at a given node i
 
-    :k: TODO
-    :mu: TODO
-    :mwi: TODO
-    :theta_i: TODO
-    :trv_bnd_len_lst: TODO
-    :trv_infl_fld_lst: TODO
-    :returns: TODO
+    input:
+    ------
+        k: TODO
+        mu: TODO
+        mwi: TODO
+        theta_i: TODO
+        trv_bnd_len_lst: TODO
+        trv_infl_fld_lst: TODO
+    returns:
+    ---------
+        T : np.array(1, dim) force density vector state of node i
 
     """
     T = []
@@ -78,18 +103,29 @@ def compute_T(k, mu, mwi, theta_i, trv_bnd_len_lst, trv_infl_fld_lst,ed, M):
 def peridym_tangent_stiffness_matrix(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst, 
                                      nbr_infl_fld_lst, mw, mesh):
     """
-    returns the peridynamic tangent stiffness matirx corresponding to the mesh, neighborhood list and 
-    dimension of the problem
+    this function returns the peridynamic tangent stiffness matirx corresponding to the mesh 
+    for a given horizon. The code is based on algorithm described in Ch5, Algorithm 4 in the 
+    Handbook of Peridynamic Modeling by S.A Silling et.al 
 
-    :nbr_lst: TODO
-    :nbr_bnd_vct_lst: TODO
-    :nbr_bnd_len_lst: TODO
-    :mesh: meshpy.MeshInfo
-    :purtub_fact: TODO
-    :returns: TODO
+    this method is currently based on central finite deifference method, 
+    TODO : include more finite difference schemes(?)
+
+    purturbation factor, bulk moudulus and shear modulus are currently hard coded
+    TODO : compute tangent matrix for a general material
+
+    input:
+    ------
+        nbr_lst: TODO
+        nbr_bnd_vct_lst: TODO
+        nbr_bnd_len_lst: TODO
+        mesh: meshpy.MeshInfo
+        purtub_fact: TODO
+    returns:
+    ---------
+        K            : np.ndarray , the tangent stiffness matrix 
 
     """
-    k = 68*1e5; mu = 27*1e5; #bulk and shear modulus for aluminum from google
+    k = 68*1e10; mu = 27*1e10; #bulk and shear modulus for aluminum from google
     #some precomputations
     dim = len(nbr_bnd_vct_lst[0][0])
     num_els = len(nbr_lst)
@@ -143,6 +179,12 @@ def peridym_tangent_stiffness_matrix(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
                 T_i_neg = compute_T(k, mu, mw[i], theta_i_neg, trv_bnd_len_lst[i], trv_infl_fld_lst[i], ed_neg, Mi_neg)
 
                 for k, kidx in enumerate(trv_lst[i]):
+                    """
+                    here instead of traversing through the neighbor
+                    list as described in the algorithm, the traversal 
+                    list is traversed, otherwise the diagonal entries
+                    of K will be zero (TODO Check if correct)?
+                    """
                     area_fact = elem_area[i]*elem_area[kidx]
                     f_eps_pos = T_i_pos[k]*area_fact
                     f_eps_neg = T_i_neg[k]*area_fact

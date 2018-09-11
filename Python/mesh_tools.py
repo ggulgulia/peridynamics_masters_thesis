@@ -4,17 +4,26 @@ import meshpy.geometry as geo
 import matplotlib.pyplot as plt
 import numpy.linalg as la
 import math
+from helper import *
+from collections import OrderedDict as od
 from six.moves import range
 
-def plot_(mesh, interactive=False):
+def plot_(mesh, annotate=False):
     mesh_points = np.array(mesh.points)
     mesh_tris = np.array(mesh.elements)
     elems_cent = get_elem_centroid(mesh)
 
     x,y = np.array(elems_cent).T
     plt.scatter(x,y, color='r', marker='o')
+
+    #TODO FIX: annotate the element centroid with element number
+    #if annotate is True:
+    #    for i in range(len(elems_cent)):
+    #        x,y = np.array(elems_cent).T
+    #        plt.annotate(i, xy=(x,y), xytext=(x-0.001, y+0.001), xycoords='data')
+
     plt.triplot(mesh_points[:,0], mesh_points[:,1], mesh_tris)
-    plt.show(block=interactive)
+    plt.show(block=False)
 
 def add_points(points, segments):
     new_points = []
@@ -53,7 +62,7 @@ def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
     builder.add_geometry(points = points, facets=facets, facet_markers = mp)
     mi = tri.MeshInfo()
     builder.set(mi)
-    mesh = tri.build(mi, max_volume=5e-2, generate_faces=True, min_angle=35,
+    mesh = tri.build(mi, max_volume=1e-2, generate_faces=True, min_angle=35,
             mesh_order=None, generate_neighbor_lists=True)
     return mesh
 
@@ -74,18 +83,18 @@ def get_elem_centroid(mesh):
     """
     elems = np.array(mesh.elements) 
     points = np.array(mesh.points)
-    elems_centroid = []
+    dim = np.shape(points[0])[0]
+    elems_centroid = np.zeros((0,dim), dtype=float)
 
     for a, b,c in elems:
         [a_pt,b_pt,c_pt] = [points[idx] for idx in [a,b,c]]
-        loc_elem_cent = [0.0, 0.0]
+        loc_elem_cent = np.zeros((1,dim), dtype=float)
+        loc_elem_cent = (a_pt + b_pt + c_pt)/3
 
-        loc_elem_cent[0] = (a_pt[0] + b_pt[0] + c_pt[0])/3
-        loc_elem_cent[1] = (a_pt[1] + b_pt[1] + c_pt[1])/3
-
-        elems_centroid.append(loc_elem_cent)
+        elems_centroid = np.append(elems_centroid, loc_elem_cent.reshape(1,dim), axis=0)
     
     return elems_centroid
+
 
 def get_elem_areas(mesh):
     element_areas = []
@@ -115,11 +124,11 @@ def get_edge_lengths(mesh):
     """
     faces = np.array(mesh.faces)
     points = np.array(mesh.points)
-    edge_lengths = []
+    edge_lengths = np.zeros(0, dtype=float)
     for a, b in faces:
         a_pt , b_pt = [points[idx] for idx in [a,b]]
-        loc_len = math.sqrt((a_pt[0] - b_pt[0])**2 + (a_pt[1] - b_pt[1])**2)
-        edge_lengths.append(loc_len)
+        loc_len = mod(a_pt - b_pt)
+        edge_lengths = np.append(edge_lengths, loc_len)
 
     return edge_lengths
     
@@ -233,60 +242,6 @@ def uniform_refine_triangles(mesh, factor=2):
         return new_mesh 
 
 
-def get_mesh_boundaries(mesh):
-    """Returns the boundary data of mesh
-    currently works only for rectangular 
-    mesh without any internal holes
-
-    TODO: return boundary data for a 
-    general mesh with arbitrary
-    holes
-
-    input:
-    -----
-        mesh: meshpy.MeshInfo
-    output:
-    ------
-        returns: TODO
-
-    """
-    boundary_data = {}
-    points = np.array(mesh.points)
-    corners = geo.bounding_box(points)
-
-    ll = corners[0][0]
-    rr = corners[1][0]
-    bb = corners[0][1]
-    tt = corners[1][1]
-
-    left = np.array(np.where(points[:,0]== ll)).flatten()
-    right = np.array(np.where(points[:,0]== rr)).flatten()
-    bottom = np.array(np.where(points[:,1] == bb)).flatten()
-    top = np.array(np.where(points[:,1] == tt)).flatten()
-
-    dim = len(points[0])
-    ll_bpnts = np.zeros((len(left),dim), dtype=float)
-    rr_bpnts = np.zeros((len(right),dim), dtype=float)
-    bb_bpnts = np.zeros((len(bottom),dim), dtype=float)
-    tt_bpnts = np.zeros((len(top),dim), dtype=float)
-
-    for i, idx in enumerate(left):
-        ll_bpnts[i] = points[idx]
-
-    for i, idx in enumerate(right):
-        rr_bpnts[i] = points[idx]
-
-    for i, idx in enumerate(bottom):
-        bb_bpnts[i] = points[idx]
-
-    for i, idx in enumerate(top):
-        tt_bpnts[i] = points[idx]
-
-
-    return np.array((left, right, bottom, top)), \
-            np.array((ll_bpnts, rr_bpnts, bb_bpnts, tt_bpnts))
-
-
 def get_peridym_mesh_bounds(mesh):
     """returns list of elements and a list
     of the centroids of the corresponding
@@ -306,8 +261,12 @@ def get_peridym_mesh_bounds(mesh):
 
     """
     elems = np.array(mesh.elements).tolist()
-    elems_cent = get_elem_centroid(mesh)
+    elem_cent = get_elem_centroid(mesh)
     pts = np.array(mesh.points)
+    #assign element id to centroid
+    elem_dict = {}
+    for i in range(len(elems)):
+        elem_dict[i] = elem_cent[i]
 
     corners = geo.bounding_box(pts)
 
@@ -316,41 +275,45 @@ def get_peridym_mesh_bounds(mesh):
     bb = corners[0][1]
     tt = corners[1][1]
 
-    lft_bnd_elems = []; rit_bnd_elems = []; btm_bnd_elems = []; top_bnd_elems = []
-    lft_elem_cent = []; rit_elem_cent = []; btm_elem_cent = []; top_elem_cent = []
+    lft_bnd_elems = {}; rit_bnd_elems = {}; btm_bnd_elems = {}; top_bnd_elems = {} 
+    lft_elem_cent = {}; rit_elem_cent = {}; btm_elem_cent = {}; top_elem_cent = {} 
 
     j = 0
     for a, b, c in elems:
         if (pts[a][0] == ll) or(pts[b][0]==ll) or (pts[c][0]==ll):
-            lft_bnd_elems.append(elems[j])
-            lft_elem_cent.append(elems_cent[j])
+            lft_bnd_elems[j] = elem_dict[j]
+            lft_elem_cent[j] = elem_dict[j]
         j +=1
         
     j = 0
     for a, b, c in elems:
         if (pts[a][0] == rr) or(pts[b][0]==rr) or (pts[c][0]==rr):
-            rit_bnd_elems.append(elems[j])
-            rit_elem_cent.append(elems_cent[j])
+            rit_bnd_elems[j] = elem_dict[j]
+            rit_elem_cent[j] = elem_dict[j]
         j +=1
     
     j = 0
     for a, b, c in elems:
         if (pts[a][1] == bb) or(pts[b][1]==bb) or (pts[c][1]==bb):
-           btm_bnd_elems.append(elems[j])
-           btm_elem_cent.append(elems_cent[j])
+            btm_bnd_elems[j] = elem_dict[j]
+            btm_elem_cent[j] = elem_dict[j]
         j +=1
 
     j = 0
     for a, b, c in elems:
         if (pts[a][1] == tt) or(pts[b][1]==tt) or (pts[c][1]==tt):
-            top_bnd_elems.append(elems[j])
-            top_elem_cent.append(elems_cent[j])
+            top_bnd_elems[j] = elem_dict[j]
+            top_elem_cent[j] = elem_dict[j]
         j +=1
     
+    lft_elem_cent = od(sorted(lft_elem_cent.items()))
+    rit_elem_cent = od(sorted(rit_elem_cent.items()))
+    btm_elem_cent = od(sorted(btm_elem_cent.items()))
+    top_elem_cent = od(sorted(top_elem_cent.items()))
     #returns 
     # 1. list of all node numbers that forms the trinagles along the boundary
     #    (above list is in the form of the list of list where the inner list 
     #     represents node set belonging to a triangle on the boundary )
     # 2. list of centroids of all such triangles
-    return [lft_bnd_elems, rit_bnd_elems, btm_bnd_elems, top_bnd_elems], \
-            [lft_elem_cent, rit_elem_cent, btm_elem_cent, top_elem_cent]
+    return {"left":lft_bnd_elems, "right":rit_bnd_elems, "bottom":btm_bnd_elems, "top":top_bnd_elems}, \
+            {"left":lft_elem_cent, "right":rit_elem_cent, "bottom": btm_elem_cent, "top":top_elem_cent}

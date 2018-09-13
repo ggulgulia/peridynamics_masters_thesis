@@ -37,11 +37,13 @@ def compute_purturb_exten(node_num, purt_node, trv_lst, trv_bnd_vct_lst,
     theta_i = 0. #dilatation for current node
     mwi_inv = 1/mwi
     for i, idx in enumerate(trv_lst):
-        eta_loc = vect_diff(purt_node, elem_cent[idx]) #deformation relative to only one bond 
+        #eta_loc = vect_diff(purt_node, elem_cent[idx]) #deformation relative to only one bond 
+        eta_loc = elem_cent[idx] - purt_node
         #relative to only one node which happens to be the current purturbed node
-        eta_plus_psi = vect_sum(trv_bnd_vct_lst[i], eta_loc)
+        #eta_plus_psi = vect_sum(trv_bnd_vct_lst[i], eta_loc)
+        eta_plus_psi = trv_bnd_vct_lst[i] + eta_loc
         e_loc = mod(eta_plus_psi) - trv_bnd_len_lst[i]
-        theta_i += 3*mwi_inv*trv_infl_fld_lst[i]*trv_bnd_len_lst[i]*e_loc*elem_area[trv_lst[i]]
+        theta_i += 3*mwi_inv*trv_infl_fld_lst[i]*trv_bnd_len_lst[i]*e_loc*elem_area[idx]
 
         Mij.append(eta_plus_psi/mod(eta_plus_psi))
         eta.append(eta_loc)
@@ -65,7 +67,8 @@ def compute_ed(e, thetai, trv_bnd_len_lst):
 
     ed = []
     for i in range(len(e)):
-        ed_loc = e[i] - thetai*trv_bnd_len_lst[i]
+        #ed_loc = e[i] - thetai*trv_bnd_len_lst[i]
+        ed_loc = e[i] - (thetai*trv_bnd_len_lst[i]/3)
         ed.append(ed_loc)
 
     return ed 
@@ -122,7 +125,11 @@ def peridym_tangent_stiffness_matrix(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
         K            : np.ndarray , the tangent stiffness matrix 
 
     """
-    k = 68*1e10; mu = 27*1e10; #bulk and shear modulus for aluminum from google
+    import timeit as tm
+    start = tm.default_timer()
+
+    print("computing the tangent stiffness matrix for the genereted mesh")
+    k = 16.8*1e9; mu = 2.7*1e9; #bulk and shear modulus for aluminum from google
     #some precomputations
     dim = len(nbr_bnd_vct_lst[0][0])
     num_els = len(nbr_lst)
@@ -139,6 +146,7 @@ def peridym_tangent_stiffness_matrix(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
     trv_bnd_len_lst = copy.deepcopy(nbr_bnd_len_lst)
     trv_bnd_vct_lst = copy.deepcopy(nbr_bnd_vct_lst)
     purt_fact = 1e-6
+    inv_purt_fact = 1e6
     #include self node at the beginning
     # (position 0) in neighborhood list of each node
     for i in range(num_els):
@@ -150,15 +158,13 @@ def peridym_tangent_stiffness_matrix(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
         trv_bnd_vct_lst[i].insert(0, [0.]*dim)
         trv_bnd_len_lst[i].insert(0,0.) #bond len for self node is zero
 
-        Ti_pos = []
-        Ti_neg = []
         for j, idx in enumerate(trv_lst[i]):
             node_j_cent = elem_cent[idx]
             elem_area_j = elem_area[idx]
             for d in range(dim):
 
-                purt_node_i_pos = node_i_cent.copy() 
-                purt_node_i_neg = node_i_cent.copy()
+                purt_node_i_pos = copy.deepcopy(node_i_cent) 
+                purt_node_i_neg = copy.deepcopy(node_i_cent)
 
                 purt_node_i_pos[d] += purt_fact
                 purt_node_i_neg[d] -= purt_fact
@@ -182,12 +188,15 @@ def peridym_tangent_stiffness_matrix(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
                     list is traversed, otherwise the diagonal entries
                     of K will be zero (TODO Check if correct)?
                     """
-                    area_fact = elem_area[i]*elem_area[kidx]
-                    f_eps_pos = T_i_pos[k]*area_fact
-                    f_eps_neg = T_i_neg[k]*area_fact
-                    f_diff = (f_eps_pos - f_eps_neg)*0.5/purt_fact
+                    #area_fact = elem_area[i]*elem_area[kidx]
+                    #f_eps_pos = T_i_pos[k]*area_fact
+                    #f_eps_neg = T_i_neg[k]*area_fact
+                    #f_diff = (f_eps_pos - f_eps_neg)*0.5*inv_purt_fact
+                    f_diff = (T_i_pos[k] - T_i_neg[k])*0.5*inv_purt_fact*elem_area[i]*elem_area[kidx]
 
                     for dd in range(dim):
                         K[dim*i+dd][dim*kidx + d] += f_diff[dd]
-                    
+    stop = tm.default_timer()
+
+    print("total time taken to assemble tangent stiffness matrix: %4.3f seconds\n" %(stop-start))
     return K

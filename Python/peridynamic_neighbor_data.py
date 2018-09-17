@@ -31,7 +31,7 @@ def peridym_set_horizon(mesh, horizon=None):
     el = get_edge_lengths(mesh)
     max_len = max(el)
     if horizon is None:
-        horizon = 5*max_len
+        horizon = 3*max_len
         
     p = np.array(mesh.points)
     corner_min = np.min(p, axis=0)
@@ -40,8 +40,11 @@ def peridym_set_horizon(mesh, horizon=None):
     lx_max = abs(corner_min[0] - corner_max[0])
     ly_max = abs(corner_min[1] - corner_max[1])
 
-    if (horizon > 0.2*min(lx_max, ly_max)):
+    if (horizon > 0.3*min(lx_max, ly_max)):
         refine_factor = math.ceil(horizon/(0.2*min(ly_max, lx_max)))
+
+        if refine_factor == 1:
+            refine_factor = 2
         print("cells are too coarse for peridynamic simulation\n",
                     "refining the cells with refine factor of %i\n"
                     %refine_factor)

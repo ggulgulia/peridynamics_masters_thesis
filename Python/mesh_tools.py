@@ -62,7 +62,7 @@ def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
     builder.add_geometry(points = points, facets=facets, facet_markers = mp)
     mi = tri.MeshInfo()
     builder.set(mi)
-    mesh = tri.build(mi, max_volume=1e-3, generate_faces=True, min_angle=35,
+    mesh = tri.build(mi, max_volume=5e-2, generate_faces=True, min_angle=35,
             mesh_order=None, generate_neighbor_lists=True)
     print("Mesh stats:\n Number of poins =%i\n Number of elements: %i\n"%(len(np.array(mesh.points)),len(np.array(mesh.elements))))
     return mesh
@@ -146,6 +146,7 @@ def uniform_refine_triangles(mesh, factor=2):
         mesh : meshpy.triangle.MeshInfo()
                Refined mesh 
     """
+    print("starting triangulation refinement with a factor of %i" %factor)
     if factor == 1:
         return mesh
     else:
@@ -239,6 +240,9 @@ def uniform_refine_triangles(mesh, factor=2):
 
         for i, f in enumerate(new_face):
             new_mesh.faces[i] = new_face[i]
+
+        print("refined mesh stat")
+        print("num points: %i\n num_elems: %i" %(len(new_points), len(new_elements)))
 
         return new_mesh 
 

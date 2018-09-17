@@ -98,9 +98,9 @@ def peridym_compute_neighbors(mesh, horizon):
             if curr_dist <= horizon : 
                 curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
-        neighbor_lst.append(curr_neighbor_lst)
+        neighbor_lst.append(np.array(curr_neighbor_lst))
 
-    return neighbor_lst
+    return np.array(neighbor_lst)
 
 
    

@@ -62,8 +62,9 @@ def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
     builder.add_geometry(points = points, facets=facets, facet_markers = mp)
     mi = tri.MeshInfo()
     builder.set(mi)
-    mesh = tri.build(mi, max_volume=1e-2, generate_faces=True, min_angle=35,
+    mesh = tri.build(mi, max_volume=1e-3, generate_faces=True, min_angle=35,
             mesh_order=None, generate_neighbor_lists=True)
+    print("Mesh stats:\n Number of poins =%i\n Number of elements: %i\n"%(len(np.array(mesh.points)),len(np.array(mesh.elements))))
     return mesh
 
 def unit_square_mesh(subdiv=(5,5)):
@@ -263,57 +264,43 @@ def get_peridym_mesh_bounds(mesh):
     elems = np.array(mesh.elements).tolist()
     elem_cent = get_elem_centroid(mesh)
     pts = np.array(mesh.points)
+    edge_lengths = get_edge_lengths(mesh)
+
+    max_el = np.amax(edge_lengths)
     #assign element id to centroid
     elem_dict = {}
     for i in range(len(elems)):
         elem_dict[i] = elem_cent[i]
 
-    corners = geo.bounding_box(pts)
-
-    ll = corners[0][0]
-    rr = corners[1][0]
-    bb = corners[0][1]
-    tt = corners[1][1]
-
-    lft_bnd_elems = {}; rit_bnd_elems = {}; btm_bnd_elems = {}; top_bnd_elems = {} 
-    lft_elem_cent = {}; rit_elem_cent = {}; btm_elem_cent = {}; top_elem_cent = {} 
-
-    j = 0
-    for a, b, c in elems:
-        if (pts[a][0] == ll) or(pts[b][0]==ll) or (pts[c][0]==ll):
-            lft_bnd_elems[j] = elem_dict[j]
-            lft_elem_cent[j] = elem_dict[j]
-        j +=1
-        
-    j = 0
-    for a, b, c in elems:
-        if (pts[a][0] == rr) or(pts[b][0]==rr) or (pts[c][0]==rr):
-            rit_bnd_elems[j] = elem_dict[j]
-            rit_elem_cent[j] = elem_dict[j]
-        j +=1
+    corner_min, corner_max = geo.bounding_box(pts)
     
-    j = 0
-    for a, b, c in elems:
-        if (pts[a][1] == bb) or(pts[b][1]==bb) or (pts[c][1]==bb):
-            btm_bnd_elems[j] = elem_dict[j]
-            btm_elem_cent[j] = elem_dict[j]
-        j +=1
+    range_fact = 1.3*max_el #range for layer of nodes in 
+                          # boundary
+    ll_range = corner_min[0] + range_fact 
+    rr_range = corner_max[0] - range_fact 
+    bb_range = corner_min[1] + range_fact 
+    tt_range = corner_max[1] - range_fact 
 
-    j = 0
-    for a, b, c in elems:
-        if (pts[a][1] == tt) or(pts[b][1]==tt) or (pts[c][1]==tt):
-            top_bnd_elems[j] = elem_dict[j]
-            top_elem_cent[j] = elem_dict[j]
-        j +=1
+### store all node numbers of lying within range to correct dictonaries
+    llnum = np.where(elem_cent[:,0] <= ll_range)
+    rrnum = np.where(elem_cent[:,0] >= rr_range)
+    bbnum = np.where(elem_cent[:,1] <= bb_range)
+    ttnum = np.where(elem_cent[:,1] >= tt_range)
     
-    lft_elem_cent = od(sorted(lft_elem_cent.items()))
-    rit_elem_cent = od(sorted(rit_elem_cent.items()))
-    btm_elem_cent = od(sorted(btm_elem_cent.items()))
-    top_elem_cent = od(sorted(top_elem_cent.items()))
+    lft_boun_nde_num = np.reshape(llnum, np.shape(llnum)[1])
+    rit_boun_nde_num = np.reshape(rrnum, np.shape(rrnum)[1])
+    btm_boun_nde_num = np.reshape(bbnum, np.shape(bbnum)[1])
+    top_boun_nde_num = np.reshape(ttnum, np.shape(ttnum)[1])
+
+    lft_elm_nde_cent = elem_cent[lft_boun_nde_num]
+    rit_elm_nde_cent = elem_cent[rit_boun_nde_num]
+    btm_elm_nde_cent = elem_cent[btm_boun_nde_num]
+    top_elm_nde_cent = elem_cent[top_boun_nde_num]
+
     #returns 
     # 1. list of all node numbers that forms the trinagles along the boundary
     #    (above list is in the form of the list of list where the inner list 
     #     represents node set belonging to a triangle on the boundary )
     # 2. list of centroids of all such triangles
-    return {"left":lft_bnd_elems, "right":rit_bnd_elems, "bottom":btm_bnd_elems, "top":top_bnd_elems}, \
-            {"left":lft_elem_cent, "right":rit_elem_cent, "bottom": btm_elem_cent, "top":top_elem_cent}
+    return {"left":lft_boun_nde_num, "right":rit_boun_nde_num, "bottom":btm_boun_nde_num, "top":top_boun_nde_num}, \
+           {"left":lft_elm_nde_cent, "right":rit_elm_nde_cent, "bottom":btm_elm_nde_cent, "top":top_elm_nde_cent}

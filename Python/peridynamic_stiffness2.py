@@ -3,8 +3,8 @@ from helper import *
 
 
 
-def compute_purturb_exten(node_num, purt_node, trv_lst, trv_bnd_vct_lst, 
-                          trv_bnd_len_lst, trv_infl_fld_lst, mwi, elem_cent, elem_area):
+def compute_purturb_exten(purt_node, trv_lst, trv_bnd_vct_lst, 
+                          trv_bnd_len_lst, trv_infl_fld_lst, elem_cent):
 
     """
     returns the extension data (e, ed, unit vector state Mij, i refers to reference
@@ -32,8 +32,8 @@ def compute_purturb_exten(node_num, purt_node, trv_lst, trv_bnd_vct_lst,
     """
 
     Mij = []
-    theta_i = 0. #dilatation for current node
-    mwi_inv = 1/mwi
+    #theta_i = 0. #dilatation for current node
+    #mwi_inv = 1/mwi
 
     eta = elem_cent[trv_lst] - purt_node
     eta_plus_psi = trv_bnd_vct_lst + eta
@@ -41,12 +41,32 @@ def compute_purturb_exten(node_num, purt_node, trv_lst, trv_bnd_vct_lst,
     e = mod_eta_psi - trv_bnd_len_lst
 
     #vectorized precompute
-    pp = 3*mwi_inv*trv_infl_fld_lst*trv_bnd_len_lst*e
+    #pp = 3*mwi_inv*trv_infl_fld_lst*trv_bnd_len_lst*e
     for i, idx in enumerate(trv_lst):
-        theta_i += pp[i]*elem_area[idx]
+        #theta_i += pp[i]*elem_area[idx]
         Mij.append(eta_plus_psi[i]/mod_eta_psi[i])
 
-    return e, eta, theta_i, Mij
+    return e, eta, Mij
+
+def compute_thetai(trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, e, mwi, elem_area):
+    """
+    computes the dilatiation of purturbed node (only once for each node)
+
+    :trv_lst: TODO
+    :trv_bnd_len_lst: TODO
+    :trv_infl_fld_lst: TODO
+    :e: TODO
+    :mwi: TODO
+    :elem_area: TODO
+    :returns: TODO
+
+    """
+    theta_i = 0.
+    pp = 3*trv_infl_fld_lst*trv_bnd_len_lst*e/mwi
+    for i, idx in enumerate(trv_lst):
+        theta_i += pp[i]*elem_area[idx]
+    
+    return theta_i
 
 def compute_ed(e, thetai, trv_bnd_len_lst):
     """
@@ -161,11 +181,20 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
                 purt_node_i_pos[d] += purt_fact
                 purt_node_i_neg[d] -= purt_fact
 
-                e_i_pos, eta_i_pos, theta_i_pos, Mi_pos = compute_purturb_exten(i, purt_node_i_pos, trv_lst[i], trv_bnd_vct_lst[i], 
-                                                                        trv_bnd_len_lst[i], trv_infl_fld_lst[i], mw[i], elem_cent, elem_area) 
+                e_i_pos, eta_i_pos, Mi_pos = compute_purturb_exten(purt_node_i_pos, trv_lst[i], trv_bnd_vct_lst[i], 
+                                                                        trv_bnd_len_lst[i], trv_infl_fld_lst[i], elem_cent) 
 
-                e_i_neg, eta_i_neg, theta_i_neg, Mi_neg = compute_purturb_exten(i, purt_node_i_neg, trv_lst[i], trv_bnd_vct_lst[i], 
-                                                                        trv_bnd_len_lst[i], trv_infl_fld_lst[i], mw[i], elem_cent, elem_area) 
+                e_i_neg, eta_i_neg, Mi_neg = compute_purturb_exten(purt_node_i_neg, trv_lst[i], trv_bnd_vct_lst[i], 
+                                                                        trv_bnd_len_lst[i], trv_infl_fld_lst[i], elem_cent)
+
+                #test : compute thet_i once only for each node i
+                if j == 0:
+                    theta_i_pos = compute_thetai(trv_lst[i], trv_bnd_len_lst[i], trv_infl_fld_lst[i], 
+                                                    e_i_pos, mw[i], elem_area)
+
+                    theta_i_neg = compute_thetai(trv_lst[i], trv_bnd_len_lst[i], trv_infl_fld_lst[i], 
+                                                    e_i_neg, mw[i], elem_area)
+
 
                 ed_pos = compute_ed(e_i_pos, theta_i_pos, trv_bnd_len_lst[i])
                 ed_neg = compute_ed(e_i_neg, theta_i_neg, trv_bnd_len_lst[i])

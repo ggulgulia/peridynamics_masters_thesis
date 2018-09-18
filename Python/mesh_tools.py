@@ -98,18 +98,22 @@ def get_elem_centroid(mesh):
 
 
 def get_elem_areas(mesh):
-    element_areas = []
-    elems = np.array(mesh.elements) 
+    #element_areas = []
+    elems = np.array(mesh.elements)
+    elem_area = np.zeros(len(elems), dtype=float)
     points = np.array(mesh.points)
 
+    i=0
     for a, b, c in elems:
         a_pt, b_pt, c_pt = [points[idx] for idx in [a,b,c]]
 
         loc_matrix = np.column_stack([[a_pt[0], a_pt[1], 1.0], [b_pt[0], b_pt[1], 1.0],[c_pt[0], c_pt[1], 1.0] ])
         loc_area = 0.5*abs(la.det(loc_matrix))
-        element_areas.append(loc_area)
+        elem_area[i] = 0.5*abs(la.det(loc_matrix))
+        i += 1
+        #element_areas.append(loc_area)
 
-    return element_areas
+    return elem_area
 
 def get_edge_lengths(mesh):
     """
@@ -241,8 +245,8 @@ def uniform_refine_triangles(mesh, factor=2):
         for i, f in enumerate(new_face):
             new_mesh.faces[i] = new_face[i]
 
-        print("refined mesh stat")
-        print("num points: %i\n num_elems: %i" %(len(new_points), len(new_elements)))
+        print("refined mesh stats")
+        print("num points: %i\n num_elems: %i\n" %(len(new_points), len(new_elements)))
 
         return new_mesh 
 
@@ -271,6 +275,7 @@ def get_peridym_mesh_bounds(mesh):
     edge_lengths = get_edge_lengths(mesh)
 
     max_el = np.amax(edge_lengths)
+    range_fact = 1.5*max_el
     #assign element id to centroid
     elem_dict = {}
     for i in range(len(elems)):
@@ -278,8 +283,7 @@ def get_peridym_mesh_bounds(mesh):
 
     corner_min, corner_max = geo.bounding_box(pts)
     
-    range_fact = 1.3*max_el #range for layer of nodes in 
-                          # boundary
+
     ll_range = corner_min[0] + range_fact 
     rr_range = corner_max[0] - range_fact 
     bb_range = corner_min[1] + range_fact 

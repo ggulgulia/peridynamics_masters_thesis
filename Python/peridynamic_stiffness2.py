@@ -31,10 +31,11 @@ def compute_purturb_exten(purt_node, trv_lst, trv_bnd_vct_lst,
         Mij                : deformed unit vector state
     """
 
-    Mij = []
+    #Mij = []
+    dim = np.shape(trv_bnd_vct_lst)[1]
+    Mij = np.zeros((len(trv_lst), dim), dtype=float)
     #theta_i = 0. #dilatation for current node
     #mwi_inv = 1/mwi
-
     eta = elem_cent[trv_lst] - purt_node
     eta_plus_psi = trv_bnd_vct_lst + eta
     mod_eta_psi = np.linalg.norm(eta_plus_psi, 2, axis=1)
@@ -44,11 +45,11 @@ def compute_purturb_exten(purt_node, trv_lst, trv_bnd_vct_lst,
     #pp = 3*mwi_inv*trv_infl_fld_lst*trv_bnd_len_lst*e
     for i, idx in enumerate(trv_lst):
         #theta_i += pp[i]*elem_area[idx]
-        Mij.append(eta_plus_psi[i]/mod_eta_psi[i])
+        Mij[i] = eta_plus_psi[i]/mod_eta_psi[i]
 
     return e, eta, Mij
 
-def compute_thetai(trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, e, mwi, elem_area):
+def compute_theta(trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, e, mwi, elem_area):
     """
     computes the dilatiation of purturbed node (only once for each node)
 
@@ -61,12 +62,8 @@ def compute_thetai(trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, e, mwi, elem_area
     :returns: TODO
 
     """
-    theta_i = 0.
-    pp = 3*trv_infl_fld_lst*trv_bnd_len_lst*e/mwi
-    for i, idx in enumerate(trv_lst):
-        theta_i += pp[i]*elem_area[idx]
-    
-    return theta_i
+    theta = np.sum(3*trv_infl_fld_lst*trv_bnd_len_lst*e*elem_area[trv_lst]/mwi)
+    return theta
 
 def compute_ed(e, thetai, trv_bnd_len_lst):
     """
@@ -86,7 +83,7 @@ def compute_ed(e, thetai, trv_bnd_len_lst):
     return ed 
 
 
-def compute_T(k, mu, mwi, theta_i, trv_bnd_len_lst, trv_infl_fld_lst, ed, M):
+def compute_T2(k, mu, mwi, theta_i, trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, ed, M, elem_area):
     """
     computes the force density vector state at a given node i
 
@@ -103,12 +100,19 @@ def compute_T(k, mu, mwi, theta_i, trv_bnd_len_lst, trv_infl_fld_lst, ed, M):
         T : np.array(1, dim) force density vector state of node i
 
     """
-    T = []
-    mwi_inv = 1/mwi
-    t_loc = (3*k*theta_i*trv_bnd_len_lst + 15*mu*ed)*trv_infl_fld_lst*mwi_inv
-    for i in range(len(trv_bnd_len_lst)):
-        T_loc = t_loc[i]*np.array(M[i])
-        T.append(T_loc)
+    ll = len(trv_lst)
+    dim = np.shape(M[0])[0]
+    T = np.zeros((len(trv_bnd_len_lst), dim), dtype=float)
+    mwi_inv = 3/mwi
+    t_loc = (k*theta_i*trv_bnd_len_lst + 5*mu*ed)*trv_infl_fld_lst*mwi_inv
+    #T0 = np.reshape(t_loc, (ll,1))*M*elem_area[trv_lst[0]]*np.reshape(elem_area[trv_lst], (ll,1))
+    #T00 = np.sum(T0, axis=0)
+    for i, idx in enumerate(trv_lst):
+        area_fact = elem_area[idx]*elem_area[trv_lst[0]]
+        T[0] += t_loc[i]*M[i]*area_fact #substituted by lines 108,109 (vectorized), 115
+        T[i] -= t_loc[i]*M[i]*area_fact
+
+    #T[0] = T00
 
     return T
 
@@ -189,18 +193,21 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
 
                 #test : compute thet_i once only for each node i
                 if j == 0:
-                    theta_i_pos = compute_thetai(trv_lst[i], trv_bnd_len_lst[i], trv_infl_fld_lst[i], 
+                    theta_i_pos = compute_theta(trv_lst[i], trv_bnd_len_lst[i], trv_infl_fld_lst[i], 
                                                     e_i_pos, mw[i], elem_area)
 
-                    theta_i_neg = compute_thetai(trv_lst[i], trv_bnd_len_lst[i], trv_infl_fld_lst[i], 
+                    theta_i_neg = compute_theta(trv_lst[i], trv_bnd_len_lst[i], trv_infl_fld_lst[i], 
                                                     e_i_neg, mw[i], elem_area)
 
 
                 ed_pos = compute_ed(e_i_pos, theta_i_pos, trv_bnd_len_lst[i])
                 ed_neg = compute_ed(e_i_neg, theta_i_neg, trv_bnd_len_lst[i])
 
-                T_i_pos = compute_T(k, mu, mw[i], theta_i_pos, trv_bnd_len_lst[i], trv_infl_fld_lst[i], ed_pos, Mi_pos)
-                T_i_neg = compute_T(k, mu, mw[i], theta_i_neg, trv_bnd_len_lst[i], trv_infl_fld_lst[i], ed_neg, Mi_neg)
+                T_i_pos = compute_T2(k, mu, mw[i], theta_i_pos, trv_lst[i], trv_bnd_len_lst[i], 
+                                        trv_infl_fld_lst[i], ed_pos, Mi_pos, elem_area)
+                
+                T_i_neg = compute_T2(k, mu, mw[i], theta_i_neg, trv_lst[i], trv_bnd_len_lst[i], 
+                                        trv_infl_fld_lst[i], ed_neg, Mi_neg, elem_area)
 
                 for k, kidx in enumerate(trv_lst[i]):
                     """
@@ -209,11 +216,8 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
                     list is traversed, otherwise the diagonal entries
                     of K will be zero (TODO Check if correct)?
                     """
-                    #area_fact = elem_area[i]*elem_area[kidx]
-                    #f_eps_pos = T_i_pos[k]*area_fact
-                    #f_eps_neg = T_i_neg[k]*area_fact
-                    #f_diff = (f_eps_pos - f_eps_neg)*0.5*inv_purt_fact
-                    f_diff = (T_i_pos[k] - T_i_neg[k])*0.5*inv_purt_fact*elem_area[i]*elem_area[kidx]
+                    #f_diff = (T_i_pos[k] - T_i_neg[k])*0.5*inv_purt_fact*elem_area[i]*elem_area[kidx]
+                    f_diff = (T_i_pos[k] - T_i_neg[k])*0.5*inv_purt_fact
 
                     for dd in range(dim):
                         K[dim*i+dd][dim*kidx + d] += f_diff[dd]

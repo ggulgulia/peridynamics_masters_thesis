@@ -32,10 +32,12 @@ def peridym_apply_bc(mesh, K, bc_list, force=-1e9):
 
     print("\n")
 
-    numel = len(np.array(mesh.elements))
+    #numel = len(np.array(mesh.elements))
     dim = len(get_elem_centroid(mesh)[0])
-    rhs = np.zeros(dim*numel,dtype=float) #create a rhs filled with zeros
+    dof = np.shape(K)[0]
+
     K_bound = copy.deepcopy(K)
+    rhs = np.zeros(dof,dtype=float) #create a rhs filled with zeros
     #bound_elem_id, bound_elem_coords = get_peridym_mesh_bounds(mesh)
     a, b = get_peridym_mesh_bounds(mesh)
     # 'a' is node numbers for bounaries 'left', 'right', 'top', 'bottom'
@@ -51,8 +53,9 @@ def peridym_apply_bc(mesh, K, bc_list, force=-1e9):
 
             for i, nk in enumerate(node_ids):
                 for d in range(dim):
-                    K_bound = np.delete(K_bound, (nk-i)*dim, axis=0) #deletes the row
-                    K_bound = np.delete(K_bound, (nk-i)*dim, axis=1) # deletes the column
+                    K_bound = np.delete(K_bound, nk*dim + d, axis=0) #deletes the row
+                    K_bound = np.insert(K_bound, nk*dim + d, np.zeros(dof, dtype=float), axis=0)
+                    K_bound[nk*dim + d][nk*dim + d] = 1.0
 
         if bc_type is "force":
             print("applying foce dirichlet bc on %s nodes"%k)
@@ -67,6 +70,6 @@ def peridym_apply_bc(mesh, K, bc_list, force=-1e9):
 
     for i, k in enumerate(lkey):
         for d in range(dim):
-            fb = np.delete(fb, dim*(k-i), axis=0)
+            fb[k*dim + d] = 0.0
 
     return K_bound, fb 

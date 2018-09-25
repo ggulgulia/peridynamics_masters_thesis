@@ -8,10 +8,13 @@ from helper import *
 from collections import OrderedDict as od
 from six.moves import range
 
-def plot_(mesh, annotate=False):
+def plot_(mesh, new_plot=False, annotate=False):
     mesh_points = np.array(mesh.points)
     mesh_tris = np.array(mesh.elements)
     elems_cent = get_elem_centroid(mesh)
+    
+    if new_plot:
+        plt.figure()
 
     x,y = np.array(elems_cent).T
     plt.scatter(x,y, color='r', marker='o')
@@ -64,7 +67,7 @@ def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
     builder.set(mi)
     mesh = tri.build(mi, max_volume=5e-2, generate_faces=True, min_angle=35,
             mesh_order=None, generate_neighbor_lists=True)
-    print("Mesh stats:\n Number of poins =%i\n Number of elements: %i\n"%(len(np.array(mesh.points)),len(np.array(mesh.elements))))
+    print("Mesh stats:\n  Number of points: %i\n  Number of elements: %i\n"%(len(np.array(mesh.points)),len(np.array(mesh.elements))))
     return mesh
 
 def unit_square_mesh(subdiv=(5,5)):
@@ -108,10 +111,8 @@ def get_elem_areas(mesh):
         a_pt, b_pt, c_pt = [points[idx] for idx in [a,b,c]]
 
         loc_matrix = np.column_stack([[a_pt[0], a_pt[1], 1.0], [b_pt[0], b_pt[1], 1.0],[c_pt[0], c_pt[1], 1.0] ])
-        loc_area = 0.5*abs(la.det(loc_matrix))
         elem_area[i] = 0.5*abs(la.det(loc_matrix))
         i += 1
-        #element_areas.append(loc_area)
 
     return elem_area
 

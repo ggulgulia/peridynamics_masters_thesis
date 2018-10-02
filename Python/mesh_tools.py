@@ -8,22 +8,24 @@ from helper import *
 from collections import OrderedDict as od
 from six.moves import range
 
-def plot_(mesh, new_plot=False, annotate=False):
+def plot_(mesh, new_fig=False, annotate=False):
     mesh_points = np.array(mesh.points)
     mesh_tris = np.array(mesh.elements)
-    elems_cent = get_elem_centroid(mesh)
+    cent = get_elem_centroid(mesh)
     
-    if new_plot:
+    if new_fig:
         plt.figure()
 
-    x,y = np.array(elems_cent).T
-    plt.scatter(x,y, color='r', marker='o')
+    plt.scatter(cent[:,0],cent[:,1], color='r', marker='o')
 
-    #TODO FIX: annotate the element centroid with element number
-    #if annotate is True:
-    #    for i in range(len(elems_cent)):
-    #        x,y = np.array(elems_cent).T
-    #        plt.annotate(i, xy=(x,y), xytext=(x-0.001, y+0.001), xycoords='data')
+    #annotate the element centroid with element number
+    #useful for debugging
+    if annotate is True:
+        for idx, cc in enumerate(cent):
+            plt.text(cc[0], cc[1],  str(idx), color='black',
+                     verticalalignment='bottom', horizontalalignment='right',
+                     fontsize='medium')
+
 
     plt.triplot(mesh_points[:,0], mesh_points[:,1], mesh_tris)
     plt.show(block=False)
@@ -65,7 +67,7 @@ def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
     builder.add_geometry(points = points, facets=facets, facet_markers = mp)
     mi = tri.MeshInfo()
     builder.set(mi)
-    mesh = tri.build(mi, max_volume=5e-2, generate_faces=True, min_angle=35,
+    mesh = tri.build(mi, max_volume=0.125, generate_faces=True, min_angle=35,
             mesh_order=None, generate_neighbor_lists=True)
     print("Mesh stats:\n  Number of points: %i\n  Number of elements: %i\n"%(len(np.array(mesh.points)),len(np.array(mesh.elements))))
     return mesh
@@ -276,7 +278,7 @@ def get_peridym_mesh_bounds(mesh):
     edge_lengths = get_edge_lengths(mesh)
 
     max_el = np.amax(edge_lengths)
-    range_fact = 1.5*max_el
+    range_fact = 0.75*max_el
     #assign element id to centroid
     elem_dict = {}
     for i in range(len(elems)):

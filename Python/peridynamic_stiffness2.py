@@ -27,24 +27,17 @@ def compute_purturb_exten(purt_node, trv_lst, trv_bnd_vct_lst,
     -------
         e                  : extension scalar state for trv_lst
         eta                : deformend bond vector list for trv_lst
-        theta_i            : dilatation for purturbed node
         Mij                : deformed unit vector state
     """
 
-    #Mij = []
     dim = np.shape(trv_bnd_vct_lst)[1]
     Mij = np.zeros((len(trv_lst), dim), dtype=float)
-    #theta_i = 0. #dilatation for current node
-    #mwi_inv = 1/mwi
-    eta = elem_cent[trv_lst] - purt_node
+    eta = elem_cent - purt_node
     eta_plus_psi = trv_bnd_vct_lst + eta
     mod_eta_psi = np.linalg.norm(eta_plus_psi, 2, axis=1)
     e = mod_eta_psi - trv_bnd_len_lst
 
-    #vectorized precompute
-    #pp = 3*mwi_inv*trv_infl_fld_lst*trv_bnd_len_lst*e
     for i, idx in enumerate(trv_lst):
-        #theta_i += pp[i]*elem_area[idx]
         Mij[i] = eta_plus_psi[i]/mod_eta_psi[i]
 
     return e, eta, Mij
@@ -82,8 +75,38 @@ def compute_ed(e, thetai, trv_bnd_len_lst):
     ed = e - thetai*trv_bnd_len_lst/3
     return ed 
 
+def compute_T_plane_stress(bulk, mu, mwi, theta_i, trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, ed, M, elem_area):
+    """
+    computes the force density vector state at a given node i
 
-def compute_T2(k, mu, mwi, theta_i, trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, ed, M, elem_area):
+    input:
+    ------
+        bulk: bulk modulus of elasticity
+        mu: shear modulus
+        mwi: weighted mass 
+        theta_i: dilatation  
+        trv_bnd_len_lst: 
+        trv_infl_fld_lst: TODO
+    returns:
+    ---------
+        T : np.array(1, dim) force density vector state of node i
+
+    """
+    ll = len(trv_lst)
+    dim = np.shape(M[0])[0]
+    T = np.zeros((ll, dim), dtype=float)
+    gamma = 4*mu/(3*bulk + 4*mu)
+    mwi_inv = 1/mwi
+    t_loc = (gamma*bulk*theta_i*trv_bnd_len_lst + 8*mu*ed)*trv_infl_fld_lst*mwi_inv
+    for i, _ in enumerate(trv_lst):
+        area_fact = elem_area[i]*elem_area[0]
+        T[0] += t_loc[i]*M[i]*area_fact #substituted by lines 108,109 (vectorized), 115
+        T[i] -= t_loc[i]*M[i]*area_fact
+
+
+    return T
+
+def compute_T(bulk, mu, mwi, theta_i, trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, ed, M, elem_area):
     """
     computes the force density vector state at a given node i
 
@@ -102,22 +125,19 @@ def compute_T2(k, mu, mwi, theta_i, trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, 
     """
     ll = len(trv_lst)
     dim = np.shape(M[0])[0]
-    T = np.zeros((len(trv_bnd_len_lst), dim), dtype=float)
+    T = np.zeros((ll, dim), dtype=float)
     mwi_inv = 3/mwi
-    t_loc = (k*theta_i*trv_bnd_len_lst + 5*mu*ed)*trv_infl_fld_lst*mwi_inv
-    #T0 = np.reshape(t_loc, (ll,1))*M*elem_area[trv_lst[0]]*np.reshape(elem_area[trv_lst], (ll,1))
-    #T00 = np.sum(T0, axis=0)
-    for i, idx in enumerate(trv_lst):
-        area_fact = elem_area[idx]*elem_area[trv_lst[0]]
+    t_loc = (bulk*theta_i*trv_bnd_len_lst + 5*mu*ed)*trv_infl_fld_lst*mwi_inv
+    for i, _ in enumerate(trv_lst):
+        area_fact = elem_area[i]*elem_area[0]
         T[0] += t_loc[i]*M[i]*area_fact #substituted by lines 108,109 (vectorized), 115
         T[i] -= t_loc[i]*M[i]*area_fact
 
-    #T[0] = T00
 
     return T
 
 def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst, 
-                                     nbr_infl_fld_lst, mw, mesh):
+                                     nbr_infl_fld_lst, mw, mesh, problem="plane_stress"):
     """
     this function returns the peridynamic tangent stiffness matirx corresponding to the mesh 
     for a given horizon. The code is based on algorithm described in Ch5, Algorithm 4 in the 
@@ -128,6 +148,7 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
 
     purturbation factor, bulk moudulus and shear modulus are currently hard coded
     TODO : compute tangent matrix for a general material
+    TODO : implement strategy of function pointer to resolve between 2D and 3D problems
 
     input:
     ------
@@ -136,6 +157,8 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
         nbr_bnd_len_lst: TODO
         mesh: meshpy.MeshInfo
         purtub_fact: TODO
+        problem: string defining the problem type
+                can be 'plane_stress', 'plane_strain', 'elastic_3d'
     returns:
     ---------
         K            : np.ndarray , the tangent stiffness matrix 
@@ -144,8 +167,13 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
     import timeit as tm
     start = tm.default_timer()
 
+    #point to appropriate function 
+    #for computing force density depending on problem type
+    if problem is "plane_stress":
+        compute_force_density = compute_T_plane_stress
+
     print("computing the tangent stiffness matrix for the genereted mesh using vectorized method")
-    k = 16.8*1e9; mu = 2.7*1e9; #bulk and shear modulus for aluminum from google
+    bulk = 68*1e9; mu = 27*1e9; #bulk and shear modulus for aluminum from google
     #some precomputations
     dim = len(nbr_bnd_vct_lst[0][0])
     num_els = len(nbr_lst)
@@ -169,7 +197,7 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
         #create and expand data structure from
         #neighbor list to that needed for traversal list
         trv_lst[i] = np.insert(trv_lst[i], 0, i)
-        trv_infl_fld_lst[i] = np.insert(trv_infl_fld_lst[i], 0, 1.) #infl fld for self node 1
+        trv_infl_fld_lst[i] = np.insert(trv_infl_fld_lst[i], 0, -1.) #infl fld for self node 1
         node_i_cent = elem_cent[i]
         trv_bnd_vct_lst[i] = np.insert(trv_bnd_vct_lst[i],0, np.zeros((1, dim), dtype=float), axis=0)
         trv_bnd_len_lst[i] = np.insert(trv_bnd_len_lst[i], 0, 0.) #bond len for self node is zero
@@ -186,10 +214,10 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
                 purt_node_i_neg[d] -= purt_fact
 
                 e_i_pos, eta_i_pos, Mi_pos = compute_purturb_exten(purt_node_i_pos, trv_lst[i], trv_bnd_vct_lst[i], 
-                                                                        trv_bnd_len_lst[i], trv_infl_fld_lst[i], elem_cent) 
+                                                                        trv_bnd_len_lst[i], trv_infl_fld_lst[i], elem_cent[trv_lst[i]]) 
 
                 e_i_neg, eta_i_neg, Mi_neg = compute_purturb_exten(purt_node_i_neg, trv_lst[i], trv_bnd_vct_lst[i], 
-                                                                        trv_bnd_len_lst[i], trv_infl_fld_lst[i], elem_cent)
+                                                                        trv_bnd_len_lst[i], trv_infl_fld_lst[i], elem_cent[trv_lst[i]])
 
                 #test : compute thet_i once only for each node i
                 if j == 0:
@@ -203,11 +231,12 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
                 ed_pos = compute_ed(e_i_pos, theta_i_pos, trv_bnd_len_lst[i])
                 ed_neg = compute_ed(e_i_neg, theta_i_neg, trv_bnd_len_lst[i])
 
-                T_i_pos = compute_T2(k, mu, mw[i], theta_i_pos, trv_lst[i], trv_bnd_len_lst[i], 
-                                        trv_infl_fld_lst[i], ed_pos, Mi_pos, elem_area)
+
+                T_i_pos = compute_force_density(bulk, mu, mw[i], theta_i_pos, trv_lst[i], trv_bnd_len_lst[i], 
+                                        trv_infl_fld_lst[i], ed_pos, Mi_pos, elem_area[trv_lst[i]])
                 
-                T_i_neg = compute_T2(k, mu, mw[i], theta_i_neg, trv_lst[i], trv_bnd_len_lst[i], 
-                                        trv_infl_fld_lst[i], ed_neg, Mi_neg, elem_area)
+                T_i_neg = compute_force_density(bulk, mu, mw[i], theta_i_neg, trv_lst[i], trv_bnd_len_lst[i], 
+                                        trv_infl_fld_lst[i], ed_neg, Mi_neg, elem_area[trv_lst[i]])
 
                 for k, kidx in enumerate(trv_lst[i]):
                     """

@@ -59,7 +59,7 @@ def round_trip_connect(start, end):
     return result
 
 
-def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
+def rectangle_mesh(point1=(0,0), point2 = (2,1), subdiv=(2,1)):
 
     points, facets, _, _ = geo.make_box(point1, point2, subdivisions=subdiv)
     builder = geo.GeometryBuilder()
@@ -67,7 +67,7 @@ def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
     builder.add_geometry(points = points, facets=facets, facet_markers = mp)
     mi = tri.MeshInfo()
     builder.set(mi)
-    mesh = tri.build(mi, max_volume=0.125, generate_faces=True, min_angle=35,
+    mesh = tri.build(mi, max_volume=0.5, generate_faces=True, min_angle=35,
             mesh_order=None, generate_neighbor_lists=True)
     print("Mesh stats:\n  Number of points: %i\n  Number of elements: %i\n"%(len(np.array(mesh.points)),len(np.array(mesh.elements))))
     return mesh

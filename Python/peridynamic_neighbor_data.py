@@ -89,12 +89,12 @@ def peridym_compute_neighbors(mesh, horizon):
         curr_neighbor_lst = []
 
         for j in range(i):
-            curr_dist = compute_distance(elem_centroid[i], elem_centroid[j])
+            curr_dist = la.norm(elem_centroid[i] - elem_centroid[j],2)
             if curr_dist <= horizon : 
                 curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
         for j in range(i+1, len(elems)):
-            curr_dist = compute_distance(elem_centroid[i], elem_centroid[j])
+            curr_dist =  la.norm(elem_centroid[j] - elem_centroid[i],2)
             if curr_dist <= horizon : 
                 curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
@@ -132,7 +132,7 @@ def peridym_get_neighbor_data(mesh, horizon):
     nbr_bnd_vector_lst = []
     nbr_bnd_len_lst = []
     nbr_infl_fld_lst = []
-    mw = np.zeros(len(elem_centroid)) #m is wighted volume
+    mw = np.zeros(len(elem_centroid), dtype=float) #m is wighted volume
 
     for i in range(len(elem_centroid)):
         curr_node_coord = elem_centroid[i]
@@ -150,7 +150,9 @@ def peridym_get_neighbor_data(mesh, horizon):
         for j, idx in enumerate(curr_node_nbr_lst):
         
             curr_nbr_coord = elem_centroid[idx]
-            curr_bnd_len = compute_distance(curr_nbr_coord, curr_node_coord)  
+            curr_bnd_len = la.norm((elem_centroid[idx] - elem_centroid[i]), 2)  
+            #curr_bnd_vctr = curr_nbr_coord - curr_node_coord
+            #curr_bnd_len = np.linalg.norm(curr_bnd_vctr,2)
             curr_infl  = ifm.gaussian_influence_function(curr_bnd_len, horizon)            
             curr_bnd_vctr = vect_diff(curr_nbr_coord, curr_node_coord)            
             mw[i] += curr_infl*curr_bnd_len**2*elem_area[idx]

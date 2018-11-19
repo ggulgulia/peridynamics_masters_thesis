@@ -59,7 +59,7 @@ def round_trip_connect(start, end):
     return result
 
 
-def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(5,5)):
+def rectangle_mesh(point1=(0,0), point2 = (1,1), subdiv=(1,1)):
 
     points, facets, _, _ = geo.make_box(point1, point2, subdivisions=subdiv)
     builder = geo.GeometryBuilder()
@@ -278,7 +278,7 @@ def get_peridym_mesh_bounds(mesh):
     edge_lengths = get_edge_lengths(mesh)
 
     max_el = np.amax(edge_lengths)
-    range_fact = 0.75*max_el
+    range_fact = 2*max_el #this factor determines the size of layer in boundary
     #assign element id to centroid
     elem_dict = {}
     for i in range(len(elems)):

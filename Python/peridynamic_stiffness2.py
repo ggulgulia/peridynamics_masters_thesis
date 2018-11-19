@@ -27,27 +27,21 @@ def compute_purturb_exten(purt_node, trv_lst, trv_bnd_vct_lst,
     -------
         e                  : extension scalar state for trv_lst
         eta                : deformend bond vector list for trv_lst
-        theta_i            : dilatation for purturbed node
         Mij                : deformed unit vector state
     """
 
-    #Mij = []
     dim = np.shape(trv_bnd_vct_lst)[1]
     Mij = np.zeros((len(trv_lst), dim), dtype=float)
-    #theta_i = 0. #dilatation for current node
-    #mwi_inv = 1/mwi
     eta = elem_cent[trv_lst] - purt_node
     eta_plus_psi = trv_bnd_vct_lst + eta
     mod_eta_psi = np.linalg.norm(eta_plus_psi, 2, axis=1)
     e = mod_eta_psi - trv_bnd_len_lst
 
-    #vectorized precompute
-    #pp = 3*mwi_inv*trv_infl_fld_lst*trv_bnd_len_lst*e
-    for i, idx in enumerate(trv_lst):
-        #theta_i += pp[i]*elem_area[idx]
-        Mij[i] = eta_plus_psi[i]/mod_eta_psi[i]
+    mij = eta_plus_psi/mod_eta_psi.reshape(len(trv_lst),1)
+    #for i, idx in enumerate(trv_lst):
+    #    Mij[i] = eta_plus_psi[i]/mod_eta_psi[i]
 
-    return e, eta, Mij
+    return e, eta, mij
 
 def compute_theta(trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, e, mwi, elem_area):
     """
@@ -62,8 +56,8 @@ def compute_theta(trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, e, mwi, elem_area)
     :returns: TODO
 
     """
-    theta = np.sum(3*trv_infl_fld_lst*trv_bnd_len_lst*e*elem_area[trv_lst]/mwi)
-    return theta
+    theta_vct = 3*trv_infl_fld_lst*trv_bnd_len_lst*e*elem_area[trv_lst]/mwi
+    return np.sum(theta_vct)
 
 def compute_ed(e, thetai, trv_bnd_len_lst):
     """
@@ -83,7 +77,7 @@ def compute_ed(e, thetai, trv_bnd_len_lst):
     return ed 
 
 
-def compute_T2(k, mu, mwi, theta_i, trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, ed, M, elem_area):
+def compute_T2(bulk, mu, mwi, theta_i, trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, ed, M, elem_area):
     """
     computes the force density vector state at a given node i
 
@@ -104,16 +98,15 @@ def compute_T2(k, mu, mwi, theta_i, trv_lst, trv_bnd_len_lst, trv_infl_fld_lst, 
     dim = np.shape(M[0])[0]
     T = np.zeros((len(trv_bnd_len_lst), dim), dtype=float)
     mwi_inv = 3/mwi
-    t_loc = (k*theta_i*trv_bnd_len_lst + 5*mu*ed)*trv_infl_fld_lst*mwi_inv
+    t_loc = (bulk*theta_i*trv_bnd_len_lst + 5*mu*ed)*trv_infl_fld_lst*mwi_inv
     #T0 = np.reshape(t_loc, (ll,1))*M*elem_area[trv_lst[0]]*np.reshape(elem_area[trv_lst], (ll,1))
     #T00 = np.sum(T0, axis=0)
-    for i, idx in enumerate(trv_lst):
-        area_fact = elem_area[idx]*elem_area[trv_lst[0]]
-        T[0] += t_loc[i]*M[i]*area_fact #substituted by lines 108,109 (vectorized), 115
-        T[i] -= t_loc[i]*M[i]*area_fact
+    for idx in range(len(trv_lst)):
+        area_fact = elem_area[idx]*elem_area[0]
+        T[0] += t_loc[idx]*M[idx]*area_fact #substituted by lines 108,109 (vectorized), 115
+        T[idx] -= t_loc[idx]*M[idx]*area_fact
 
     #T[0] = T00
-
     return T
 
 def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst, 
@@ -145,7 +138,7 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
     start = tm.default_timer()
 
     print("computing the tangent stiffness matrix for the genereted mesh using vectorized method")
-    k = 16.8*1e9; mu = 2.7*1e9; #bulk and shear modulus for aluminum from google
+    bulk = 68*1e9; mu = 27*1e9; #bulk and shear modulus for aluminum from google
     #some precomputations
     dim = len(nbr_bnd_vct_lst[0][0])
     num_els = len(nbr_lst)
@@ -203,11 +196,11 @@ def peridym_tangent_stiffness_matrix2(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst,
                 ed_pos = compute_ed(e_i_pos, theta_i_pos, trv_bnd_len_lst[i])
                 ed_neg = compute_ed(e_i_neg, theta_i_neg, trv_bnd_len_lst[i])
 
-                T_i_pos = compute_T2(k, mu, mw[i], theta_i_pos, trv_lst[i], trv_bnd_len_lst[i], 
-                                        trv_infl_fld_lst[i], ed_pos, Mi_pos, elem_area)
+                T_i_pos = compute_T2(bulk, mu, mw[i], theta_i_pos, trv_lst[i], trv_bnd_len_lst[i], 
+                                        trv_infl_fld_lst[i], ed_pos, Mi_pos, elem_area[trv_lst[i]])
                 
-                T_i_neg = compute_T2(k, mu, mw[i], theta_i_neg, trv_lst[i], trv_bnd_len_lst[i], 
-                                        trv_infl_fld_lst[i], ed_neg, Mi_neg, elem_area)
+                T_i_neg = compute_T2(bulk, mu, mw[i], theta_i_neg, trv_lst[i], trv_bnd_len_lst[i], 
+                                        trv_infl_fld_lst[i], ed_neg, Mi_neg, elem_area[trv_lst[i]])
 
                 for k, kidx in enumerate(trv_lst[i]):
                     """

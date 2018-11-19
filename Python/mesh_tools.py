@@ -67,7 +67,7 @@ def rectangle_mesh(point1=(0,0), point2 = (2,1), subdiv=(2,1)):
     builder.add_geometry(points = points, facets=facets, facet_markers = mp)
     mi = tri.MeshInfo()
     builder.set(mi)
-    mesh = tri.build(mi, max_volume=0.5, generate_faces=True, min_angle=35,
+    mesh = tri.build(mi, max_volume=1, generate_faces=True, min_angle=40,
             mesh_order=None, generate_neighbor_lists=True)
     print("Mesh stats:\n  Number of points: %i\n  Number of elements: %i\n"%(len(np.array(mesh.points)),len(np.array(mesh.elements))))
     return mesh
@@ -278,7 +278,7 @@ def get_peridym_mesh_bounds(mesh):
     edge_lengths = get_edge_lengths(mesh)
 
     max_el = np.amax(edge_lengths)
-    range_fact = 0.75*max_el
+    range_fact = 1.35*max_el
     #assign element id to centroid
     elem_dict = {}
     for i in range(len(elems)):

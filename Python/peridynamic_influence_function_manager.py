@@ -9,7 +9,7 @@ def gaussian_influence_function(bnd_len, horizon):
     :returns: TODO
 
     """
-    return -np.exp(-(bnd_len**2/horizon**2))
+    return -np.exp(-(bnd_len**2/(0.5*horizon)**2))
 
 
 def parabolic_influence_func(bnd_len, horizon):

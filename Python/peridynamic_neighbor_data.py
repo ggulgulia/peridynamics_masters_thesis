@@ -1,4 +1,4 @@
-from mesh_tools import *
+from fenics_mesh_tools import *
 from helper import *
 import peridynamic_influence_function_manager as ifm
 from meshpy.geometry import bounding_box
@@ -19,37 +19,34 @@ def peridym_set_horizon(mesh, horizon=None):
     
     input:
     ------
-        mesh    : meshpy.MeshInfo mesh
+        mesh    : FEniCS mesh 2D-tri/3D-tet
         horizon : float, peridynamic horizon
         
     returns:
     --------
-        mesh : meshpy.MeshInfo mesh (useful if the mesh is refined)
+        mesh :    FEniCS mesh (useful if the mesh is refined)
         horizon : float , global for the entire domain
 
     """
-    el = get_edge_lengths(mesh)
-    max_len = max(el)
+    el = mesh.hmax() #edge length
     if horizon is None:
-        horizon = 3*max_len
+        horizon = 2*max_len
         
-    p = np.array(mesh.points)
-    corner_min = np.min(p, axis=0)
-    corner_max = np.max(p, axis=0)
+    corner_min, corner_max = get_domain_bounding_box(mesh)
 
     lx_max = abs(corner_min[0] - corner_max[0])
     ly_max = abs(corner_min[1] - corner_max[1])
 
-    if (horizon > 0.3*min(lx_max, ly_max)):
-        refine_factor = math.ceil(horizon/(0.2*min(ly_max, lx_max)))
-
-        if refine_factor == 1:
-            refine_factor = 2
+    #if horizon size is close to the bounding box size
+    if (horizon > 0.3*min(lx_max, ly_max)): 
         print("cells are too coarse for peridynamic simulation\n",
-                    "refining the cells with refine factor of %i\n"
+                    "refining the cells\n"
                     %refine_factor)
+        
+        
+        mesh = refine(mesh)
+        print_mesh_stats(mesh)        
 
-        mesh = uniform_refine_triangles(mesh, refine_factor)
         return  peridym_set_horizon(mesh)
     else:
         return mesh, horizon
@@ -79,22 +76,21 @@ def peridym_compute_neighbors(mesh, horizon):
     print("computing the neighbor list of the mesh (with the trial function) for horizon size of %f" %horizon)
     neighbor_lst = []
 
-    elems = np.array(mesh.elements)
-    points = np.array(mesh.points)
-    elem_centroid = get_elem_centroid(mesh)
+    num_cells = mesh.num_cells()
+    cell_cent = get_cell_centroids(mesh)
 
-    for i in range(len(elems)):
-        #temp.remove(elem_centroid[i])
+    for i in range(num_cells):
+        #temp.remove(cell_cent[i])
         curr_dist = 0.0
         curr_neighbor_lst = []
 
         for j in range(i):
-            curr_dist = la.norm(elem_centroid[i] - elem_centroid[j],2)
+            curr_dist = la.norm(cell_cent[i] - cell_cent[j],2)
             if curr_dist <= horizon : 
                 curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
-        for j in range(i+1, len(elems)):
-            curr_dist =  la.norm(elem_centroid[j] - elem_centroid[i],2)
+        for j in range(i+1, num_cells):
+            curr_dist =  la.norm(cell_cent[j] - cell_cent[i],2)
             if curr_dist <= horizon : 
                 curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
@@ -126,16 +122,16 @@ def peridym_get_neighbor_data(mesh, horizon):
 
     """
     nbr_lst = peridym_compute_neighbors(mesh, horizon)
-    elem_centroid = get_elem_centroid(mesh)
-    elem_area = get_elem_areas(mesh)
+    cell_cent = get_cell_centroids(mesh)
+    cell_vol = get_cell_volumes(mesh)
 
     nbr_bnd_vector_lst = []
     nbr_bnd_len_lst = []
     nbr_infl_fld_lst = []
-    mw = np.zeros(len(elem_centroid), dtype=float) #m is wighted volume
+    mw = np.zeros(len(cell_vol), dtype=float) #m is wighted volume
 
-    for i in range(len(elem_centroid)):
-        curr_node_coord = elem_centroid[i]
+    for i in range(len(cell_cent)):
+        curr_node_coord = cell_cent[i]
         
         #declare empty lists for current node neighbor
         #attributes like neighbor bond vector, bond len,
@@ -149,13 +145,13 @@ def peridym_get_neighbor_data(mesh, horizon):
         curr_node_nbr_lst = nbr_lst[i] 
         for j, idx in enumerate(curr_node_nbr_lst):
         
-            curr_nbr_coord = elem_centroid[idx]
-            curr_bnd_len = la.norm((elem_centroid[idx] - elem_centroid[i]), 2)  
+            curr_nbr_coord = cell_cent[idx]
+            curr_bnd_len = la.norm((cell_cent[idx] - cell_cent[i]), 2)  
             #curr_bnd_vctr = curr_nbr_coord - curr_node_coord
             #curr_bnd_len = np.linalg.norm(curr_bnd_vctr,2)
             curr_infl  = ifm.gaussian_influence_function(curr_bnd_len, horizon)            
             curr_bnd_vctr = vect_diff(curr_nbr_coord, curr_node_coord)            
-            mw[i] += curr_infl*curr_bnd_len**2*elem_area[idx]
+            mw[i] += curr_infl*curr_bnd_len**2*cell_vol[idx]
 
             curr_node_bnd_lst.append(curr_bnd_vctr)
             curr_node_bnd_len_lst.append(curr_bnd_len)

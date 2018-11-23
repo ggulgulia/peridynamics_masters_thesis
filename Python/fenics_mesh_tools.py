@@ -21,8 +21,10 @@ def plot_fenics_mesh(mesh, new_fig=True):
         plt.figure()
 
     plot(mesh)
-    plt.title("FEniCS mesh")
+    #plt.title("FEniCS mesh")
     plt.show(block=False)
+
+    pass
 
 def plot_peridym_mesh(mesh):
     """
@@ -44,7 +46,7 @@ def plot_peridym_mesh(mesh):
     if dim == 3:
         x,y,z = cell_cent.T
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(x,y,z, s=50, marker='o', color='c', alpha=1.0, edgecolors='face')
+        ax.scatter(x,y,z, s=70, marker='o', color='c', alpha=1.0, edgecolors='face')
         ax.axis('off')
     
     if dim == 2 : 
@@ -56,13 +58,124 @@ def plot_peridym_mesh(mesh):
     plt.title("peridynamics mesh")
     plt.show(block=False)
 
+
+def print_mesh_stats(mesh):
+    """
+    this function prints the mesh stats like:
+    num cells, num vertices, max edge length, min edge length
+
+    :mesh: TODO
+    :returns: TODO
+
+    """
+    print("num cells: %i\nnum vertices: %i\nmax edge length: %4.5f\nmin edge length: %4.5f\n \
+          "%(mesh.num_cells(), mesh.num_vertices(), mesh.hmax(), mesh.hmin()))
+    pass
+
+def rectangle_mesh(point1=Point(0,0), point2=Point(2,1), numptsX=10, numptsY=5):
+    """
+    generates a triangulated Rectangular domain with a circular hole
+
+    input
+    ------
+        point1: Point coordinates in 3D corner_min of box
+        point2: Point coordinates in 3D corner_max of box
+        numptsX: number of discretization points in X-direction
+        numptsY: number of discretization points in Y-direction
+    output:
+    ------
+        mesh: 2D FEniCS mesh
+
+    """
+
+    mesh = RectangleMesh(point1, point2, numptsX, numptsY)
+    print_mesh_stats(mesh)
+    
+    return mesh
+
+def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(2,1), hole_cent=Point(1,0.5), hole_rad=0.25):
+    """
+    generates a triangulated Rectangular domain with a circular hole
+
+    input
+    ------
+        point1: Point coordinates in 3D corner_min of box
+        point2: Point coordinates in 3D corner_max of box
+        cyl_cent1: Point coordinates in 3D of center1 of Cylinder
+        cyl_cent2: Point coordinates in 3D of center1 of Cylinder
+        cyl_rad:   Radius of cylinder
+    output:
+    ------
+        mesh: 2D FEniCS mesh with circular hole
+
+    """
+
+    Router = mshr.Rectangle(point1, point2)
+    Rinner = mshr.Circle(hole_cent, hole_rad)
+    domain = Router - Rinner
+
+    mesh = mshr.generate_mesh(domain, 15)
+    print_mesh_stats(mesh)
+    
+    return mesh
+
+def box_mesh(point1=Point(0,0,0), point2=Point(2,1,1),
+             numptsX=8, numptsY=4, numptsZ=4):
+    """
+    generates a 3D box mesh with tetrahedral elements with a cylindrical hole in it
+
+    input
+    ------
+        point1: Point coordinates in 3D corner_min of box
+        point2: Point coordinates in 3D corner_max of box
+        cyl_cent1: Point coordinates in 3D of center1 of Cylinder
+        cyl_cent2: Point coordinates in 3D of center1 of Cylinder
+        cyl_rad:   Radius of cylinder
+    output:
+    ------
+        mesh: 3D FEniCS mesh
+
+    """
+    mesh = BoxMesh(point1, point2, numptsX, numptsY, numptsZ)
+    print_mesh_stats(mesh)
+
+    return mesh 
+
+
+def box_mesh_with_hole(point1=Point(0,0,0), point2=Point(2,1,1), cyl_cent1 = Point(1, -10, 0.5), 
+                      cyl_cent2= Point(1, 10, 0.5), cyl_rad=0.25):
+    """
+    generates a 3D box mesh with tetrahedral elements with a cylindrical hole in it
+
+    input
+    ------
+        point1: Point coordinates in 3D corner_min of box
+        point2: Point coordinates in 3D corner_max of box
+        cyl_cent1: Point coordinates in 3D of center1 of Cylinder
+        cyl_cent2: Point coordinates in 3D of center1 of Cylinder
+        cyl_rad:   Radius of cylinder
+    output:
+    ------
+        mesh: 3D FEniCS mesh with a cylindrical hole
+
+    """
+    Router = mshr.Box(point1, point2)
+    Rinner = mshr.Cylinder(cyl_cent1, cyl_cent2, cyl_rad, cyl_rad)
+    domain = Router - Rinner
+
+    mesh = mshr.generate_mesh(domain, 15)
+    print_mesh_stats(mesh)
+    
+    return mesh
+
+
+
 def write_to_vtk(mesh):
     """
     writes the peridynamic mesh coordinates to a vetk supported file format
     """
 
     pass
-
 
 def get_cell_centroids(mesh):
     """
@@ -116,7 +229,7 @@ def get_cell_volumes(mesh):
     for i in range(num_els):
         cell_volume[i] = abs(la.det(np.insert(coords[cells[i]], dim, 1, axis=1)))
     
-    return division_fact*cell_volume
+    return div_fact*cell_volume
 
 def get_domain_bounding_box(mesh):
     """
@@ -187,8 +300,8 @@ def get_peridym_mesh_bounds(mesh):
         """
         bound_range[2*d]    = corner_min[d] + range_fact #min bound for d
         bound_range[2*d +1] = corner_max[d] - range_fact #max bound for d
-        bound_nodes[(2*d)]   = np.where(cell_cent[:,d] <= bounds_range[2*d]) #node nums for min bound
-        bound_nodes[(2*d+1)] = np.where(cell_cent[:,d] >= bounds_range[2*d+1]) # node nums for max bound
+        bound_nodes[(2*d)]   = np.where(cell_cent[:,d] <= bound_range[2*d]) #node nums for min bound
+        bound_nodes[(2*d+1)] = np.where(cell_cent[:,d] >= bound_range[2*d+1]) # node nums for max bound
 
         bound_cents[(2*d)]   = cell_cent[bound_nodes[2*d][0]] #node centroids for min bound
         bound_cents[(2*d+1)]   = cell_cent[bound_nodes[2*d+1][0]] #node centroids for min bound

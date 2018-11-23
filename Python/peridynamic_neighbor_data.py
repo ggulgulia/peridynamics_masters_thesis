@@ -1,4 +1,4 @@
-from mesh_tools import *
+from fenics_mesh_tools import *
 from helper import *
 import peridynamic_influence_function_manager as ifm
 from meshpy.geometry import bounding_box
@@ -42,22 +42,10 @@ def peridym_set_horizon(mesh, horizon=None):
         print("cells are too coarse for peridynamic simulation\n",
                     "refining the cells\n"
                     %refine_factor)
-
-        print("Old mesh stats:\nNumber of points: %i\n \
-                Number of Cells: %i\n \
-                max edge length: %4.5f\n \
-                min edge length: %4.5f\n" \
-                %(mesh.num_vertices(), mesh.num_cells(), \
-                  mesh.hmax(), mesh.hmin()))
-
-        mesh = refine(mesh)
         
-        print("New mesh stats:\nNumber of points: %i\n \
-                Number of Cells: %i\n \
-                max edge length: %4.5f\n \
-                min edge length: %4.5f\n" \
-                %(mesh.num_vertices(), mesh.num_cells(), \
-                  mesh.hmax(), mesh.hmin()))
+        
+        mesh = refine(mesh)
+        print_mesh_stats(mesh)        
 
         return  peridym_set_horizon(mesh)
     else:
@@ -89,9 +77,9 @@ def peridym_compute_neighbors(mesh, horizon):
     neighbor_lst = []
 
     num_cells = mesh.num_cells()
-    cell_centroid = get_cell_centroids_centroid(mesh)
+    cell_cent = get_cell_centroids(mesh)
 
-    for i in range(len(elems)):
+    for i in range(num_cells):
         #temp.remove(cell_cent[i])
         curr_dist = 0.0
         curr_neighbor_lst = []
@@ -101,7 +89,7 @@ def peridym_compute_neighbors(mesh, horizon):
             if curr_dist <= horizon : 
                 curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
-        for j in range(i+1, len(elems)):
+        for j in range(i+1, num_cells):
             curr_dist =  la.norm(cell_cent[j] - cell_cent[i],2)
             if curr_dist <= horizon : 
                 curr_neighbor_lst.append(j) # appending the element ID to neighbor_list

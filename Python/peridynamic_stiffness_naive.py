@@ -101,6 +101,7 @@ def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent):
     dof = num_els*dim
     K_naive = np.zeros((dof, dof), dtype=float)
     small_val=1e-10 #purtub factor
+    inv_small_val = 1.0/small_val
     
     for i in range(num_els):
         for d in range(dim):
@@ -112,8 +113,10 @@ def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent):
             f_p=computeInternalForce(i,u_e_p,horizon,nbr_lst,cell_vol,cell_cent,mw,bulk,mu,gamma)
             f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,cell_vol,cell_cent,mw,bulk,mu,gamma)
             
-            K_naive[0::dim][:,dim*i+d] = (f_p[:,0] - f_m[:,0])/(2*small_val)
-            K_naive[1::dim][:,dim*i+d] = (f_p[:,1] - f_m[:,1])/(2*small_val)
+            for dd in range(dim):
+                K_naive[dd::dim][:,dim*i+d] = (f_p[:,dd] - f_m[:,dd])*0.5*inv_small_val
+            #K_naive[0::dim][:,dim*i+d] = (f_p[:,0] - f_m[:,0])/(2*small_val)
+            #K_naive[1::dim][:,dim*i+d] = (f_p[:,1] - f_m[:,1])/(2*small_val)
     
     end = tm.default_timer()
     print("Time taken for the composition of tangent stiffness matrix seconds: %4.3f\n" %(end-start))

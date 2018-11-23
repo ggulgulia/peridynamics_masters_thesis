@@ -14,3 +14,7 @@ Python/__pycache__/
 *.csv
 *.vtk
 
+*.node
+*.poly
+*.ele
+*.face

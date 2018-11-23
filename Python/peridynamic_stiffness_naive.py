@@ -122,4 +122,3 @@ def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent):
     print("Time taken for the composition of tangent stiffness matrix seconds: %4.3f\n" %(end-start))
 
     return K_naive
-    

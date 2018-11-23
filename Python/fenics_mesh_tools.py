@@ -5,6 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import numpy.linalg as la
 from math import factorial as fact
+from evtk.hl import pointsToVTK
 
 def plot_fenics_mesh(mesh, new_fig=True):
     """
@@ -93,7 +94,8 @@ def rectangle_mesh(point1=Point(0,0), point2=Point(2,1), numptsX=10, numptsY=5):
     
     return mesh
 
-def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(2,1), hole_cent=Point(1,0.5), hole_rad=0.25):
+def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(2,1), hole_cent=Point(1,0.5), 
+                                hole_rad=0.25, npts=15):
     """
     generates a triangulated Rectangular domain with a circular hole
 
@@ -104,6 +106,7 @@ def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(2,1), hole_cent=Poi
         cyl_cent1: Point coordinates in 3D of center1 of Cylinder
         cyl_cent2: Point coordinates in 3D of center1 of Cylinder
         cyl_rad:   Radius of cylinder
+        npts:      number of discretization points
     output:
     ------
         mesh: 2D FEniCS mesh with circular hole
@@ -114,7 +117,7 @@ def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(2,1), hole_cent=Poi
     Rinner = mshr.Circle(hole_cent, hole_rad)
     domain = Router - Rinner
 
-    mesh = mshr.generate_mesh(domain, 15)
+    mesh = mshr.generate_mesh(domain, npts)
     print_mesh_stats(mesh)
     
     return mesh
@@ -143,7 +146,7 @@ def box_mesh(point1=Point(0,0,0), point2=Point(2,1,1),
 
 
 def box_mesh_with_hole(point1=Point(0,0,0), point2=Point(2,1,1), cyl_cent1 = Point(1, -10, 0.5), 
-                      cyl_cent2= Point(1, 10, 0.5), cyl_rad=0.25):
+                      cyl_cent2= Point(1, 10, 0.5), cyl_rad=0.25, numpts=15):
     """
     generates a 3D box mesh with tetrahedral elements with a cylindrical hole in it
 
@@ -154,6 +157,7 @@ def box_mesh_with_hole(point1=Point(0,0,0), point2=Point(2,1,1), cyl_cent1 = Poi
         cyl_cent1: Point coordinates in 3D of center1 of Cylinder
         cyl_cent2: Point coordinates in 3D of center1 of Cylinder
         cyl_rad:   Radius of cylinder
+        npts: Number of discretization points
     output:
     ------
         mesh: 3D FEniCS mesh with a cylindrical hole
@@ -163,19 +167,10 @@ def box_mesh_with_hole(point1=Point(0,0,0), point2=Point(2,1,1), cyl_cent1 = Poi
     Rinner = mshr.Cylinder(cyl_cent1, cyl_cent2, cyl_rad, cyl_rad)
     domain = Router - Rinner
 
-    mesh = mshr.generate_mesh(domain, 15)
+    mesh = mshr.generate_mesh(domain, numpts)
     print_mesh_stats(mesh)
     
     return mesh
-
-
-
-def write_to_vtk(mesh):
-    """
-    writes the peridynamic mesh coordinates to a vetk supported file format
-    """
-
-    pass
 
 def get_cell_centroids(mesh):
     """
@@ -194,7 +189,7 @@ def get_cell_centroids(mesh):
     cells = mesh.cells()
     dim = len(coords[0])
 
-    cell_cent = np.zeros((num_els, dim), dtype=float)
+    cell_cent = np.zeros((num_els, dim), dtype=float, order='c')
 
     for i in range(num_els):
         pts = [coords[idx] for idx in cells[i]]
@@ -307,3 +302,74 @@ def get_peridym_mesh_bounds(mesh):
         bound_cents[(2*d+1)]   = cell_cent[bound_nodes[2*d+1][0]] #node centroids for min bound
 
     return bound_nodes, bound_cents #convert list to np array 
+
+
+def write_to_vtk(mesh,  displacement=None, file_name="gridfile"):
+    """
+    writes the peridynamic mesh coordinates to a vetk supported file format
+    """
+    cents = get_cell_centroids(mesh)
+    dim = len(cents[0])
+    
+    if displacement is not None:
+        cents+= displacement
+    
+    file_name = "./"+file_name
+    
+    write_function=None
+    if dim==3:
+        write_function = write_to_vtk3D
+    if dim==2:
+        write_function = write_to_vtk2D
+   
+    write_function(cents, displacement, file_name)
+
+
+    pass
+
+def write_to_vtk3D(cents, displacement, file_name):
+    """
+    writes 3D data to vtk file 
+    """
+
+    x,y,z = cents.T
+    x = np.array(x, order='c')
+    y = np.array(y, order='c')
+    z = np.array(z, order='c')
+
+    if displacement is None:
+        pointsToVTK(file_name, x, y, z, data={"x":x, "y":y, "z":z})
+
+    else:
+        dispX, dispY, dispZ = displacement.T
+        dispX = np.array(dispX, order='c')
+        dispY = np.array(dispY, order='c')
+        dispZ = np.array(dispZ, order='c')
+        
+        pointsToVTK(file_name, x, y, z, data={"x":x, "y":y, "z":z, 
+                    "dispX":dispX, "dispY":dispY, "dispZ":dispZ})
+
+    pass
+
+def write_to_vtk2D(cents, displacement, file_name):
+    """
+    writes 2D data to VTK 
+    """
+
+    x,y = cents.T
+    x = np.copy(x, order='c')
+    y = np.copy(y, order='c')
+    z = np.zeros(len(x), order='c')
+
+    if displacement is None:
+        pointsToVTK(file_name, x, y, z, data={"x":x, "y":y})
+
+    else:
+        dispX, dispY  = displacement.T
+        dispX = np.array(dispX, order='c')
+        dispY = np.array(dispY, order='c')
+        
+        pointsToVTK(file_name, x, y, z, data={"x":x, "y":y, 
+                    "dispX":dispX, "dispY":dispY})
+
+    pass

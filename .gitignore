@@ -18,3 +18,4 @@ Python/__pycache__/
 *.poly
 *.ele
 *.face
+*.vtu

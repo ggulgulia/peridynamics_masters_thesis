@@ -80,7 +80,6 @@ def peridym_compute_neighbors(mesh, horizon):
     cell_cent = get_cell_centroids(mesh)
 
     for i in range(num_cells):
-        #temp.remove(cell_cent[i])
         curr_dist = 0.0
         curr_neighbor_lst = []
 
@@ -100,7 +99,8 @@ def peridym_compute_neighbors(mesh, horizon):
 
 
    
-def peridym_get_neighbor_data(mesh, horizon):
+#def peridym_get_neighbor_data(mesh, horizon):
+def peridym_get_neighbor_data(cell_cent, cell_area, horizon):
     """
     this function computes the bond vector coordinates
     for each element in the neighborhood list of the 

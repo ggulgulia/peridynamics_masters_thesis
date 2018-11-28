@@ -67,8 +67,6 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, force=-1e9):
             #see the diagram in doc string comments above
     a, b = get_peridym_mesh_bounds(mesh)
 
-#def peridym_apply_bc(mesh, K, bc_type, bc_vals, force=-1e9):
-
     #apply force on the rhs
     for bb in bound_name:
         
@@ -88,10 +86,9 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, force=-1e9):
 
             for i, nk in enumerate(node_ids):
                 for d in range(dim):
-                    K_bound = np.delete(K_bound, (nk-i)*dim + d, axis=0) #deletes the row
-                    K_bound = np.delete(K_bound, (nk-i)*dim + d, axis=1) #deletes the col
-                    rhs     = np.delete(rhs, (nk-i)*dim+d)               #deletes the row on rhs
-
+                    K_bound = np.delete(K_bound, (nk-i)*dim, axis=0) #deletes the row
+                    K_bound = np.delete(K_bound, (nk-i)*dim, axis=1) #deletes the col
+                    rhs     = np.delete(rhs, (nk-i)*dim)                   #deletes the row on rhs
 
     return K_bound, -rhs 
 

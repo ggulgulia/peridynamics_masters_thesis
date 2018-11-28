@@ -281,8 +281,8 @@ def get_peridym_mesh_bounds(cell_cent):
     dim = len(cell_cent[0])
     elems = cell_cent
     elem_cent = cell_cent
-    max_el = 0.2 #np.amax(edge_lengths)
-    range_fact = 1.5*max_el
+    max_el = 0.4 #np.amax(edge_lengths)
+    range_fact = 2.0*max_el
     #assign element id to centroid
     elem_dict = {}
     for i in range(len(elems)):

@@ -69,9 +69,9 @@ def peridym_apply_bc(cell_cent, K, bc_list, force=-1e9):
 
             for i, nk in enumerate(node_ids):
                 for d in range(dim):
-                    K_bound = np.delete(K_bound, (nk-i)*dim + d, axis=0) #deletes the row
-                    K_bound = np.delete(K_bound, (nk-i)*dim + d, axis=1) #deletes the col
-                    rhs     = np.delete(rhs, (nk-i)*dim+d)                   #deletes the row on rhs
+                    K_bound = np.delete(K_bound, (nk-i)*dim, axis=0) #deletes the row
+                    K_bound = np.delete(K_bound, (nk-i)*dim, axis=1) #deletes the col
+                    rhs     = np.delete(rhs, (nk-i)*dim)                   #deletes the row on rhs
 
 
     fb = copy.deepcopy(rhs)  #force vector with bc applied

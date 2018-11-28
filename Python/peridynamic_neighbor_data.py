@@ -55,7 +55,8 @@ def peridym_set_horizon(mesh, horizon=None):
         return mesh, horizon
 
 
-def peridym_compute_neighbors(mesh, horizon):
+#def peridym_compute_neighbors(mesh, horizon):
+def peridym_compute_neighbors(cell_cent, cell_area, horizon):
     """
     given a mesh and a horizon, this function
     rturns for each node in the mesh the 
@@ -79,10 +80,12 @@ def peridym_compute_neighbors(mesh, horizon):
     print("computing the neighbor list of the mesh (with the trial function) for horizon size of %f" %horizon)
     neighbor_lst = []
 
-    elems = np.array(mesh.elements)
-    points = np.array(mesh.points)
-    elem_centroid = get_elem_centroid(mesh)
+    #elems = np.array(mesh.elements)
+    #points = np.array(mesh.points)
+    #elem_centroid = get_elem_centroid(mesh)
 
+    elems = cell_cent
+    elem_centroid = cell_cent 
     for i in range(len(elems)):
         #temp.remove(elem_centroid[i])
         curr_dist = 0.0
@@ -104,7 +107,8 @@ def peridym_compute_neighbors(mesh, horizon):
 
 
    
-def peridym_get_neighbor_data(mesh, horizon):
+#def peridym_get_neighbor_data(mesh, horizon):
+def peridym_get_neighbor_data(cell_cent, cell_area, horizon):
     """
     this function computes the bond vector coordinates
     for each element in the neighborhood list of the 
@@ -125,9 +129,11 @@ def peridym_get_neighbor_data(mesh, horizon):
         
 
     """
-    nbr_lst = peridym_compute_neighbors(mesh, horizon)
-    elem_centroid = get_elem_centroid(mesh)
-    elem_area = get_elem_areas(mesh)
+    nbr_lst = peridym_compute_neighbors(cell_cent, cell_area, horizon)
+    #elem_centroid = get_elem_centroid(mesh)
+    #elem_area = get_elem_areas(mesh)
+    elem_centroid = cell_cent 
+    elem_area = cell_area 
 
     nbr_bnd_vector_lst = []
     nbr_bnd_len_lst = []

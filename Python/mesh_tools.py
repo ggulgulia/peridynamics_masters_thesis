@@ -254,7 +254,8 @@ def uniform_refine_triangles(mesh, factor=2):
         return new_mesh 
 
 
-def get_peridym_mesh_bounds(mesh):
+#def get_peridym_mesh_bounds(mesh):
+def get_peridym_mesh_bounds(cell_cent):
     """returns list of elements and a list
     of the centroids of the corresponding
     elements that lie next to the boundary 
@@ -272,20 +273,31 @@ def get_peridym_mesh_bounds(mesh):
         ## see comments just before the return statement below ##
 
     """
-    elems = np.array(mesh.elements).tolist()
-    elem_cent = get_elem_centroid(mesh)
-    pts = np.array(mesh.points)
-    edge_lengths = get_edge_lengths(mesh)
+   # elems = np.array(mesh.elements).tolist()
+   # elem_cent = get_elem_centroid(mesh)
+   # pts = np.array(mesh.points)
+   # edge_lengths = get_edge_lengths(mesh)
 
-    max_el = np.amax(edge_lengths)
+    dim = len(cell_cent[0])
+    elems = cell_cent
+    elem_cent = cell_cent
+    max_el = 0.2 #np.amax(edge_lengths)
     range_fact = 1.5*max_el
     #assign element id to centroid
     elem_dict = {}
     for i in range(len(elems)):
         elem_dict[i] = elem_cent[i]
 
-    corner_min, corner_max = geo.bounding_box(pts)
+    #corner_min, corner_max = geo.bounding_box(pts)
+
+    corner_min = np.zeros(dim, dtype=float)
+    corner_max = np.zeros(dim, dtype=float)
     
+    corner_min[0] = min(elem_cent[:,0])
+    corner_min[1] = min(elem_cent[:,1])
+
+    corner_max[0] = max(elem_cent[:,0])
+    corner_max[1] = max(elem_cent[:,1])
 
     ll_range = corner_min[0] + range_fact 
     rr_range = corner_max[0] - range_fact 

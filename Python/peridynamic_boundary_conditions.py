@@ -2,7 +2,8 @@ from helper import *
 from mesh_tools import *
 
 
-def peridym_apply_bc(mesh, K, bc_list, force=-1e9):
+#def peridym_apply_bc(mesh, K, bc_list, force=-1e9):
+def peridym_apply_bc(cell_cent, K, bc_list, force=-1e9):
     """
     the function applies a boundary conditions on the mesh provided
     BC type : Dirichlet(fixed, displacement), Neumann
@@ -33,7 +34,8 @@ def peridym_apply_bc(mesh, K, bc_list, force=-1e9):
     print("\n")
 
     #numel = len(np.array(mesh.elements))
-    dim = len(get_elem_centroid(mesh)[0])
+    #dim = len(get_elem_centroid(mesh)[0])
+    dim = len(cell_cent[0])
     dof = np.shape(K)[0]
 
     K_bound = copy.deepcopy(K)
@@ -43,7 +45,7 @@ def peridym_apply_bc(mesh, K, bc_list, force=-1e9):
 
     # 'a': dictonary is node numbers for bounaries 'left', 'right', 'top', 'bottom' 
     # 'b': dictonary are the corresponding node centroids
-    a, b = get_peridym_mesh_bounds(mesh)
+    a, b = get_peridym_mesh_bounds(cell_cent)
 
     for bb in bound_name:
         bc_type = bc_list[bb]

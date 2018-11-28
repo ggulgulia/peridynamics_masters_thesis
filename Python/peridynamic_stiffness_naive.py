@@ -74,8 +74,8 @@ def computeInternalForce(d,u,horizon, nbr_lst, cell_vol, cell_cent, mw, bulk, mu
         t = (gamma*bulk*theta[i]*bnd_len + 8*mu*exten_d)*omega/mw[i]
         M = xi_plus_eta/mod_xi_plus_eta[:,None]
         
-        f[i] += sum(M*cell_vol[curr_nbr][:,None]*t[:,None])
-        f[curr_nbr] -= M*cell_vol[i]*t[:,None]
+        f[i] += sum(M*cell_vol[curr_nbr][:,None]*t[:,None])*cell_vol[i]
+        f[curr_nbr] -= M*t[:,None]*cell_vol[curr_nbr][:,None]*cell_vol[i]
 
     return f
 

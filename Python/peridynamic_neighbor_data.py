@@ -99,8 +99,7 @@ def peridym_compute_neighbors(mesh, horizon):
 
 
    
-#def peridym_get_neighbor_data(mesh, horizon):
-def peridym_get_neighbor_data(cell_cent, cell_area, horizon):
+def peridym_get_neighbor_data(mesh, horizon):
     """
     this function computes the bond vector coordinates
     for each element in the neighborhood list of the 

@@ -85,10 +85,17 @@ def plot_wav_disp(wave_freqs, horizons):
     plt.legend(loc=2)
     plt.xlim(0, len(x_axis))
     plt.ylim(0, len(x_axis))
+    plt.xlabel("k [rad/m]")
+    plt.ylabel("omega (angular frequencey) [rad/m]")
+    plt.title("1D wave dispersion analysis")
     return figure
 
 def evaluate_varying_horizons():
 
+    """
+    evaluates the wave dispersion for varying horizons
+    but with fixed number of subdivisions in the horizon
+    """
     steps = 3
     #horizons = np.zeros(num_horizons, dtype=float)
     horizons = np.array([3, 2.325, 1.65, 0.975, 0.3])/1000
@@ -119,3 +126,47 @@ def evaluate_varying_horizons():
     plt.show(block=False)
 
     return wave_freqs, horizons
+
+def varying_step_numbers():
+
+    """
+    evaluates the wave dispersion for fixed horizon
+    but varying subdivisions within the horizons 
+    """
+    step_nums = np.array([3, 4, 5, 6], dtype=int)
+    horizon = 0.003 # 3mm
+
+
+    pass
+
+def plot_influence_functions():
+    """
+    proof of correct working influence 
+    functions as shown in figure 3
+
+    it plots a similar plot as in figure 3, page 5      of the paper: wave dispersion and propogation in    state based peridynamics by butt et.al 
+    """
+
+    domain = np.arange(-1, 1.001, 0.001)
+    horizon = 1.0 
+
+    om1 = omega1(domain, horizon)
+    om2 = omega2(domain, horizon)
+    om31 = omega3(domain, horizon, p=1.0)
+    om32 = omega3(domain, horizon, p=2.5)
+    om33 = omega3(domain, horizon, p=4.0)
+
+    plt.figure()
+    plt.plot(domain, om1, label='om1')
+    plt.plot(domain, om2, label='om2')
+    plt.plot(domain, om31, label='om3, p=1.0')
+    plt.plot(domain, om32, label='om3, p=2.5')
+    plt.plot(domain, om33, label='om3, p=4.0')
+    plt.xlim(-1,1)
+    plt.ylim(0.0, 2.4)
+    plt.legend(loc=1)
+    plt.yticks(np.arange(0.0, 2.8, 0.4))
+    plt.xlabel('|zeta|/delta')
+    plt.ylabel('omega [infl fun]')
+    plt.title('plots of different choices of influence functions')
+    plt.show(block=False)

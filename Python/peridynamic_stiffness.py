@@ -41,15 +41,21 @@ def computeTheta(u, horizon, nbr_lst, trv_lst,cell_vol, cell_cent, mw, gamma):
         exten = la.norm((xi+eta), 2, axis=1) - bnd_len
         omega = omega_fun1(xi, horizon)
 
-        cncell_vol = cell_vol[curr_nbr] #cn stands for curr_nbr
-        theta[i] = sum(3*omega*bnd_len*exten*cncell_vol/mw[i])
+        cur_nbr_cell_vol = cell_vol[curr_nbr] #cn stands for curr_nbr
+        theta[i] = sum(3*omega*bnd_len*exten*cur_nbr_cell_vol/mw[i])
 
     return theta
 
 
 #vectorized version of Felix's code
 def computeInternalForce(d,u,horizon, nbr_lst, cell_vol, cell_cent, mw, bulk, mu, gamma):
+    """
+    computes the internal force using pairwise force function
 
+    the pairwise force function here is valid only for plane stress
+    TODO: generalize to 3d stess, elasticity, viscoplasticity, 
+          thermal models, etc
+    """
     num_els=len(cell_vol)
     dim = np.shape(cell_cent[0])[0]
    
@@ -80,20 +86,38 @@ def computeInternalForce(d,u,horizon, nbr_lst, cell_vol, cell_cent, mw, bulk, mu
     return f
 
     
-def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent):
+def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma):
+    
+    """
+    computes the tangent stiffness matrix based on central difference method
+    formulas for computation of constants needed in plane stress 
+    (compare Handbook Section 6.3.1.1):
 
+    nu=0.3
+    E=200e9
+    bulk = E/(3*(1 - (2*nu)))
+    mu=E/(2*(1 + nu))
+    gamma= 4*mu / (3*bulk + 4*mu)
+
+    input:
+    ------
+        horizon : peridynamic horizon
+        cell_vol: numpy array of cell volume
+        nbr_lst : numpy array of peridynamic neighbor list
+        mw      : weighted volume
+        cell_cent: centroid of each element in peridynamic discretization
+        E, nu, mu, bulk, gamma : material properites
+
+    output:
+    ------
+        K : numpy nd array , the tangent stiffness matrix
+    """
     print("Beginning to compute the tangent stiffness matrix")
 
     import timeit as tm
     start = tm.default_timer()
     #specify material constants
     #hard coded :(
-    nu=0.3
-    E=200e9
-    bulk = E/(3*(1 - (2*nu)))
-    mu=E/(2*(1 + nu))
-    # constant needed in plane stress (compare Handbook Section 6.3.1.1)
-    gamma= 4*mu / (3*bulk + 4*mu)
 
     # Compose stiffness matrix
     num_els= len(cell_vol)
@@ -119,6 +143,6 @@ def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent):
             #K_naive[1::dim][:,dim*i+d] = (f_p[:,1] - f_m[:,1])/(2*small_val)
     
     end = tm.default_timer()
-    print("Time taken for the composition of tangent stiffness matrix seconds: %4.3f\n" %(end-start))
+    print("Time taken for the composition of tangent stiffness matrix seconds: %4.3f seconds\n" %(end-start))
 
     return K_naive

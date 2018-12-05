@@ -1,202 +1,148 @@
-from mesh_tools import *
-from helper import *
+import numpy as np
+import numpy.linalg as la
+import matplotlib.pyplot as plt
+
+from peridynamic_neighbor_data import*
+from peridynamic_boundary_conditions import *
+from fenics_mesh_tools import *
+
+def omega_fun1(xi, horizon):
+
+    if(len(xi) >2): #if we have an array of bond length
+        bnd_len = la.norm(xi, 2, axis=1)
+        return -np.exp(-(bnd_len**2/(0.5*horizon)**2))*(bnd_len<horizon).astype(float)
+    else: # if there's a single bond
+        bnd_len = la.norm(xi, 2, axis=0)
+        return -np.exp(-(bnd_len**2/(0.5*horizon)**2))*float(la.norm(xi,2, axis=0)<horizon)
 
 
 
-def compute_purturb_exten(node_num, purt_node, trv_lst, trv_bnd_vct_lst, 
-                          trv_bnd_len_lst, trv_infl_fld_lst, mwi, elem_cent, elem_area):
+def computeTheta(u, horizon, nbr_lst, trv_lst,cell_vol, cell_cent, mw, gamma):
+    """computes the dilatation vector, theta
+
+    :u: TODO
+    :horizon: TODO
+    :nbr_lst: TODO
+    :trv_lst: TODO
+    :cell_vol: TODO
+    :mwi: TODO
+    :returns: TODO
 
     """
-    returns the extension data (e, ed, unit vector state Mij, i refers to reference
-    node, j refers to its corresponding neighbor in horizon with which node i makes
-    a bond)
+    num_els = len(cell_vol)
+    dim = np.shape(cell_cent[0])[0]
+    theta = np.zeros(num_els, dtype=float)
+
+    for i in trv_lst:
+        curr_nbr = nbr_lst[i]
+        xi = cell_cent[curr_nbr] - cell_cent[i]
+        bnd_len = la.norm(xi, 2, axis=1)
+        eta = u[curr_nbr] - u[i]
+        exten = la.norm((xi+eta), 2, axis=1) - bnd_len
+        omega = omega_fun1(xi, horizon)
+
+        cur_nbr_cell_vol = cell_vol[curr_nbr] #cn stands for curr_nbr
+        theta[i] = sum(3*omega*bnd_len*exten*cur_nbr_cell_vol/mw[i])
+
+    return theta
+
+
+#vectorized version of Felix's code
+def computeInternalForce(d,u,horizon, nbr_lst, cell_vol, cell_cent, mw, bulk, mu, gamma):
+    """
+    computes the internal force using pairwise force function
+
+    the pairwise force function here is valid only for plane stress
+    TODO: generalize to 3d stess, elasticity, viscoplasticity, 
+          thermal models, etc
+    """
+    num_els=len(cell_vol)
+    dim = np.shape(cell_cent[0])[0]
+   
+    #compute dilatation for each node
+    theta=np.zeros(num_els, dtype=float)
+    trv_lst = np.insert(nbr_lst[d],0,d)
+
+    theta = computeTheta(u, horizon, nbr_lst, trv_lst, cell_vol, cell_cent, mw, gamma)
+    
+    # Compute pairwise contributions to the global force density vector
+    f=np.zeros((num_els,dim), dtype=float)
+    for i in trv_lst:
+        curr_nbr = nbr_lst[i]
+        xi = cell_cent[curr_nbr] - cell_cent[i]
+        bnd_len = la.norm(xi, 2, axis=1)
+        eta = u[curr_nbr] - u[i]
+        xi_plus_eta = xi + eta
+        mod_xi_plus_eta = la.norm(xi_plus_eta, 2, axis=1)
+        exten = mod_xi_plus_eta - bnd_len
+        omega = omega_fun1(xi, horizon)
+        exten_d = exten - theta[i]*bnd_len*gamma/3
+        t = (gamma*bulk*theta[i]*bnd_len + 8*mu*exten_d)*omega/mw[i]
+        M = xi_plus_eta/mod_xi_plus_eta[:,None]
+        
+        f[i] += sum(M*cell_vol[curr_nbr][:,None]*t[:,None])*cell_vol[i]
+        f[curr_nbr] -= M*t[:,None]*cell_vol[curr_nbr][:,None]*cell_vol[i]
+
+    return f
+
+    
+def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma):
+    
+    """
+    computes the tangent stiffness matrix based on central difference method
+    formulas for computation of constants needed in plane stress 
+    (compare Handbook Section 6.3.1.1):
+
+    nu=0.3
+    E=200e9
+    bulk = E/(3*(1 - (2*nu)))
+    mu=E/(2*(1 + nu))
+    gamma= 4*mu / (3*bulk + 4*mu)
 
     input:
     ------
-        node_num           : TODO
-        purt_node          : np.array, (1,dim) centroid of purturbed node
-        trv_lst            : traversal list for and including purturbed node
-        trv_bnd_vct_lst    : traversal list of vectors of bonds
-        trv_bnd_len_lst    : traversal list for bond lengths
-        trv_infl_fld_lst   : traversal list for influence field
-        mwi                : weighted volume of purturbed node
-        elem_cent          : list of element centroid
-        elem_area          : list of element area
+        horizon : peridynamic horizon
+        cell_vol: numpy array of cell volume
+        nbr_lst : numpy array of peridynamic neighbor list
+        mw      : weighted volume
+        cell_cent: centroid of each element in peridynamic discretization
+        E, nu, mu, bulk, gamma : material properites
 
-    returns
-    -------
-        e                  : extension scalar state for trv_lst
-        eta                : deformend bond vector list for trv_lst
-        theta_i            : dilatation for purturbed node
-        Mij                : deformed unit vector state
-    """
-
-    e = []
-    eta = []
-    Mij = []
-    theta_i = 0. #dilatation for current node
-    mwi_inv = 1/mwi
-    for i, idx in enumerate(trv_lst):
-        #eta_loc = vect_diff(purt_node, elem_cent[idx]) #deformation relative to only one bond 
-        eta_loc = elem_cent[idx] - purt_node
-        #relative to only one node which happens to be the current purturbed node
-        #eta_plus_psi = vect_sum(trv_bnd_vct_lst[i], eta_loc)
-        eta_plus_psi = trv_bnd_vct_lst[i] + eta_loc
-        e_loc = mod(eta_plus_psi) - trv_bnd_len_lst[i]
-        theta_i += 3*mwi_inv*trv_infl_fld_lst[i]*trv_bnd_len_lst[i]*e_loc*elem_area[idx]
-
-        Mij.append(eta_plus_psi/mod(eta_plus_psi))
-        eta.append(eta_loc)
-        e.append(e_loc)
-
-    return e, eta, theta_i, Mij
-
-def compute_ed(e, thetai, trv_bnd_len_lst):
-    """
-    computes the deviatoric extension scalar state
-
-    input:
+    output:
     ------
-        e               : trv list like extension scalar state for single node 
-        thetai          : dilatation of corresponding node
-        trv_bnd_len_lst : traversal list of bond length for a purturbed node  
-    returns:
-    --------
-        ed              : trv list like deviatoric extension scalar state
+        K : numpy nd array , the tangent stiffness matrix
     """
+    print("Beginning to compute the tangent stiffness matrix")
 
-    ed = []
-    for i in range(len(e)):
-        #ed_loc = e[i] - thetai*trv_bnd_len_lst[i]
-        ed_loc = e[i] - (thetai*trv_bnd_len_lst[i]/3)
-        ed.append(ed_loc)
-
-    return ed 
-
-
-def compute_T(k, mu, mwi, theta_i, trv_bnd_len_lst, trv_infl_fld_lst,ed, M):
-    """
-    computes the force density vector state at a given node i
-
-    input:
-    ------
-        k: TODO
-        mu: TODO
-        mwi: TODO
-        theta_i: TODO
-        trv_bnd_len_lst: TODO
-        trv_infl_fld_lst: TODO
-    returns:
-    ---------
-        T : np.array(1, dim) force density vector state of node i
-
-    """
-    T = []
-    mwi_inv = 1/mwi
-    for i in range(len(trv_bnd_len_lst)):
-        t_loc = (3*k*theta_i*trv_bnd_len_lst[i] + 15*mu*ed[i])*trv_infl_fld_lst[i]*mwi_inv
-        T_loc = t_loc*np.array(M[i])
-        T.append(T_loc)
-
-    return T
-
-def peridym_tangent_stiffness_matrix(nbr_lst, nbr_bnd_vct_lst, nbr_bnd_len_lst, 
-                                     nbr_infl_fld_lst, mw, mesh):
-    """
-    this function returns the peridynamic tangent stiffness matirx corresponding to the mesh 
-    for a given horizon. The code is based on algorithm described in Ch5, Algorithm 4 in the 
-    Handbook of Peridynamic Modeling by S.A Silling et.al 
-
-    this method is currently based on central finite deifference method, 
-    TODO : include more finite difference schemes(?)
-
-    purturbation factor, bulk moudulus and shear modulus are currently hard coded
-    TODO : compute tangent matrix for a general material
-
-    input:
-    ------
-        nbr_lst: TODO
-        nbr_bnd_vct_lst: TODO
-        nbr_bnd_len_lst: TODO
-        mesh: meshpy.MeshInfo
-        purtub_fact: TODO
-    returns:
-    ---------
-        K            : np.ndarray , the tangent stiffness matrix 
-
-    """
     import timeit as tm
     start = tm.default_timer()
+    #specify material constants
+    #hard coded :(
 
-    print("computing the tangent stiffness matrix for the genereted mesh")
-    k = 16.8*1e9; mu = 2.7*1e9; #bulk and shear modulus for aluminum from google
-    #some precomputations
-    dim = len(nbr_bnd_vct_lst[0][0])
-    num_els = len(nbr_lst)
-    size = (dim*num_els)
-
-    #initializing empty data 
-    K = np.zeros((size, size), dtype=float)
-
-    elem_area = get_elem_areas(mesh)
-    elem_cent = get_elem_centroid(mesh)
-
-    trv_lst = copy.deepcopy(nbr_lst)
-    trv_infl_fld_lst = copy.deepcopy(nbr_infl_fld_lst)
-    trv_bnd_len_lst = copy.deepcopy(nbr_bnd_len_lst)
-    trv_bnd_vct_lst = copy.deepcopy(nbr_bnd_vct_lst)
-    purt_fact = 1e-6
-    inv_purt_fact = 1e6
-    #include self node at the beginning
-    # (position 0) in neighborhood list of each node
+    # Compose stiffness matrix
+    num_els= len(cell_vol)
+    dim = np.shape(cell_cent[0])[0]
+    dof = num_els*dim
+    K_naive = np.zeros((dof, dof), dtype=float)
+    small_val=1e-10 #purtub factor
+    inv_small_val = 1.0/small_val
+    
     for i in range(num_els):
-        #create and expand data structure from
-        #neighbor list to that needed for traversal list
-        trv_lst[i].insert(0,i)
-        trv_infl_fld_lst[i].insert(0,1.) #infl fld for self node 1
-        node_i_cent = elem_cent[i]
-        trv_bnd_vct_lst[i].insert(0, [0.]*dim)
-        trv_bnd_len_lst[i].insert(0,0.) #bond len for self node is zero
+        for d in range(dim):
+            u_e_p=np.zeros((num_els,dim), dtype=float)
+            u_e_m=np.zeros((num_els,dim), dtype=float)
+            u_e_p[i][d]= 1.0*small_val
+            u_e_m[i][d]= -1.0*small_val
+    
+            f_p=computeInternalForce(i,u_e_p,horizon,nbr_lst,cell_vol,cell_cent,mw,bulk,mu,gamma)
+            f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,cell_vol,cell_cent,mw,bulk,mu,gamma)
+            
+            for dd in range(dim):
+                K_naive[dd::dim][:,dim*i+d] = (f_p[:,dd] - f_m[:,dd])*0.5*inv_small_val
+            #K_naive[0::dim][:,dim*i+d] = (f_p[:,0] - f_m[:,0])/(2*small_val)
+            #K_naive[1::dim][:,dim*i+d] = (f_p[:,1] - f_m[:,1])/(2*small_val)
+    
+    end = tm.default_timer()
+    print("Time taken for the composition of tangent stiffness matrix seconds: %4.3f seconds\n" %(end-start))
 
-        for j, idx in enumerate(trv_lst[i]):
-            node_j_cent = elem_cent[idx]
-            elem_area_j = elem_area[idx]
-            for d in range(dim):
-
-                purt_node_i_pos = copy.deepcopy(node_i_cent) 
-                purt_node_i_neg = copy.deepcopy(node_i_cent)
-
-                purt_node_i_pos[d] += purt_fact
-                purt_node_i_neg[d] -= purt_fact
-
-                e_i_pos, eta_i_pos, theta_i_pos, Mi_pos = compute_purturb_exten(i, purt_node_i_pos, trv_lst[i], trv_bnd_vct_lst[i], 
-                                                                        trv_bnd_len_lst[i], trv_infl_fld_lst[i], mw[i], elem_cent, elem_area) 
-
-                e_i_neg, eta_i_neg, theta_i_neg, Mi_neg = compute_purturb_exten(i, purt_node_i_neg, trv_lst[i], trv_bnd_vct_lst[i], 
-                                                                        trv_bnd_len_lst[i], trv_infl_fld_lst[i], mw[i], elem_cent, elem_area) 
-
-                ed_pos = compute_ed(e_i_pos, theta_i_pos, trv_bnd_len_lst[i])
-                ed_neg = compute_ed(e_i_neg, theta_i_neg, trv_bnd_len_lst[i])
-
-                T_i_pos = compute_T(k, mu, mw[i], theta_i_pos, trv_bnd_len_lst[i], trv_infl_fld_lst[i], ed_pos, Mi_pos)
-                T_i_neg = compute_T(k, mu, mw[i], theta_i_neg, trv_bnd_len_lst[i], trv_infl_fld_lst[i], ed_neg, Mi_neg)
-
-                for k, kidx in enumerate(trv_lst[i]):
-                    """
-                    here instead of traversing through the neighbor
-                    list as described in the algorithm, the traversal 
-                    list is traversed, otherwise the diagonal entries
-                    of K will be zero (TODO Check if correct)?
-                    """
-                    #area_fact = elem_area[i]*elem_area[kidx]
-                    #f_eps_pos = T_i_pos[k]*area_fact
-                    #f_eps_neg = T_i_neg[k]*area_fact
-                    #f_diff = (f_eps_pos - f_eps_neg)*0.5*inv_purt_fact
-                    f_diff = (T_i_pos[k] - T_i_neg[k])*0.5*inv_purt_fact*elem_area[i]*elem_area[kidx]
-
-                    for dd in range(dim):
-                        K[dim*i+dd][dim*kidx + d] += f_diff[dd]
-    stop = tm.default_timer()
-
-    print("total time taken to assemble tangent stiffness matrix: %4.3f seconds\n" %(stop-start))
-    return K
+    return K_naive

@@ -135,9 +135,33 @@ def varying_step_numbers():
     """
     step_nums = np.array([3, 4, 5, 6], dtype=int)
     horizon = 0.003 # 3mm
+    
+    #material properties
+    E = 1.0; rho = 1.0
 
+    kappa_max = 3000
+    omega_evals = np.zeros((4, kappa_max), dtype=float)
 
     pass
+
+def evaluate_effect_of_infl_fun():
+   
+    num_infl_funs = 3
+    step_size = 0.5e-3
+    domain = np.arange(-1, 1+step_size, step_size)
+    horizon = 3*step_size #horizon = 1.5 mm
+    horizon_divs = np.arange(0,4,1)*step_size
+     
+    #constants  
+    E = 1.0; rho = 1.0 #material properites
+    kappa_max = 3000   # wave number
+    omega_evals = np.zeros((num_infl_funs, kappa_max), dtype=float)
+
+    wave_freqs[0][:] = evaluate_wave_frq(kappa_max, E, rho, horizon_divs, omega1)
+    wave_freqs[1][:] = evaluate_wave_frq(kappa_max, E, rho, horizon_divs, omega2)
+    wave_freqs[2][:] = evaluate_wave_frq(kappa_max, E, rho, horizon_divs, oomega3)
+    #wave_freqs[3][:] = evaluate_wave_frq(kappa_max, E, rho, horizon_divs, omega3)
+    #wave_freqs[4][:] = evaluate_wave_frq(kappa_max, E, rho, horizon_divs, omega3)
 
 def plot_influence_functions():
     """

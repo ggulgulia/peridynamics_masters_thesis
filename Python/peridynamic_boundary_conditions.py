@@ -38,6 +38,10 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, force=-1e9):
         u         :
 
     """
+    import timeit as tm
+    print("beginning the application of boundary conditions to the given mesh")
+    start = tm.default_timer()
+
     #dictonary that maps integral numbers to appropirate surface normal
     dir_to_surface_map = {0:"x_min", 1:"x_max", 2:"y_min", 3:"y_max", 4:"z_min", 5:"z_max"}
 
@@ -89,6 +93,8 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, force=-1e9):
                     K_bound = np.delete(K_bound, (nk-i)*dim, axis=0) #deletes the row
                     K_bound = np.delete(K_bound, (nk-i)*dim, axis=1) #deletes the col
                     rhs     = np.delete(rhs, (nk-i)*dim)                   #deletes the row on rhs
+
+    print("time taken for the application of boundary condition is %4.3f seconds"%(tm.default_timer()-start))
 
     return K_bound, -rhs 
 

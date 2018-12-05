@@ -1,6 +1,7 @@
 from fenics_mesh_tools import *
 from helper import *
 import peridynamic_influence_function_manager as ifm
+import timeit as tm
 from meshpy.geometry import bounding_box
 
 
@@ -73,7 +74,8 @@ def peridym_compute_neighbors(mesh, horizon):
             for each node, its neighbors in the peridynamic
             horizon 
     """
-    print("computing the neighbor list of the mesh (with the trial function) for horizon size of %f" %horizon)
+    start = tm.default_timer()
+    print("computing the neighbor list of the mesh for horizon size of %f" %horizon)
     neighbor_lst = []
 
     num_cells = mesh.num_cells()
@@ -94,7 +96,7 @@ def peridym_compute_neighbors(mesh, horizon):
                 curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
         neighbor_lst.append(np.array(curr_neighbor_lst))
-
+    print("time taken for computation of neighbor list for the given mesh is %4.3f seconds"%(tm.default_timer()-start))
     return np.array(neighbor_lst)
 
 
@@ -121,6 +123,8 @@ def peridym_get_neighbor_data(mesh, horizon):
 
     """
     nbr_lst = peridym_compute_neighbors(mesh, horizon)
+    start = tm.default_timer()
+    print("computing the remaining peridynamic neighbor data for the mesh with horizon: %4.2f" %horizon)
     cell_cent = get_cell_centroids(mesh)
     cell_vol = get_cell_volumes(mesh)
 
@@ -160,4 +164,6 @@ def peridym_get_neighbor_data(mesh, horizon):
         nbr_bnd_len_lst.append(curr_node_bnd_len_lst)
         nbr_infl_fld_lst.append(curr_node_infl_fld_lst)
 
+    print("time taken for computation of remaining neighbor data for the given mesh is %4.3f seconds"%(tm.default_timer()-start))
+    
     return nbr_lst, nbr_bnd_vector_lst, nbr_bnd_len_lst, nbr_infl_fld_lst, mw

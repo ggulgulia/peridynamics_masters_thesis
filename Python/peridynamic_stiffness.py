@@ -3,21 +3,9 @@ import numpy.linalg as la
 import matplotlib.pyplot as plt
 
 from peridynamic_neighbor_data import*
-from peridynamic_boundary_conditions import *
 from fenics_mesh_tools import *
 
-def omega_fun1(xi, horizon):
-
-    if(len(xi) >2): #if we have an array of bond length
-        bnd_len = la.norm(xi, 2, axis=1)
-        return -np.exp(-(bnd_len**2/(0.5*horizon)**2))*(bnd_len<horizon).astype(float)
-    else: # if there's a single bond
-        bnd_len = la.norm(xi, 2, axis=0)
-        return -np.exp(-(bnd_len**2/(0.5*horizon)**2))*float(la.norm(xi,2, axis=0)<horizon)
-
-
-
-def computeTheta(u, horizon, nbr_lst, trv_lst,cell_vol, cell_cent, mw, gamma):
+def computeTheta(u, horizon, nbr_lst, trv_lst,cell_vol, cell_cent, mw, gamma, omega_fun):
     """computes the dilatation vector, theta
 
     :u: TODO
@@ -39,7 +27,7 @@ def computeTheta(u, horizon, nbr_lst, trv_lst,cell_vol, cell_cent, mw, gamma):
         bnd_len = la.norm(xi, 2, axis=1)
         eta = u[curr_nbr] - u[i]
         exten = la.norm((xi+eta), 2, axis=1) - bnd_len
-        omega = omega_fun1(xi, horizon)
+        omega = omega_fun(xi, horizon)
 
         cur_nbr_cell_vol = cell_vol[curr_nbr] #cn stands for curr_nbr
         theta[i] = sum(3*omega*bnd_len*exten*cur_nbr_cell_vol/mw[i])
@@ -48,7 +36,7 @@ def computeTheta(u, horizon, nbr_lst, trv_lst,cell_vol, cell_cent, mw, gamma):
 
 
 #vectorized version of Felix's code
-def computeInternalForce(d,u,horizon, nbr_lst, cell_vol, cell_cent, mw, bulk, mu, gamma):
+def computeInternalForce(d,u,horizon, nbr_lst, cell_vol, cell_cent, mw, bulk, mu, gamma, omega_fun):
     """
     computes the internal force using pairwise force function
 
@@ -63,7 +51,7 @@ def computeInternalForce(d,u,horizon, nbr_lst, cell_vol, cell_cent, mw, bulk, mu
     theta=np.zeros(num_els, dtype=float)
     trv_lst = np.insert(nbr_lst[d],0,d)
 
-    theta = computeTheta(u, horizon, nbr_lst, trv_lst, cell_vol, cell_cent, mw, gamma)
+    theta = computeTheta(u, horizon, nbr_lst, trv_lst, cell_vol, cell_cent, mw, gamma, omega_fun)
     
     # Compute pairwise contributions to the global force density vector
     f=np.zeros((num_els,dim), dtype=float)
@@ -75,7 +63,7 @@ def computeInternalForce(d,u,horizon, nbr_lst, cell_vol, cell_cent, mw, bulk, mu
         xi_plus_eta = xi + eta
         mod_xi_plus_eta = la.norm(xi_plus_eta, 2, axis=1)
         exten = mod_xi_plus_eta - bnd_len
-        omega = omega_fun1(xi, horizon)
+        omega = omega_fun(xi, horizon)
         exten_d = exten - theta[i]*bnd_len*gamma/3
         t = (gamma*bulk*theta[i]*bnd_len + 8*mu*exten_d)*omega/mw[i]
         M = xi_plus_eta/mod_xi_plus_eta[:,None]
@@ -86,7 +74,7 @@ def computeInternalForce(d,u,horizon, nbr_lst, cell_vol, cell_cent, mw, bulk, mu
     return f
 
     
-def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma):
+def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun):
     
     """
     computes the tangent stiffness matrix based on central difference method
@@ -107,6 +95,7 @@ def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma):
         mw      : weighted volume
         cell_cent: centroid of each element in peridynamic discretization
         E, nu, mu, bulk, gamma : material properites
+        omega_fun : pointer to peridynamic influence function
 
     output:
     ------
@@ -134,8 +123,8 @@ def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma):
             u_e_p[i][d]= 1.0*small_val
             u_e_m[i][d]= -1.0*small_val
     
-            f_p=computeInternalForce(i,u_e_p,horizon,nbr_lst,cell_vol,cell_cent,mw,bulk,mu,gamma)
-            f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,cell_vol,cell_cent,mw,bulk,mu,gamma)
+            f_p=computeInternalForce(i,u_e_p,horizon,nbr_lst,cell_vol,cell_cent,mw,bulk,mu,gamma, omega_fun)
+            f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,cell_vol,cell_cent,mw,bulk,mu,gamma, omega_fun)
             
             for dd in range(dim):
                 K_naive[dd::dim][:,dim*i+d] = (f_p[:,dd] - f_m[:,dd])*0.5*inv_small_val

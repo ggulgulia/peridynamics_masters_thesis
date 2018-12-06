@@ -1,6 +1,5 @@
 from fenics_mesh_tools import *
 from helper import *
-import peridynamic_influence_function_manager as ifm
 import timeit as tm
 from meshpy.geometry import bounding_box
 
@@ -140,29 +139,13 @@ def peridym_get_neighbor_data(mesh, horizon, omega_fun):
         #declare empty lists for current node neighbor
         #attributes like neighbor bond vector, bond len,
         #and influence field 
-        curr_node_bnd_lst = []
-        curr_node_bnd_len_lst = []
         #refer ch5 algo1  of handbook of peridynamic modelling
         #by silling etal 
 
         curr_nbr_lst = nbr_lst[i] 
-        curr_nbr_bnd_vct = cell_cent[nbr_lst[i]] - curr_node_coord
+        curr_nbr_bnd_vct = cell_cent[curr_nbr_lst] - curr_node_coord
         curr_nbr_bnd_len = la.norm(curr_nbr_bnd_vct, 2, axis=1)
         mw[i] = sum(omega_fun(curr_nbr_bnd_vct, horizon)*curr_nbr_bnd_len**2*cell_vol[curr_nbr_lst])
-
-        #for j, idx in enumerate(curr_nbr_lst):
-        
-            #curr_nbr_coord = cell_cent[idx]
-            #curr_nbr_bnd_vct = curr_nbr_coord - curr_node_coord #zeta from literature
-            #curr_nbr_bnd_len = la.norm((cell_cent[idx] - cell_cent[i]), 2)  
-            #curr_bnd_vctr = curr_nbr_coord - curr_node_coord
-            #curr_bnd_len = np.linalg.norm(curr_bnd_vctr,2)
-            #curr_infl  = ifm.gaussian_influence_function(curr_bnd_len, horizon)            
-            #mw[i] += curr_infl*curr_bnd_len**2*cell_vol[idx]
-            #mw[i] += omega_fun(curr_bnd_vctr, horizon)*curr_bnd_len**2*cell_vol[idx]
-
-            #curr_node_bnd_lst.append(curr_nbr_bnd_vctr)
-            #curr_node_bnd_len_lst.append(curr_bnd_len)
 
         nbr_bnd_vector_lst.append(curr_nbr_bnd_vct)
         nbr_bnd_len_lst.append(curr_nbr_bnd_len)

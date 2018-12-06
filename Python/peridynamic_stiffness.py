@@ -6,15 +6,21 @@ from peridynamic_neighbor_data import*
 from fenics_mesh_tools import *
 
 def computeTheta(u, horizon, nbr_lst, trv_lst,cell_vol, cell_cent, mw, gamma, omega_fun):
-    """computes the dilatation vector, theta
+    """
+    computes the dilatation vector, theta
 
-    :u: TODO
-    :horizon: TODO
-    :nbr_lst: TODO
-    :trv_lst: TODO
-    :cell_vol: TODO
-    :mwi: TODO
-    :returns: TODO
+    input:
+    ------
+        u: displacement field 
+        horizon: peridynamic horizon 
+        nbr_lst: peridynamic neighbor list 
+        trv_lst: peridynamic traversal list 
+        cell_vol: volume of cells in peridynamic descritization 
+        mwi: weighted volume of each cell defined according to literature 
+    
+    output:
+    ------
+        theta : dilatation vector 
 
     """
     num_els = len(cell_vol)
@@ -30,7 +36,7 @@ def computeTheta(u, horizon, nbr_lst, trv_lst,cell_vol, cell_cent, mw, gamma, om
         omega = omega_fun(xi, horizon)
 
         cur_nbr_cell_vol = cell_vol[curr_nbr] #cn stands for curr_nbr
-        theta[i] = sum(3*omega*bnd_len*exten*cur_nbr_cell_vol/mw[i])
+        theta[i] = sum(dim*omega*bnd_len*exten*cur_nbr_cell_vol/mw[i])
 
     return theta
 
@@ -105,15 +111,13 @@ def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, 
 
     import timeit as tm
     start = tm.default_timer()
-    #specify material constants
-    #hard coded :(
 
     # Compose stiffness matrix
     num_els= len(cell_vol)
     dim = np.shape(cell_cent[0])[0]
     dof = num_els*dim
     K_naive = np.zeros((dof, dof), dtype=float)
-    small_val=1e-10 #purtub factor
+    small_val=1e-6 #purtub factor
     inv_small_val = 1.0/small_val
     
     for i in range(num_els):

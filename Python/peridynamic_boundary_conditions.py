@@ -2,7 +2,7 @@ from helper import *
 from fenics_mesh_tools import *
 
 
-def peridym_apply_bc(mesh, K, bc_type, bc_vals, force=-1e9):
+def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol):
     """
     the function applies a boundary conditions on the mesh provided
     BC type : Dirichlet(fixed, displacement), Neumann
@@ -79,7 +79,7 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, force=-1e9):
             node_cents = b[bb]
             print("applying foce dirichlet bc on %s nodes"%k)
             for i, nk in enumerate(node_ids):
-                rhs[nk*dim + 1] = bc_vals[bc_type[bb]] #hard coded negative y-axis force (denoted by 1)
+                rhs[nk*dim + 1] = bc_vals[bc_type[bb]]*cell_vol[nk] #hard coded negative y-axis force (denoted by 1)
                     #rhs has not yet bc applied to it
     #apply dirichlet bc 
     for bb in bound_name:

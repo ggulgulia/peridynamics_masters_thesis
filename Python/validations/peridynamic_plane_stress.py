@@ -7,14 +7,15 @@ import mshr
 import timeit as tm
 from peridynamic_infl_fun import *
 
-def solve_peridynamic_bar(delta_fact=2, material='steel', omega_fun=None):
+def solve_peridynamic_bar(horizon, m=mesh, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8):
     """
     solves the peridynamic bar with a specified load
 
     """
 
-    #m = rectangle_mesh(numptsX=20, numptsY=10)
-    m = rectangle_mesh_with_hole(npts=30)
+    print('horizon value: %4.3f\n'%horizon)
+    #m = rectangle_mesh(Point(0,0), Point(3,1), numptsX=20, numptsY=10)
+    #m = rectangle_mesh_with_hole(npts=npts)
     
     #establish the influence function 
     #omega_fun = unit_infl_fun
@@ -26,15 +27,14 @@ def solve_peridynamic_bar(delta_fact=2, material='steel', omega_fun=None):
     
     if material is 'steel':
         E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
-
-    horizon = delta_fact*m.hmax()
+ 
     nbr_lst, _, _, mw = peridym_get_neighbor_data(m, horizon, omega_fun)
     
     K = computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
     bc_type = {0:'dirichlet', 1:'force'}
-    bc_vals = {'dirichlet': 0, 'force': -5e8}
+    bc_vals = {'dirichlet': 0, 'force': force}
     
-    K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals)
+    K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals, cell_vol)
     
     print("solving the stystem")
     start = tm.default_timer()
@@ -51,16 +51,17 @@ def solve_peridynamic_bar(delta_fact=2, material='steel', omega_fun=None):
         u_disp = np.insert(u_disp, nk, np.zeros(dim, dtype=float), axis=0)
     
     disp_cent = cell_cent + u_disp
-    
-    x, y = cell_cent.T
-    plt.figure()
-    plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original configuration')
-    x,y = disp_cent.T
-    plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label='horizon='+str(horizon))
-    #plt.ylim(-0.5, 1.5)
-    plt.legend()
-    plt.title("influence function:"+str(omega_fun))
-    plt.show(block=False)
+
+    if plot_ is True: 
+        x, y = cell_cent.T
+        plt.figure()
+        plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original configuration')
+        x,y = (cell_cent + 20*u_disp).T
+        plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label='horizon='+str(horizon))
+        #plt.ylim(-0.5, 1.5)
+        plt.legend()
+        plt.title("influence function:"+str(omega_fun))
+        plt.show(block=False)
     
 
-    return K, K_bound, disp_cent
+    return K, K_bound, disp_cent, u_disp

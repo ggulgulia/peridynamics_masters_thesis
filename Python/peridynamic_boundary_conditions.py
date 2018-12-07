@@ -77,9 +77,11 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol):
         if bc_type[bb] is "force":
             node_ids   = a[bb][0]
             node_cents = b[bb]
+            vol_sum = sum(cell_vol[node_ids])
+            f_density = bc_vals[bc_type[bb]]/vol_sum #external force applied as force density
             print("applying foce dirichlet bc on %s nodes"%k)
             for i, nk in enumerate(node_ids):
-                rhs[nk*dim + 1] = bc_vals[bc_type[bb]]*cell_vol[nk] #hard coded negative y-axis force (denoted by 1)
+                rhs[nk*dim + 1] = f_density*cell_vol[nk]  #hard coded negative y-axis force 
                     #rhs has not yet bc applied to it
     #apply dirichlet bc 
     for bb in bound_name:

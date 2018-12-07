@@ -27,7 +27,7 @@ def plot_fenics_mesh(mesh, new_fig=True):
 
     pass
 
-def plot_peridym_mesh(mesh):
+def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
     """
     plots the mesh/centroids of mesh as is expected in peridynamics
 
@@ -47,14 +47,18 @@ def plot_peridym_mesh(mesh):
     if dim == 3:
         x,y,z = cell_cent.T
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(x,y,z, s=70, marker='o', color='c', alpha=1.0, edgecolors='face')
+        ax.scatter(x,y,z, s=70, marker='o', color='b', alpha=1.0, edgecolors='face')
         ax.axis('off')
     
     if dim == 2 : 
         x,y = cell_cent.T
-        ax = fig.add_subplot(111)
-        ax.scatter(x,y, s=50, marker='o', color='c', alpha=1.0, edgecolors='face')
-        ax.axis=('off')
+        plt.scatter(x,y, s=300, color='c', marker='o', alpha=0.8)
+        plt.axis=('off')
+
+    if annotate==True:
+        for idx, cc in enumerate(cell_cent):
+            plt.text(cc[0], cc[1],  str(idx), color='k', verticalalignment='bottom', horizontalalignment='right', fontsize='medium')
+
 
     plt.title("peridynamics mesh")
     plt.show(block=False)

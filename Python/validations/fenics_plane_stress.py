@@ -18,30 +18,41 @@ def get_displaced_cell_centroids(m, u_fe):
         u_disp: displacement vectors of each triangle 
     """
 
-    u_vect = np.array(u_fe.vector())
     cell_cent = get_cell_centroids(m)
     dim = np.shape(cell_cent)[1]
-    u_dim = np.reshape(u_vect,(m.num_vertices(),dim))
-
     u_disp = np.zeros((m.num_cells(), dim), dtype=float)
 
     for i, cell in enumerate(m.cells()):
-        u_disp[i] = sum(u_dim[cell])/(dim+1)
+        u_disp[i] = u_fe(cell_cent[i]) #this is expensive 
 
     disp_cent = cell_cent + u_disp
 
     return disp_cent, u_disp
 
 
-def solve_fenic_bar(npts=15, material='steel'):
+def solve_fenic_bar(mesh, npts=15, material='steel', plot_ = False, force=-5e8):
+    """
+    solves the case for a 2D steel plate loaded statically under various loads
+
+    input:
+    ------
+        mesh : FEniCS mesh
+        npts : number of discretization points for 2D plate with circular hole
+        material: 
+        plot_: boolean for showing plots of FE solution
+        force: value of force we want to apply
+
+    output:
+    -------
+        disp_cent : centroids of elements after FE solution
+        u_disp    : displacement of each centroid
+    """
     L = 3.
     H = 1.
     
-    mesh = rectangle_mesh_with_hole(npts=npts)
-    plt.figure()
-    plt.xlim(-0.5,3.5)
-    plt.ylim(-1,2)
-    plot(mesh)
+#   mesh = rectangle_mesh_with_hole(npts=npts)
+    #mesh = rectangle_mesh(Point(0,0), Point(3,1), numptsX=20, numptsY=10)
+
     
     def eps(v):
         return sym(grad(v))
@@ -111,9 +122,12 @@ def solve_fenic_bar(npts=15, material='steel'):
     
     disp_cent, u_disp = get_displaced_cell_centroids(mesh, u_fe) 
     
-    plot(20*u_fe, mode="displacement")
-    plt.xlim(-0.5,3.5)
-    plt.ylim(-1,2)
-    plt.show(block=False)
+    if plot_ is True:
+        plt.figure()
+        plot(mesh)
+        plot(20*u_fe, mode="displacement")
+        plt.xlim(-0.5,3.5)
+        plt.ylim(-0.6,1.5)
+        plt.show(block=False)
 
     return disp_cent, u_disp

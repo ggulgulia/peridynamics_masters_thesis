@@ -7,7 +7,7 @@ import mshr
 import timeit as tm
 from peridynamic_infl_fun import *
 
-def solve_peridynamic_bar(horizon, m=mesh, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8):
+def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8):
     """
     solves the peridynamic bar with a specified load
 
@@ -27,8 +27,11 @@ def solve_peridynamic_bar(horizon, m=mesh, npts=15, material='steel', omega_fun=
     
     if material is 'steel':
         E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
- 
-    nbr_lst, _, _, mw = peridym_get_neighbor_data(m, horizon, omega_fun)
+
+        if nbr_lst is None:
+            nbr_lst, _, _, mw = peridym_get_neighbor_data(m, horizon, omega_fun)
+        else:
+            mw = peridym_compute_weighted_volume(m, nbr_lst, horizon, omega_fun) 
     
     K = computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
     bc_type = {0:'dirichlet', 1:'force'}

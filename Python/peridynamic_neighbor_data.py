@@ -99,6 +99,32 @@ def peridym_compute_neighbors(mesh, horizon):
     return np.array(neighbor_lst)
 
 
+def peridym_compute_weighted_volume(mesh, nbr_lst, horizon, omega_fun):
+    """
+    computes the weighted volume of the peridynammic 
+    mesh based on influence function and horizon value
+    """
+    cell_cent = get_cell_centroids(mesh)
+    cell_vol = get_cell_volumes(mesh)
+
+    mw = np.zeros(len(cell_vol), dtype=float) #m is wighted volume
+
+    for i in range(len(cell_cent)):
+        curr_node_coord = cell_cent[i]
+        
+        #declare empty lists for current node neighbor
+        #attributes like neighbor bond vector, bond len,
+        #and influence field 
+        #refer ch5 algo1  of handbook of peridynamic modelling
+        #by silling etal 
+
+        curr_nbr_lst = nbr_lst[i] 
+        curr_nbr_bnd_vct = cell_cent[curr_nbr_lst] - curr_node_coord
+        curr_nbr_bnd_len = la.norm(curr_nbr_bnd_vct, 2, axis=1)
+        mw[i] = sum(omega_fun(curr_nbr_bnd_vct, horizon)*curr_nbr_bnd_len**2*cell_vol[curr_nbr_lst])
+
+    return mw
+
    
 def peridym_get_neighbor_data(mesh, horizon, omega_fun):
     """
@@ -125,13 +151,14 @@ def peridym_get_neighbor_data(mesh, horizon, omega_fun):
     nbr_lst = peridym_compute_neighbors(mesh, horizon)
     start = tm.default_timer()
     print("computing the remaining peridynamic neighbor data for the mesh with horizon: %4.2f" %horizon)
+
+    mw = peridym_compute_weighted_volume(mesh, nbr_lst, horizon, omega_fun)
     cell_cent = get_cell_centroids(mesh)
     cell_vol = get_cell_volumes(mesh)
 
     nbr_bnd_vector_lst = []
     nbr_bnd_len_lst = []
     nbr_infl_fld_lst = []
-    mw = np.zeros(len(cell_vol), dtype=float) #m is wighted volume
 
     for i in range(len(cell_cent)):
         curr_node_coord = cell_cent[i]
@@ -145,7 +172,6 @@ def peridym_get_neighbor_data(mesh, horizon, omega_fun):
         curr_nbr_lst = nbr_lst[i] 
         curr_nbr_bnd_vct = cell_cent[curr_nbr_lst] - curr_node_coord
         curr_nbr_bnd_len = la.norm(curr_nbr_bnd_vct, 2, axis=1)
-        mw[i] = sum(omega_fun(curr_nbr_bnd_vct, horizon)*curr_nbr_bnd_len**2*cell_vol[curr_nbr_lst])
 
         nbr_bnd_vector_lst.append(curr_nbr_bnd_vct)
         nbr_bnd_len_lst.append(curr_nbr_bnd_len)

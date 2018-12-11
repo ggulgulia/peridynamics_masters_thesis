@@ -111,7 +111,7 @@ def solve_fenic_bar(mesh, npts=15, material='steel', plot_ = False, force=-5e8):
     #l = inner(f, v)*dx  
     
     #Neumann Boundary condition for traction force
-    g = inner(Constant((0,-5e8)),v) #
+    g = inner(Constant((0,force)),v) #
     l = g*ds(5)
         
     #Applying bc and solving

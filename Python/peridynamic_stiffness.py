@@ -36,7 +36,7 @@ def computeTheta(u, horizon, nbr_lst, trv_lst,cell_vol, cell_cent, mw, gamma, om
         omega = omega_fun(xi, horizon)
 
         cur_nbr_cell_vol = cell_vol[curr_nbr] #cn stands for curr_nbr
-        theta[i] = sum(dim*omega*bnd_len*exten*cur_nbr_cell_vol/mw[i])
+        theta[i] = sum(3*omega*bnd_len*exten*cur_nbr_cell_vol/mw[i])
 
     return theta
 
@@ -132,8 +132,6 @@ def computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, 
             
             for dd in range(dim):
                 K_naive[dd::dim][:,dim*i+d] = (f_p[:,dd] - f_m[:,dd])*0.5*inv_small_val
-            #K_naive[0::dim][:,dim*i+d] = (f_p[:,0] - f_m[:,0])/(2*small_val)
-            #K_naive[1::dim][:,dim*i+d] = (f_p[:,1] - f_m[:,1])/(2*small_val)
     
     end = tm.default_timer()
     print("Time taken for the composition of tangent stiffness matrix seconds: %4.3f seconds\n" %(end-start))

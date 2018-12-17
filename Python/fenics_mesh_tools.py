@@ -73,6 +73,21 @@ def print_mesh_stats(mesh):
           "%(mesh.num_cells(), mesh.num_vertices(), mesh.hmax(), mesh.hmin()))
     pass
 
+def uniform_square_mesh(point1=(0.0, 0.0), point2=(2.0, 1.0), nptsX=20, nptsY=10):
+    """
+    returns a domain descricitized with square mesh 
+    """
+
+    dx = (point2[0] - point1[0])/(nptsX+1)
+    dy = (point2[1] - point1[1])/(nptsY+1)
+    cell_volume = dx*dy
+    #mesh = {}
+
+    #mesh['volum'] = volume
+    #mesh['centroid'] = centroids 
+
+    #return mesh
+
 def rectangle_mesh(point1=Point(0,0), point2=Point(2,1), numptsX=10, numptsY=5):
     """
     generates a triangulated Rectangular domain with a circular hole
@@ -89,12 +104,12 @@ def rectangle_mesh(point1=Point(0,0), point2=Point(2,1), numptsX=10, numptsY=5):
 
     """
 
-    mesh = RectangleMesh(point1, point2, numptsX, numptsY)
+    mesh = RectangleMesh(point1, point2, numptsX, numptsY, 'crossed')
     print_mesh_stats(mesh)
     
     return mesh
 
-def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(2,1), hole_cent=Point(1,0.5), 
+def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(3,1), hole_cent=Point(1.5,0.5), 
                                 hole_rad=0.25, npts=15):
     """
     generates a triangulated Rectangular domain with a circular hole
@@ -276,7 +291,7 @@ def get_peridym_mesh_bounds(mesh):
     num_els = mesh.num_cells()
 
     max_edge_len = mesh.hmax()
-    range_fact = 1.25*max_edge_len
+    range_fact = 1.5*max_edge_len
 
     bound_range = np.zeros(2*dim, dtype=float)
     bound_nodes = {} #dict to store the node numbers of centroids that lie within bound_range

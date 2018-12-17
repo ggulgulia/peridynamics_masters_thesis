@@ -108,7 +108,7 @@ def rectangle_mesh(point1=Point(0,0), point2=Point(2,1), numptsX=10, numptsY=5):
 
     """
 
-    mesh = RectangleMesh(point1, point2, numptsX, numptsY, 'crossed')
+    mesh = RectangleMesh(point1, point2, numptsX, numptsY )
     print_mesh_stats(mesh)
     
     return mesh
@@ -268,7 +268,7 @@ def get_domain_bounding_box(mesh):
         corner_min[d] = min(coords[:,d])
         corner_max[d] = max(coords[:,d])
     
-    return corner_min, corner_max
+    return np.vstack((corner_min, corner_max))
 
 def get_peridym_mesh_bounds(mesh):
     """

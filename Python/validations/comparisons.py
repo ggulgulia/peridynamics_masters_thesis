@@ -41,8 +41,8 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
         u_disp_PD_array[i]    = u_disp_i 
     
     flag = 799 #top right corner element of the bar that we wish to monitor
-    #top_els = np.arange(723, 803, 4, dtype=int) #centroids of all top elements
-    top_els = np.arange(1103, 1203, 4, dtype=int) #centroids of all top elements
+    top_els = np.arange(723, 803, 4, dtype=int) #centroids of all top elements
+    #top_els = np.arange(1103, 1203, 4, dtype=int) #centroids of all top elements
 
 
     u_top_fe = u_disp_FE[top_els]
@@ -56,7 +56,7 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
         plt.plot(cell_cent_top[:,0], u_disp_pd_top[:,1], linewidth=2.0, label='PD Solution, delta='+str(horizons[i]))
 
     plt.legend()
-    plt.title('displacement of top centroids')
+    plt.title('displacement of top centroids mesh size: %i, hmax: %4.4f, hmin: %4.4f'%(mesh.num_cells(), mesh.hmax(), mesh.hmin()))
     plt.show(block=False)
     plt.savefig('FE_vs_PD_displacements')
 

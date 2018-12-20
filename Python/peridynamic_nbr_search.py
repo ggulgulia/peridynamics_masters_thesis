@@ -10,39 +10,22 @@ class TreeNode:
 
     expecting the key to be a 2D array
     """
-    def __init__(self, cents, one=None, two=None, three=None, 
-                 four=None, extents=None):
+    def __init__(self, extents=None):
         self.end = True
         
-        if(one is not None):
-            self.one = TreeNode(one, extents = extents[0])
-            self.end = False
-        else:
-            self.one = one
+        if len(extents) == 4:
 
-        if(two is not None):
-            self.two = TreeNode(two, extents = extents[1])
+            self.one = TreeNode(extents[0])
+            self.two = TreeNode(extents[1])
+            self.three = TreeNode(extents[2])
+            self.four = TreeNode(extents[3])
             self.end = False
         else:
-            self.two = two 
-
-        if(three is not None):
-            self.three = TreeNode(three, extents = extents[2])
-            self.end = False
-        else:
-            self.three = three 
-        if(four is not None):
-            self.four = TreeNode(four, extents = extents[3])
-            self.end = False
-        else:
-            self.four = four
-
-        self.cents = None
-        self.extents = None
-        
-        if self.end == True:
-            self.cents = cents
             self.extents = extents
+            self.one = None 
+            self.two = None 
+            self.three = None
+            self.four = None 
 
     def hasOneChild(self):
         return (self.one)
@@ -65,7 +48,6 @@ class QuadTree:
 
     def __init__(self):
         self.root = None
-        self.coords = None 
         self.depth = 0
         self.horizon = 0.0 
         self.extents = None
@@ -79,7 +61,7 @@ class QuadTree:
     def __iter__(self):
         return self.root.__iter__()
 
-    def compute_sub_domains(self, coords, extents, horizon):
+    def compute_sub_domains(self, extents, horizon):
         """
         computes the four nodes of the quad tree
         taking the horizon into account as the ghost layer 
@@ -106,61 +88,36 @@ class QuadTree:
         extents[0] = extent1; extents[1] = extent2;
         extents[2] = extent3; extents[3] = extent4 
 
-        k = 1.1
-        # divide along x-axis 
-        rr_id = np.where(coords[:,0] >= midX)
-        ll_id = np.where(coords[:,0] <= midX)
-        rr = coords[rr_id]
-        ll = coords[ll_id]
 
-        #divide along y-axis
-        one_id   = np.where(rr[:,1] >= midY)
-        two_id   = np.where(ll[:,1] >= midY)
-        three_id = np.where(rr[:,1] <= midY)
-        four_id  = np.where(ll[:,1] <= midY)
+        return extents
 
-        one   = rr[one_id];   two  = ll[two_id]
-        three = rr[three_id]; four = ll[four_id]
-
-        return one, two, three, four, extents
-
-    def put(self, coords, extents, horizon):
+    def put(self, extents, horizon):
 
         #while((0.5*np.sum(extents,axis=0) > 1.1*horizon).all()):
         while(True):
             if self.root:
-                self._put(self.root, self.root.extents, horizon)
+                self._put(self.root, horizon)
                 self.depth += 1
             else:
-                self.extents = extents
-                self.coords = coords
-                one, two, three, four, extents = self.compute_sub_domains(coords, extents, horizon)
-                self.root = TreeNode(coords, one, two, three, four, extents)
-                self.depth  += 1
+                self.root = TreeNode(extents)
     
-    def _put(self, currNode, extents, horizon):
+    def _put(self, currNod, horizon):
 
-        if(currNode.hasOneChild()):
-            self._put(currNode.one, currNode.one.extents, horizon)
+        if(currNode.end==False):
+            self._put(currNode.one, horizon)
+            self._put(currNode.two, horizon)
+            self._put(currNode.three, horizon)
+            self._put(currNode.four, horizon)
         else:
-            sub11, sub21, sub31, sub41, extents1 = self.compute_sub_domains(currNode.cents, extents, horizon)
-            currNode.one   = TreeNode(currNode.cents, sub11, sub21, sub31, sub41, extents1)
+             ee = currNode.extents
+             ll = sqrt((ee[0][0]-ee[1][0])**2 + (ee[0][1]-ee[1][1])**2)
+             if(ll< horizon):
+                extents1 = self.compute_sub_domains(currNode.extents, horizon)
+                currNode.one   = TreeNode(extents1[0])
+                currNod.two    = TreeNode(extents1[1])
+                currNode.three = TreeNode(extents1[2])
+                currNode.four  = TreeNode(extents1[3])
+                currNode.end = False
+             else:
+                 break
         
-        if(currNode.hasTwoChild()):
-            self._put(currNode.two, currNode.two.extents, horizon)
-        else:
-            sub12, sub22, sub32, sub42, extents2 = self.compute_sub_domains(currNode.cents, extents, horizon)
-            currNode.two   = TreeNode(currNode.cents, sub12, sub22, sub32, sub42, extents2)
-        
-        if(currNode.hasThreeChild()):
-            self._put(currNode.three, currNode.three.extents, horizon)
-        else:
-            sub13, sub23, sub33, sub43, extents3 = self.compute_sub_domains(currNode.cents, extents, horizon)
-            currNode.three = TreeNode(currNode.cents, sub13, sub23, sub33, sub43, extents3)
-        
-        if(currNode.hasFourChild()):
-            self._put(currNode.four, currNode.four.extents, horizon)
-        else:
-            sub14, sub24, sub34, sub44, extents4 = self.compute_sub_domains(currNode.cents, extents, horizon)
-            currNode.four  = TreeNode(currNode.cents, sub14, sub24, sub34, sub44, extents4)
-

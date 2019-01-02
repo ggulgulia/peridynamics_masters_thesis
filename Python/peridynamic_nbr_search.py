@@ -13,25 +13,8 @@ class TreeNode:
     def __init__(self, extents=None):
         self.end = True
         self.leaves = []
-        
-        dim = len(extents[0])
-        num_leaves = int(2**dim)
+        self.extents = extents
 
-        if len(extents) == num_leaves:
-            for i in range(num_leavs):
-                self.leaves.append(TreeNode(extents[i]))
-        else:
-            self.extents = extents
-
-    def hasOneChild(self):
-        return (self.leaves[0])
-    def hasTwoChild(self):
-        return (self.leaves[1])
-    def hasThreeChild(self):
-        return (self.leaves[2])
-    def hasFourChild(self):
-        return (self.leaves[3])
-    
 
 class QuadTree:
 
@@ -46,6 +29,7 @@ class QuadTree:
         self.root = None
         self.depth = 0
         self.horizon = 0.0 
+        self.dim = None
 
     def depth(self):
         return self.depth
@@ -68,7 +52,6 @@ class QuadTree:
         midPoint = 0.5*sum(extents[:,])
         midVer = np.row_stack(np.broadcast(midPoint[0], extents[:,1]))
         midHor = np.row_stack(np.broadcast(extents[:,0], midPoint[1]))
-
 
         extents_new = np.zeros((num_leaves,2,dim), dtype=float)
         extents_new[0] = np.vstack((midPoint, extents[1]))
@@ -138,6 +121,8 @@ class QuadTree:
         num_leaves = 2**dim
         #el: edge_length
         el = min(abs(extents[0] - extents[1]))
+        self.horizon = horizon
+        self.dim = dim
 
         while(el > horizon):
             if self.root:
@@ -160,5 +145,4 @@ class QuadTree:
                 currNode.leaves.append(TreeNode(extents1[i]))
 
             currNode.end = False
-
 

@@ -91,17 +91,38 @@ class QuadTree:
 
         return extents
 
+    def iterate_quad_tree(self, currNode, depth):
+        extents = np.zeros((4**depth,2,2), dtype=float)
+        self._iterate(currNode, depth, extents)
+
+        return extents
+
+    def _iterate(self, currNode, depth, extent_array):
+
+        if(currNode.end==True):
+            extent_array[:] = currNode.extents
+        else:
+            size = int(4**(depth-1))
+            self._iterate(currNode.one, depth-1, extent_array[0:size])
+            self._iterate(currNode.two, depth-1, extent_array[size:2*size])
+            self._iterate(currNode.three, depth-1, extent_array[2*size:3*size])
+            self._iterate(currNode.four, depth-1, extent_array[3*size:])
+
     def put(self, extents, horizon):
 
+        el = abs(extents[0][0] - extents[1][0])
         #while((0.5*np.sum(extents,axis=0) > 1.1*horizon).all()):
-        while(True):
+        while(el > horizon):
             if self.root:
                 self._put(self.root, horizon)
                 self.depth += 1
+                ee_array = self.iterate_quad_tree(self.root, self.depth)
+                ee = ee_array[0]
+                el = abs(ee[0][0] - ee[1][0])
             else:
                 self.root = TreeNode(extents)
     
-    def _put(self, currNod, horizon):
+    def _put(self, currNode, horizon):
 
         if(currNode.end==False):
             self._put(currNode.one, horizon)
@@ -111,13 +132,10 @@ class QuadTree:
         else:
              ee = currNode.extents
              ll = sqrt((ee[0][0]-ee[1][0])**2 + (ee[0][1]-ee[1][1])**2)
-             if(ll< horizon):
-                extents1 = self.compute_sub_domains(currNode.extents, horizon)
-                currNode.one   = TreeNode(extents1[0])
-                currNod.two    = TreeNode(extents1[1])
+             if(ll> horizon): 
+                extents1 = self.compute_sub_domains(currNode.extents, horizon) 
+                currNode.one   = TreeNode(extents1[0]) 
+                currNode.two    = TreeNode(extents1[1]) 
                 currNode.three = TreeNode(extents1[2])
                 currNode.four  = TreeNode(extents1[3])
                 currNode.end = False
-             else:
-                 break
-        

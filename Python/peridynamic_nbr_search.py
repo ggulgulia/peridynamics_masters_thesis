@@ -62,68 +62,103 @@ class QuadTree:
         taking the horizon into account as the ghost layer 
         of each node in the quad tree 
         """
-        midX = 0.5*sum(extents[:,0])
-        midY = 0.5*sum(extents[:,1])
+        dim = len(extents[0])
+        num_leaves = 2**dim
+
+        midPoint = 0.5*sum(extents[:,])
+        midVer = np.row_stack(np.broadcast(midPoint[0], extents[:,1]))
+        midHor = np.row_stack(np.broadcast(extents[:,0], midPoint[1]))
+
+
+        extents_new = np.zeros((num_leaves,2,dim), dtype=float)
+        extents_new[0] = np.vstack((midPoint, extents[1]))
+        extents_new[1] = np.vstack((midHor[0], midVer[1]))
+        extents_new[2] = np.vstack((midVer[0], midHor[1]))
+        extents_new[3] = np.vstack((extents[0], midPoint))
+
+        return extents_new
+
+    def iterate_quad_tree(self, currNode, depth, dim):
+        """
+        public member function that iterates down the tree from
+        currNode till depth provided to it. 
         
-        midXBottom = np.array((midX, extents[0][1]))
-        midXTop    = np.array((midX, extents[1][1]))
-        midYLeft   = np.array((extents[0][0], midY))
-        midYRight  = np.array((extents[1][0], midY))
-        midPoint   = np.array((midX, midY))
+        If the depth exceeds the valid depth from currNode, 
+        then the function returns the extents till the valid 
+        depth down the currNode 
 
-        extentL = np.vstack((extents[0], midXTop))
-        extentR = np.vstack((midXBottom, extents[1]))
+        For 2D this is a Quadtree and for 3D the tree is an
+        Octree
+        
+        input:
+        -----
+            self:
+            currNode: TreeNode at an arbitrary level
+            depth:    Depth that needs to be traversed
+            dim:      Dimension of the problem
 
-        extent1 = np.vstack((midPoint, extents[1]))
-        extent2 = np.vstack((midYLeft, midXTop))
-        extent3 = np.vstack((midXBottom, midYRight))
-        extent4 = np.vstack((extents[0], midPoint))
-
-        extents = np.zeros((4,2,2), dtype=float)
-        extents[0] = extent1; extents[1] = extent2;
-        extents[2] = extent3; extents[3] = extent4 
-
-
-        return extents
-
-    def iterate_quad_tree(self, currNode, depth):
-        extents = np.zeros((4**depth,2,2), dtype=float)
-        self._iterate(currNode, depth, extents)
+        """
+        num_leaves = 2**dim
+        extents = np.zeros((num_leaves**depth,2,dim), dtype=float)
+        self._iterate(currNode, depth, extents, num_leaves)
 
         return extents
 
-    def _iterate(self, currNode, depth, extent_array):
+    def _iterate(self, currNode, depth, extent_array, num_leaves):
 
+        """
+        private member function that is internally called by iterate_quad_tree
+        method 
+
+        """
         if(currNode.end==True):
             extent_array[:] = currNode.extents
         else:
-            size = int(4**(depth-1))
+            size = int(num_leaves**(depth-1))
             for i in range(4):
-                self._iterate(currNode.leaves[i], depth-1, extent_array[int(i*size):int((i+1)*size)])
+                self._iterate(currNode.leaves[i], depth-1, extent_array[int(i*size):int((i+1)*size)], num_leaves)
 
     def put(self, extents, horizon):
 
-        el = abs(extents[0][0] - extents[1][0])
+        """
+        public method that recursively decomposes a rectangle domain
+        and adds tree node child to the tree root until the child subomain
+        edge length is less than or equal to horizon
+
+        input:
+        ------
+            self:
+            extents: extents of bounding box
+            horizon: peridynamic horizon
+        output:
+        ------
+            None
+        """
+        dim = len(extents[0])
+        num_leaves = 2**dim
+        #el: edge_length
+        el = min(abs(extents[0] - extents[1]))
+
         while(el > horizon):
             if self.root:
-                self._put(self.root, horizon)
+                self._put(self.root, horizon, num_leaves)
                 self.depth += 1
-                ee_array = self.iterate_quad_tree(self.root, self.depth)
-                ee = ee_array[0]
-                el = abs(ee[0][0] - ee[1][0])
+                ext_arry = self.iterate_quad_tree(self.root, self.depth, dim)
+                ee = ext_arry[0]
+                el = abs(min(ee[0] - ee[1]))
             else:
                 self.root = TreeNode(extents)
     
-    def _put(self, currNode, horizon):
+    def _put(self, currNode, horizon, num_leaves):
 
         if(currNode.end==False):
-
-            for i in range(4):
-                self._put(currNode.leaves[i], horizon)
+            for i in range(num_leaves):
+                self._put(currNode.leaves[i], horizon, num_leaves)
         else:
             extents1 = self.compute_sub_domains(currNode.extents, horizon) 
-
-            for i in range(4):
+            for i in range(num_leaves):
                 currNode.leaves.append(TreeNode(extents1[i]))
 
             currNode.end = False
+
+

@@ -12,29 +12,25 @@ class TreeNode:
     """
     def __init__(self, extents=None):
         self.end = True
+        self.leaves = []
         
-        if len(extents) == 4:
+        dim = len(extents[0])
+        num_leaves = int(2**dim)
 
-            self.one = TreeNode(extents[0])
-            self.two = TreeNode(extents[1])
-            self.three = TreeNode(extents[2])
-            self.four = TreeNode(extents[3])
-            self.end = False
+        if len(extents) == num_leaves:
+            for i in range(num_leavs):
+                self.leaves.append(TreeNode(extents[i]))
         else:
             self.extents = extents
-            self.one = None 
-            self.two = None 
-            self.three = None
-            self.four = None 
 
     def hasOneChild(self):
-        return (self.one)
+        return (self.leaves[0])
     def hasTwoChild(self):
-        return (self.two)
+        return (self.leaves[1])
     def hasThreeChild(self):
-        return (self.three)
+        return (self.leaves[2])
     def hasFourChild(self):
-        return (self.four)
+        return (self.leaves[3])
     
 
 class QuadTree:
@@ -50,7 +46,6 @@ class QuadTree:
         self.root = None
         self.depth = 0
         self.horizon = 0.0 
-        self.extents = None
 
     def depth(self):
         return self.depth
@@ -103,15 +98,12 @@ class QuadTree:
             extent_array[:] = currNode.extents
         else:
             size = int(4**(depth-1))
-            self._iterate(currNode.one, depth-1, extent_array[0:size])
-            self._iterate(currNode.two, depth-1, extent_array[size:2*size])
-            self._iterate(currNode.three, depth-1, extent_array[2*size:3*size])
-            self._iterate(currNode.four, depth-1, extent_array[3*size:])
+            for i in range(4):
+                self._iterate(currNode.leaves[i], depth-1, extent_array[int(i*size):int((i+1)*size)])
 
     def put(self, extents, horizon):
 
         el = abs(extents[0][0] - extents[1][0])
-        #while((0.5*np.sum(extents,axis=0) > 1.1*horizon).all()):
         while(el > horizon):
             if self.root:
                 self._put(self.root, horizon)
@@ -125,17 +117,13 @@ class QuadTree:
     def _put(self, currNode, horizon):
 
         if(currNode.end==False):
-            self._put(currNode.one, horizon)
-            self._put(currNode.two, horizon)
-            self._put(currNode.three, horizon)
-            self._put(currNode.four, horizon)
+
+            for i in range(4):
+                self._put(currNode.leaves[i], horizon)
         else:
-             ee = currNode.extents
-             ll = sqrt((ee[0][0]-ee[1][0])**2 + (ee[0][1]-ee[1][1])**2)
-             if(ll> horizon): 
-                extents1 = self.compute_sub_domains(currNode.extents, horizon) 
-                currNode.one   = TreeNode(extents1[0]) 
-                currNode.two    = TreeNode(extents1[1]) 
-                currNode.three = TreeNode(extents1[2])
-                currNode.four  = TreeNode(extents1[3])
-                currNode.end = False
+            extents1 = self.compute_sub_domains(currNode.extents, horizon) 
+
+            for i in range(4):
+                currNode.leaves.append(TreeNode(extents1[i]))
+
+            currNode.end = False

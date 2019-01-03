@@ -16,6 +16,9 @@ class TreeNode:
         self.extents = extents
         self.level = level
         self.location_code=None
+        self.nx = None 
+        self.ny = None
+        self.bin_code = None
         self.is_boundary=None
 
 
@@ -190,17 +193,19 @@ class QuadTree:
         location_code = str(0).zfill(tree_depth)
         root = self.root 
         root.location_code = str(0) #root is always zero
+        nx = location_code 
+        ny = location_code 
         bounding_box = root.extents
         root.is_boundary = True
 
         num_leaves = len(root.leaves)
         for i in range(num_leaves):
             self._organize_tree_nodes(root.leaves[i], tree_depth, i, 
-                                     location_code, bounding_box)
+                                     location_code, nx, ny, bounding_box)
 
 
     def _organize_tree_nodes(self, currNode, tree_depth, sibling_index, 
-                             location_code, bounding_box):
+                             location_code, nx, ny, bounding_box):
         """
         private method that is called by public method
         organize_tree_nodes and recursively organizes 
@@ -210,21 +215,52 @@ class QuadTree:
         input:
         -----
             self:
-            currNode:       TreeNode member
+            currNode:   TreeNode member
             tree_depth:     
             sibling_index:  
         """
         level = currNode.level 
         num_leaves = len(currNode.leaves)
         currNode.location_code = self._mutate_string_at(location_code, sibling_index, level-1)
+
+        if(sibling_index == 0):
+            currNode.nx = nx 
+            currNode.ny = ny 
+
+        if(sibling_index == 1):
+            currNode.nx = self._mutate_string_at(nx, 1, level-1)
+            currNode.ny = ny 
+
+        if(sibling_index == 2):
+            currNode.nx = nx
+            currNode.ny = self._mutate_string_at(ny, 1, level-1)
+
+        if(sibling_index == 3):
+            currNode.nx = self._mutate_string_at(nx, 1, level-1)
+            currNode.ny = self._mutate_string_at(ny, 1, level-1)
+        
         location_code = currNode.location_code
+        nx = currNode.nx
+        ny = currNode.ny; 
         currNode.is_boundary = (bounding_box == currNode.extents).any()
+        
         if(currNode.end==False):
             for i in range(num_leaves):
                 self._organize_tree_nodes(currNode.leaves[i], tree_depth, i, 
-                                          location_code, bounding_box)
+                                          location_code, nx, ny, bounding_box )
         else:
             return
+
+    def organize_node_nbrs(self):
+        """
+        public method that collects immediate 
+        neighbor extents for each node in the tree
+
+        in 2D there can be upto 8 neighbors
+        in 3D there can be upto 26 neighbors
+        in ND there can be up to 3^N-1 neighbors
+        """
+
 
 
 

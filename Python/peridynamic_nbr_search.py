@@ -148,6 +148,21 @@ class QuadTree:
 
             currNode.end = False
 
+    def _mutate_string_at(self, location_code, new_loc, at_loc):
+        """
+        private helper function to mutate the location_code 
+        of a node at a given level 
+    
+        input:
+        ------
+            location_code: string 
+            new_loc      : single digit int, new location code
+            at_loc:      : single digit int indicating where in 
+                           location_code the new_loc goes
+        """ 
+        str_list = list(location_code)
+        str_list[at_loc] = str(new_loc)
+
     def organize_tree_nodes(self):
         """
         public method that organizes additional 
@@ -176,21 +191,6 @@ class QuadTree:
         num_leaves = len(root.leaves)
         for i in range(num_leaves):
             self._organize_tree_nodes(root.leaves[i], tree_depth, i, location_code)
-
-    def _mutate_string_at(self, location_code, new_loc, at_loc):
-        """
-        private helper function to mutate the location_code 
-        of a node at a given level 
-    
-        input:
-        ------
-            location_code: string 
-            new_loc      : single digit int, new location code
-            at_loc:      : single digit int indicating where in 
-                           location_code the new_loc goes
-        """ 
-        str_list = list(location_code)
-        str_list[at_loc] = str(new_loc)
 
         return ''.join(str_list)
 

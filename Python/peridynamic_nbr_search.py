@@ -10,10 +10,12 @@ class TreeNode:
 
     expecting the key to be a 2D array
     """
-    def __init__(self, extents=None):
+    def __init__(self, extents=None, level=None):
         self.end = True
         self.leaves = []
         self.extents = extents
+        self.level = level
+        self.location_code=None
 
 
 class QuadTree:
@@ -126,23 +128,95 @@ class QuadTree:
 
         while(el > horizon):
             if self.root:
-                self._put(self.root, horizon, num_leaves)
+                self._put(self.root, horizon, num_leaves, self.depth+1)
                 self.depth += 1
                 ext_arry = self.iterate_quad_tree(self.root, self.depth, dim)
                 ee = ext_arry[0]
                 el = abs(min(ee[0] - ee[1]))
             else:
-                self.root = TreeNode(extents)
+                self.root = TreeNode(extents, 0)
     
-    def _put(self, currNode, horizon, num_leaves):
+    def _put(self, currNode, horizon, num_leaves, depth):
 
         if(currNode.end==False):
             for i in range(num_leaves):
-                self._put(currNode.leaves[i], horizon, num_leaves)
+                self._put(currNode.leaves[i], horizon, num_leaves, depth)
         else:
             extents1 = self.compute_sub_domains(currNode.extents, horizon) 
             for i in range(num_leaves):
-                currNode.leaves.append(TreeNode(extents1[i]))
+                currNode.leaves.append(TreeNode(extents1[i], depth))
 
             currNode.end = False
+
+    def organize_tree_nodes(self):
+        """
+        public method that organizes additional 
+        structure in the tree nodes starting at root
+        till its depth as described
+        in the paper : Constant Time Neighbor Finding 
+        in Quadtrees by Aizwa et al
+
+        this method makes a call to private method
+        with its root node and corresponding sibling 
+        index which is zero for all root
+
+        input:
+        ------
+            NONE
+        output:
+        ------
+            NONE
+        """
+
+        tree_depth = self.depth
+        location_code = str(0).zfill(tree_depth)
+        root = self.root 
+        root.location_code = str(0) #root is always zero
+
+        num_leaves = len(root.leaves)
+        for i in range(num_leaves):
+            self._organize_tree_nodes(root.leaves[i], tree_depth, i, location_code)
+
+    def _mutate_string_at(self, location_code, new_loc, at_loc):
+        """
+        private helper function to mutate the location_code 
+        of a node at a given level 
+    
+        input:
+        ------
+            location_code: string 
+            new_loc      : single digit int, new location code
+            at_loc:      : single digit int indicating where in 
+                           location_code the new_loc goes
+        """ 
+        str_list = list(location_code)
+        str_list[at_loc] = str(new_loc)
+
+        return ''.join(str_list)
+
+    def _organize_tree_nodes(self, currNode, tree_depth, sibling_index, location_code):
+        """
+        private method that is called by public method
+        organize_tree_nodes and recursively organizes 
+        the TreeNode member variable location_code
+        at each level of the tree
+
+        input:
+        -----
+            self:
+            currNode:       TreeNode member
+            tree_depth:     
+            sibling_index:  
+        """
+        level = currNode.level 
+        num_leaves = len(currNode.leaves)
+        currNode.location_code = self._mutate_string_at(location_code, sibling_index, level-1)
+        location_code = currNode.location_code
+        if(currNode.end==False):
+            for i in range(num_leaves):
+                self._organize_tree_nodes(currNode.leaves[i], tree_depth, i, location_code)
+        else:
+            return
+
+
 

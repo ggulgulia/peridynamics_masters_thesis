@@ -94,11 +94,11 @@ class QuadTree:
         method 
 
         """
-        if(currNode.end==True):
+        if(depth==0):
             extent_array[:] = currNode.extents
         else:
             size = int(num_leaves**(depth-1))
-            for i in range(4):
+            for i in range(num_leaves):
                 self._iterate(currNode.leaves[i], depth-1, extent_array[int(i*size):int((i+1)*size)], num_leaves)
 
     def put(self, extents, horizon):

@@ -16,6 +16,7 @@ class TreeNode:
         self.extents = extents
         self.level = level
         self.location_code=None
+        self.is_boundary=None
 
 
 class QuadTree:
@@ -162,6 +163,8 @@ class QuadTree:
         """ 
         str_list = list(location_code)
         str_list[at_loc] = str(new_loc)
+        
+        return ''.join(str_list)
 
     def organize_tree_nodes(self):
         """
@@ -187,14 +190,17 @@ class QuadTree:
         location_code = str(0).zfill(tree_depth)
         root = self.root 
         root.location_code = str(0) #root is always zero
+        bounding_box = root.extents
+        root.is_boundary = True
 
         num_leaves = len(root.leaves)
         for i in range(num_leaves):
-            self._organize_tree_nodes(root.leaves[i], tree_depth, i, location_code)
+            self._organize_tree_nodes(root.leaves[i], tree_depth, i, 
+                                     location_code, bounding_box)
 
-        return ''.join(str_list)
 
-    def _organize_tree_nodes(self, currNode, tree_depth, sibling_index, location_code):
+    def _organize_tree_nodes(self, currNode, tree_depth, sibling_index, 
+                             location_code, bounding_box):
         """
         private method that is called by public method
         organize_tree_nodes and recursively organizes 
@@ -212,9 +218,11 @@ class QuadTree:
         num_leaves = len(currNode.leaves)
         currNode.location_code = self._mutate_string_at(location_code, sibling_index, level-1)
         location_code = currNode.location_code
+        currNode.is_boundary = (bounding_box == currNode.extents).any()
         if(currNode.end==False):
             for i in range(num_leaves):
-                self._organize_tree_nodes(currNode.leaves[i], tree_depth, i, location_code)
+                self._organize_tree_nodes(currNode.leaves[i], tree_depth, i, 
+                                          location_code, bounding_box)
         else:
             return
 

@@ -15,10 +15,10 @@ class TreeNode:
         self.leaves = []
         self.extents = extents
         self.level = level
-        self.location_code=None
+        self.loc_code=None
         self.nx = None 
         self.ny = None
-        self.bin_code = None
+        self.bin_loc_code = None
         self.is_boundary=None
 
 
@@ -40,11 +40,6 @@ class QuadTree:
     def depth(self):
         return self.depth
 
-    def __depth__(self):
-        return self.depth
-
-    def __iter__(self):
-        return self.root.__iter__()
 
     def compute_sub_domains(self, extents, horizon):
         """
@@ -139,6 +134,9 @@ class QuadTree:
                 el = abs(min(ee[0] - ee[1]))
             else:
                 self.root = TreeNode(extents, 0)
+
+        self.organize_tree_nodes()
+        return
     
     def _put(self, currNode, horizon, num_leaves, depth):
 
@@ -151,23 +149,47 @@ class QuadTree:
                 currNode.leaves.append(TreeNode(extents1[i], depth))
 
             currNode.end = False
+        return
 
-    def _mutate_string_at(self, location_code, new_loc, at_loc):
+
+    def _assign_node_loc(self, loc_code, new_loc, at_loc):
         """
         private helper function to mutate the location_code 
         of a node at a given level 
     
         input:
         ------
-            location_code: string 
+            loc_code: string 
             new_loc      : single digit int, new location code
             at_loc:      : single digit int indicating where in 
                            location_code the new_loc goes
         """ 
-        str_list = list(location_code)
+        str_list = list(loc_code)
         str_list[at_loc] = str(new_loc)
         
         return ''.join(str_list)
+
+
+    def _assign_bin_loc_code(self, treeNode):
+        """
+        private method accessd by _organize_tree_nodes
+
+        creates the binary location code by combining 
+        nx and ny. Refer to page 2 of Constant Time Neighbor
+        Finding by Aizawa et. al. 
+
+        """
+        assert(len(treeNode.nx)==len(treeNode.ny))
+        ll = len(treeNode.nx)
+        lst1 = list(treeNode.nx); lst2 = list(treeNode.ny);
+        bin_loc_code = []
+        for i in range(ll):
+            bin_loc_code.append(lst2[i])
+            bin_loc_code.append(lst1[i])
+        
+        treeNode.bin_loc_code =  ''.join(bin_loc_code)
+        return
+
 
     def organize_tree_nodes(self):
         """
@@ -175,7 +197,7 @@ class QuadTree:
         structure in the tree nodes starting at root
         till its depth as described
         in the paper : Constant Time Neighbor Finding 
-        in Quadtrees by Aizwa et al
+        in Quadtrees by Aizawa et. al.
 
         this method makes a call to private method
         with its root node and corresponding sibling 
@@ -190,68 +212,77 @@ class QuadTree:
         """
 
         tree_depth = self.depth
-        location_code = str(0).zfill(tree_depth)
+        loc_code = str(0).zfill(tree_depth)
         root = self.root 
-        root.location_code = str(0) #root is always zero
-        nx = location_code 
-        ny = location_code 
+        root.loc_code = str(0) #root is always zero
+        nx = loc_code 
+        ny = loc_code 
         bounding_box = root.extents
         root.is_boundary = True
 
         num_leaves = len(root.leaves)
         for i in range(num_leaves):
-            self._organize_tree_nodes(root.leaves[i], tree_depth, i, 
-                                     location_code, nx, ny, bounding_box)
+            self._organize_tree_nodes(root.leaves[i], i, 
+                                     loc_code, nx, ny, bounding_box)
 
 
-    def _organize_tree_nodes(self, currNode, tree_depth, sibling_index, 
-                             location_code, nx, ny, bounding_box):
+    def _organize_tree_nodes(self, currNode, sibInd, 
+                             loc_code, nx, ny, bounding_box):
         """
         private method that is called by public method
         organize_tree_nodes and recursively organizes 
         the TreeNode member variable location_code
-        at each level of the tree
+        at each level of the tree. 
+
+        For more details on naming conventions for inputs 
+        to the function refer to paper: Constant Time Neighbor
+        Search in Quad tree by Aizawa et. al.
 
         input:
         -----
             self:
-            currNode:   TreeNode member
-            tree_depth:     
-            sibling_index:  
+            currNode: TreeNode object, (grand..) child of root
+            sibInd:   int, refers to the one of the four child of its ancestor
+            loc_code: str, quartenary location code, num of chars = depth
+            nx      : str, binary location code in x direction
+            ny      : str, binary location code in y direction
+            bounding_box: extents of the bounding box
         """
+
         level = currNode.level 
         num_leaves = len(currNode.leaves)
-        currNode.location_code = self._mutate_string_at(location_code, sibling_index, level-1)
+        currNode.loc_code = self._assign_node_loc(loc_code, sibInd, level-1)
 
-        if(sibling_index == 0):
+        if(sibInd == 0):
             currNode.nx = nx 
             currNode.ny = ny 
 
-        if(sibling_index == 1):
-            currNode.nx = self._mutate_string_at(nx, 1, level-1)
+        if(sibInd == 1):
+            currNode.nx = self._assign_node_loc(nx, 1, level-1)
             currNode.ny = ny 
 
-        if(sibling_index == 2):
+        if(sibInd == 2):
             currNode.nx = nx
-            currNode.ny = self._mutate_string_at(ny, 1, level-1)
+            currNode.ny = self._assign_node_loc(ny, 1, level-1)
 
-        if(sibling_index == 3):
-            currNode.nx = self._mutate_string_at(nx, 1, level-1)
-            currNode.ny = self._mutate_string_at(ny, 1, level-1)
+        if(sibInd == 3):
+            currNode.nx = self._assign_node_loc(nx, 1, level-1)
+            currNode.ny = self._assign_node_loc(ny, 1, level-1)
         
-        location_code = currNode.location_code
+        self._assign_bin_loc_code(currNode)
+        loc_code = currNode.loc_code
         nx = currNode.nx
         ny = currNode.ny; 
         currNode.is_boundary = (bounding_box == currNode.extents).any()
         
         if(currNode.end==False):
             for i in range(num_leaves):
-                self._organize_tree_nodes(currNode.leaves[i], tree_depth, i, 
-                                          location_code, nx, ny, bounding_box )
+                self._organize_tree_nodes(currNode.leaves[i], i, 
+                                          loc_code, nx, ny, bounding_box )
         else:
             return
 
-    def organize_node_nbrs(self):
+    def get_linear_tree(self):
         """
         public method that collects immediate 
         neighbor extents for each node in the tree
@@ -259,8 +290,12 @@ class QuadTree:
         in 2D there can be upto 8 neighbors
         in 3D there can be upto 26 neighbors
         in ND there can be up to 3^N-1 neighbors
+        
+        TODO: implement
         """
+        linear_tree = []
 
+        return linear_tree
 
 
 

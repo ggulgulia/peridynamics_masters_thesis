@@ -312,14 +312,14 @@ def find_one_nbr(nq, delNi):
 
     tx = ['0','1']; ty = ['1', '0']
     dim = 2 #hard coded :(
-    depth = len(nq)/dim
+    depth = int(len(nq)/dim)
     
     tx = ''.join(tx*depth)
     ty = ''.join(ty*depth)
     nbr_int = (((int(nq,2)|int(tx,2))+(int(delNi,2)&int(ty,2)))&int(ty,2))|(((int(nq,2)|int(ty,2))+(int(delNi,2)&int(tx,2)))&int(tx,2))
-    nbr_bin = bin(nbr)
+    nbr_bin = bin(nbr_int)[2:].zfill(len(nq))
 
-    return nbr_int, nbr_bin[2:]
+    return nbr_int, nbr_bin
 
 def get_binary_direction(dir1, dir2):
     """
@@ -368,8 +368,9 @@ def find_all_nbrs(nq):
     TODO: generalize for 3D 
 
     """
-    dim = 2; ll = len(nq)
-    depth = int(len(nq)/ll)
+    dim = 2
+    ll = len(nq)
+    depth = int(ll/dim)
     east =  ['0', '1']
     north = ['1', '0']
 
@@ -383,10 +384,10 @@ def find_all_nbrs(nq):
     NN = ''.join(north)
     SS = ''.join(south)
     
-    SW = get_binary_direction(SS, WW, ll)
-    SE = get_binary_direction(SS, EE, ll)
-    NW = get_binary_direction(NN, WW, ll)
-    NE = get_binary_direction(NN, EE, ll)
+    SW = get_binary_direction(SS, WW)
+    SE = get_binary_direction(SS, EE)
+    NW = get_binary_direction(NN, WW)
+    NE = get_binary_direction(NN, EE)
 
     delN = [WW, SW, SS, SE, EE, NE, NN, NW]
     nbr_int = []

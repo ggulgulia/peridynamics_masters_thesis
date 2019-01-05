@@ -309,6 +309,12 @@ def find_one_nbr(nq, delNi):
     currently handles only 2D case
     TODO: generalize for 3D
     """
+    
+    ll = len(nq)
+    if(delNi == bin(0)[2:].zfill(ll)):
+        #sanity check, doesn't  return self
+        #if delNi = '00...0'
+        return 
 
     tx = ['0','1']; ty = ['1', '0']
     dim = 2 #hard coded :(
@@ -316,6 +322,7 @@ def find_one_nbr(nq, delNi):
     
     tx = ''.join(tx*depth)
     ty = ''.join(ty*depth)
+    #equation 2 in paper Constant Time Neighbor finding in Quad Tree
     nbr_int = (((int(nq,2)|int(tx,2))+(int(delNi,2)&int(ty,2)))&int(ty,2))|(((int(nq,2)|int(ty,2))+(int(delNi,2)&int(tx,2)))&int(tx,2))
     nbr_bin = bin(nbr_int)[2:].zfill(len(nq))
 
@@ -329,16 +336,6 @@ def get_binary_direction(dir1, dir2):
     This function creates a combination of two directions
     lying on different axis like NE, NW, SE or SW
     Works only for 2D
-
-                  N
-              NW  |   NE
-                  |
-             W----|----E
-                  |
-              SW  |   SE
-                  S
-    this doesn't work for dir1==dir2, or when dir1, dir2 lie on
-    same axis (like dir1 = North, and dir2 = South)
     input:
     ------
         dir1 : binary string direction1
@@ -348,8 +345,7 @@ def get_binary_direction(dir1, dir2):
     output:
     -------
         returns the binary string direction as a combination of
-        dir1 and dir2. For eg, if dir1 = North, dir2 = East,
-        the function returns North-East binary dirction
+        dir1 and dir2. 
     """
     #some sanity checks on directions
     assert(len(dir1)==len(dir2)) #directions represents same tree depth
@@ -365,8 +361,20 @@ def find_all_nbrs(nq):
     currently works only for 2D
     for 2D there are 8 nbrs and for 3D there are 26
     
-    TODO: generalize for 3D 
+                  NN
+              NW  |   NE
+                  |
+            WW----|----EE
+                  |
+              SW  |   SE
+                  SS
 
+    desired delN order: [WW, SW, SS, SE, EE, NE, NN, NW]
+
+    this is the order with which we desire the neighbors
+    binary location code
+
+    TODO: generalize for 3D 
     """
     dim = 2
     ll = len(nq)
@@ -379,20 +387,68 @@ def find_all_nbrs(nq):
     west = ['0']*len(nq); west[-1] = '1'
     south = ['0']*len(nq); south[-2] = '1'
     
-    EE = ''.join(east)
-    WW = ''.join(west)
-    NN = ''.join(north)
-    SS = ''.join(south)
-    
-    SW = get_binary_direction(SS, WW)
-    SE = get_binary_direction(SS, EE)
-    NW = get_binary_direction(NN, WW)
-    NE = get_binary_direction(NN, EE)
+    tempH = []
+    #see direction nomenclature in docstring
+    if(nq[1::2]=='111'):
+        #no west direction
+        WW = None 
+        tempH.append(WW)
+    else:
+        WW = ''.join(west)
+        tempH.append(WW)
 
-    delN = [WW, SW, SS, SE, EE, NE, NN, NW]
+    if(nq[0::2]=='111'):
+        #no south direction
+        SS = None
+        tempH.append(SS)
+    else:
+        SS = ''.join(south)
+        tempH.append(SS)
+
+    if(nq[1::2]=='000'):
+        #no east direction
+        EE = None 
+        tempH.append(EE)
+    else:
+        EE = ''.join(east)
+        tempH.append(EE)
+
+    if(nq[0::2]=='000'):
+        #no north direction
+        NN = None 
+        tempH.append(NN)
+    else:
+        NN = ''.join(north)
+        tempH.append(NN)
+
+    #tempH = [WW, SS, EE, NN]
+    tempV = []
+    for tt in tempH[1::2]: #SS or NN
+        for vv in tempH[0::2]: #WW or EE
+            if((tt) and (vv)):
+                tempV.append(get_binary_direction(tt,vv))
+            else:
+                tempV.append(None)
+    #tempV = [SW, SE, NW, NE]
+    
+    ##do the trick below to swap NW and NE
+    ## positions in list tempV
+    ## i know  this is ugly but I cannot
+    ## think of a better way at the moment
+    a = tempV[-1]; b = tempV[-2]
+    tempV[-1]=b; tempV[-2]=a
+    #tempV = [SW, SE, NE, NW]
+    #tempH = [WW, SS, EE, NN]
+    delN = []
+    for i in range(len(tempH)):
+        if tempH[i]:
+            delN.append(tempH[i])
+        if(tempV[i]):
+            delN.append(tempV[i])
+    #delN order = [WW, SW, SS, SE, EE, NE, NN, NW]
+
     nbr_int = []
     nbr_bin = []
-    
     for delNi in delN:
         nbr_int_i, nbr_bin_i = find_one_nbr(nq, delNi)
         nbr_int.append(nbr_int_i)

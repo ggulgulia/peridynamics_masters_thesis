@@ -1,4 +1,5 @@
 import numpy as np
+import copy as cpy 
 from fenics_mesh_tools import *
 
 
@@ -295,7 +296,105 @@ class QuadTree:
         """
         linear_tree = []
 
-        return linear_tree
+        return "TODO :P sorry, I've not had the time"
 
+        ### END OF CLASS QuadTree ###
 
+def find_one_nbr(nq, delNi):
 
+    """
+    refer to equation 2 in the paper:
+    Constant Time Neighbor Search by Aizawa et. al
+    
+    currently handles only 2D case
+    TODO: generalize for 3D
+    """
+
+    tx = ['0','1']; ty = ['1', '0']
+    dim = 2 #hard coded :(
+    depth = len(nq)/dim
+    
+    tx = ''.join(tx*depth)
+    ty = ''.join(ty*depth)
+    nbr_int = (((int(nq,2)|int(tx,2))+(int(delNi,2)&int(ty,2)))&int(ty,2))|(((int(nq,2)|int(ty,2))+(int(delNi,2)&int(tx,2)))&int(tx,2))
+    nbr_bin = bin(nbr)
+
+    return nbr_int, nbr_bin[2:]
+
+def get_binary_direction(dir1, dir2):
+    """
+    refer to page 2 of the paper: Constant Time Neighbor Search
+    by Aizawa et.al.
+
+    This function creates a combination of two directions
+    lying on different axis like NE, NW, SE or SW
+    Works only for 2D
+
+                  N
+              NW  |   NE
+                  |
+             W----|----E
+                  |
+              SW  |   SE
+                  S
+    this doesn't work for dir1==dir2, or when dir1, dir2 lie on
+    same axis (like dir1 = North, and dir2 = South)
+    input:
+    ------
+        dir1 : binary string direction1
+        dir2 : binary string direction2
+        length: length of resulting binary string
+        
+    output:
+    -------
+        returns the binary string direction as a combination of
+        dir1 and dir2. For eg, if dir1 = North, dir2 = East,
+        the function returns North-East binary dirction
+    """
+    #some sanity checks on directions
+    assert(len(dir1)==len(dir2)) #directions represents same tree depth
+    assert(dir1 != dir2)         # not same directions
+    assert(dir1[-2:] != dir2[-2:])# directions not on same axis
+
+    return bin((int(dir1,2)+int(dir2,2)))[2:].zfill(len(dir1))
+
+def find_all_nbrs(nq):
+    """
+    Finds all the neighbors according to equation 2
+    of the paper mentioned several times in this script
+    currently works only for 2D
+    for 2D there are 8 nbrs and for 3D there are 26
+    
+    TODO: generalize for 3D 
+
+    """
+    dim = 2; ll = len(nq)
+    depth = int(len(nq)/ll)
+    east =  ['0', '1']
+    north = ['1', '0']
+
+    east *= depth
+    north *= depth
+    west = ['0']*len(nq); west[-1] = '1'
+    south = ['0']*len(nq); south[-2] = '1'
+    
+    EE = ''.join(east)
+    WW = ''.join(west)
+    NN = ''.join(north)
+    SS = ''.join(south)
+    
+    SW = get_binary_direction(SS, WW, ll)
+    SE = get_binary_direction(SS, EE, ll)
+    NW = get_binary_direction(NN, WW, ll)
+    NE = get_binary_direction(NN, EE, ll)
+
+    delN = [WW, SW, SS, SE, EE, NE, NN, NW]
+    nbr_int = []
+    nbr_bin = []
+    
+    for delNi in delN:
+        nbr_int_i, nbr_bin_i = find_one_nbr(nq, delNi)
+        nbr_int.append(nbr_int_i)
+        nbr_bin.append(nbr_bin_i)
+
+    return nbr_int, nbr_bin 

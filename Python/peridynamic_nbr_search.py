@@ -312,7 +312,7 @@ def find_one_nbr(nq, delNi):
     
     ll = len(nq)
     if(delNi == bin(0)[2:].zfill(ll)):
-        #sanity check, doesn't  return self
+        #sanity check, no need to compute self
         #if delNi = '00...0'
         return 
 
@@ -387,65 +387,58 @@ def find_all_nbrs(nq):
     west = ['0']*len(nq); west[-1] = '1'
     south = ['0']*len(nq); south[-2] = '1'
     
-    tempH = []
+    tempCard = [] #Cardinal directions
     #see direction nomenclature in docstring
     if(nq[1::2]=='111'):
         #no west direction
-        WW = None 
-        tempH.append(WW)
+        tempCard.append(None)
     else:
-        WW = ''.join(west)
-        tempH.append(WW)
+        tempCard.append(''.join(west))
 
     if(nq[0::2]=='111'):
         #no south direction
-        SS = None
-        tempH.append(SS)
+        tempCard.append(None)
     else:
-        SS = ''.join(south)
-        tempH.append(SS)
+        tempCard.append(''.join(south))
 
     if(nq[1::2]=='000'):
         #no east direction
-        EE = None 
-        tempH.append(EE)
+        tempCard.append(None)
     else:
-        EE = ''.join(east)
-        tempH.append(EE)
+        tempCard.append(''.join(east))
 
     if(nq[0::2]=='000'):
         #no north direction
-        NN = None 
-        tempH.append(NN)
+        tempCard.append(None)
     else:
-        NN = ''.join(north)
-        tempH.append(NN)
+        tempCard.append(''.join(north))
+    #final order infinal order in tempCard = [WW, SS, EE, NN]
 
-    #tempH = [WW, SS, EE, NN]
-    tempV = []
-    for tt in tempH[1::2]: #SS or NN
-        for vv in tempH[0::2]: #WW or EE
+    tempComb = [] #combination of carinal directions
+    for tt in tempCard[1::2]: #SS or NN
+        for vv in tempCard[0::2]: #WW or EE
             if((tt) and (vv)):
-                tempV.append(get_binary_direction(tt,vv))
+                tempComb.append(get_binary_direction(tt,vv))
             else:
-                tempV.append(None)
-    #tempV = [SW, SE, NW, NE]
+                tempComb.append(None)
+    # current order tempComb = [SW, SE, NW, NE]
     
-    ##do the trick below to swap NW and NE
-    ## positions in list tempV
+    ## swap NW and NE positions in tempComb
     ## i know  this is ugly but I cannot
     ## think of a better way at the moment
-    a = tempV[-1]; b = tempV[-2]
-    tempV[-1]=b; tempV[-2]=a
-    #tempV = [SW, SE, NE, NW]
-    #tempH = [WW, SS, EE, NN]
+    a = tempComb[-1]; b = tempComb[-2]
+    tempComb[-1]=b;   tempComb[-2]=a
+    #final (and desired) order tempComb = [SW, SE, NE, NW]
+
     delN = []
-    for i in range(len(tempH)):
-        if tempH[i]:
-            delN.append(tempH[i])
-        if(tempV[i]):
-            delN.append(tempV[i])
+    assert(len(tempCard) == len(tempComb))
+    for i in range(len(tempCard)):
+        if tempCard[i]:
+            delN.append(tempCard[i])
+        if(tempComb[i]):
+            delN.append(tempComb[i])
     #delN order = [WW, SW, SS, SE, EE, NE, NN, NW]
+    # above delN order is circular (see doc string graphic)
 
     nbr_int = []
     nbr_bin = []

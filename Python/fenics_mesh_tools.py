@@ -191,6 +191,30 @@ def box_mesh_with_hole(point1=Point(0,0,0), point2=Point(2,1,1), cyl_cent1 = Poi
     
     return mesh
 
+
+def get_cell_centroid2(cents, extents):
+    """
+    returns the cell centroids lying within given
+    geometric extents
+
+    input:
+    ------
+        cell_cents: np.array of cell centroids
+        extents   : np.array((2,dim)) of bounding 
+                    box for sub domains
+    output:
+    -------
+        cents_in_extents 
+    """
+    cells_in_ee = np.empty(0,int)
+    for i in range(len(cents)):
+        c = cents[i]
+        if( (c > extents[0]).all() and (c <= extents[1]).all() ):
+            cells_in_ee = np.append(cells_in_ee, [i], axis=0)
+
+    return cells_in_ee
+
+
 def get_cell_centroids(mesh):
     """
     given a fenics mesh/mshr.mesh as argument, returns

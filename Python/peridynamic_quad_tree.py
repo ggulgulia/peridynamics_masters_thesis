@@ -5,11 +5,24 @@ from fenics_mesh_tools import *
 
 class TreeNode:
     """
-    a quad tree node that serves 
-    as either a child or a root of 
-    the quad tree 
+    a quad tree node that serves  as either a child or a root of 
+    the quad tree expecting the key to be a 2D array
 
-    expecting the key to be a 2D array
+    for literature refer: Constant Time Neighbor Search in Quadtree
+    by Aizawa et.al.
+
+    members
+    -------
+        end          :bool,whether the tree node has child
+        leaves       :empty list to hold child TreeNode
+        extents      :np.array, subdomain bounding box
+        level        :int, level in tree to which the TreeNode refers
+        loc_code     :Quartenary/Octal location code acc. to literature
+        nx           :binary location code along x-direction acc. to literature
+        ny           :binary location code along y-direction acc. to literature
+        bin_loc_code :binary location code acc. to literature
+        has_bounds   :if the extents in Tree Node forms a part
+                      of the boundary
     """
     def __init__(self, extents=None, level=None):
         self.end = True
@@ -20,7 +33,7 @@ class TreeNode:
         self.nx = None 
         self.ny = None
         self.bin_loc_code = None
-        self.is_boundary=None
+        self.has_bounds=None
 
 
 class QuadTree:
@@ -30,6 +43,16 @@ class QuadTree:
     structure for 2D euclidian data 
     which is intended to speed up the 
     neighbor search algorithm
+
+    members:
+    -------
+        root    :TreeNode object serving as the root of the QuadTree
+        depth   :int, denotes the depth of the tree
+        horizon :peridynamic horizon
+        dim     :geometric dimension of the problem 
+
+    NOTE: this currently handles only 2D
+    TODO: extend to 3D : OctTree
     """
 
     def __init__(self):
@@ -37,10 +60,6 @@ class QuadTree:
         self.depth = 0
         self.horizon = 0.0 
         self.dim = None
-
-    def depth(self):
-        return self.depth
-
 
     def compute_sub_domains(self, extents, horizon):
         """
@@ -60,7 +79,7 @@ class QuadTree:
         extents_new[1] = np.vstack((midHor[0], midVer[1]))
         extents_new[2] = np.vstack((midVer[0], midHor[1]))
         extents_new[3] = np.vstack((extents[0], midPoint))
-
+        
         return extents_new
 
     def iterate_quad_tree(self, currNode, depth, dim):
@@ -126,7 +145,7 @@ class QuadTree:
         self.horizon = horizon
         self.dim = dim
 
-        while(el > horizon):
+        while(el > 1.0*horizon):
             if self.root:
                 self._put(self.root, horizon, num_leaves, self.depth+1)
                 self.depth += 1
@@ -160,7 +179,7 @@ class QuadTree:
     
         input:
         ------
-            loc_code: string 
+            loc_code     : binary string 
             new_loc      : single digit int, new location code
             at_loc:      : single digit int indicating where in 
                            location_code the new_loc goes
@@ -219,7 +238,7 @@ class QuadTree:
         nx = loc_code 
         ny = loc_code 
         bounding_box = root.extents
-        root.is_boundary = True
+        root.has_bounds = True
 
         num_leaves = len(root.leaves)
         for i in range(num_leaves):
@@ -274,7 +293,7 @@ class QuadTree:
         loc_code = currNode.loc_code
         nx = currNode.nx
         ny = currNode.ny; 
-        currNode.is_boundary = (bounding_box == currNode.extents).any()
+        currNode.has_bounds = (bounding_box == currNode.extents).any()
         
         if(currNode.end==False):
             for i in range(num_leaves):
@@ -294,9 +313,27 @@ class QuadTree:
         
         TODO: implement
         """
-        linear_tree = []
+        depth = self.depth
+        root = self.root
+        dim = self.dim
+        horizon = self.horizon
+        linear_tree = {}
+        num_leaves = len(root.leaves)
 
-        return "TODO :P sorry, I've not had the time"
+        for i in range(num_leaves):
+            self._get_bin_loc_code_and_extents(depth, root, horizon, linear_tree)
+
+        return linear_tree
+
+    def _get_bin_loc_code_and_extents(self, treeDepth, currNode, horizon, linear_tree):
+        
+        if(currNode.level != treeDepth):
+            num_leaves = len(currNode.leaves)
+            for i in range(num_leaves):
+                 self._get_bin_loc_code_and_extents(treeDepth, currNode.leaves[i], horizon, linear_tree)
+        else:
+            linear_tree[currNode.bin_loc_code] = currNode.extents
+
+            return linear_tree
 
         ### END OF CLASS QuadTree ###
-

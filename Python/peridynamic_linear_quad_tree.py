@@ -88,26 +88,28 @@ def find_all_nbrs(nq):
     south = ['0']*len(nq); south[-2] = '1'
     
     tempCard = [] #Cardinal directions
+    corner0 = ''.join(['0']*depth)
+    corner1 = ''.join(['1']*depth)
     #see direction nomenclature in docstring
-    if(nq[1::2]=='111'):
+    if(nq[1::2]==corner1):
         #no west direction
         tempCard.append(None)
     else:
         tempCard.append(''.join(west))
 
-    if(nq[0::2]=='111'):
+    if(nq[0::2]==corner1):
         #no south direction
         tempCard.append(None)
     else:
         tempCard.append(''.join(south))
 
-    if(nq[1::2]=='000'):
+    if(nq[1::2]==corner0):
         #no east direction
         tempCard.append(None)
     else:
         tempCard.append(''.join(east))
 
-    if(nq[0::2]=='000'):
+    if(nq[0::2]==corner0):
         #no north direction
         tempCard.append(None)
     else:
@@ -148,3 +150,88 @@ def find_all_nbrs(nq):
         nbr_bin.append(nbr_bin_i)
 
     return nbr_int, nbr_bin 
+
+def tree_nbr_search(linear_tree, cell_cents, horizon):
+    """
+    linear tree nbr search
+
+    input:
+    ------
+        cent_linear_tree : dictonary of binary_location code of 
+                       all subdomains
+        cell_cents        : numpy array of cell centroid
+        horizon          : pridynamic horizon
+
+    output:
+    -------
+        nbr_lst 
+    """
+
+    import timeit as tt
+
+    print("starting to compute the neighbor list of the mesh")
+    start = tt.default_timer()
+    kk = linear_tree.keys()
+    nbr_lst = []
+    for k in kk:
+        _, bin_nbrs = find_all_nbrs(k)
+        nbr_cells = np.empty(0,int)
+
+        for i, bb in enumerate(bin_nbrs):
+            ee = cpy.deepcopy(linear_tree[bb])
+            ee[0] -= horizon/3
+            ee[1] += horizon/3
+
+            nn_cc = get_cell_centroid2(cell_cents, ee)
+            nbr_cells = np.append(nbr_cells, nn_cc)
+
+        nbr_cells = np.unique(nbr_cells)
+        curr_cells = get_cell_centroid2(cell_cents, linear_tree[k])
+
+        nbr_lst = nbr_lst+compute_single_nbr_lst(curr_cells, cell_cents, nbr_cells, horizon)
+    end = tt.default_timer()
+
+    print("time taken to compute neighbor list= %4.5f"%(end-start))
+
+    return nbr_lst
+
+def compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents):
+    nbr_cells = np.empty(0, int)
+    _, bin_nbrs = find_all_nbrs(bin_code)
+
+    for bb in bin_nbrs:
+        ee = cpy.deepcopy(linear_tree[bb])
+        ee[0] -= horizon/3
+        ee[1] += horizon/3
+        nn_cc = get_cell_centroid2(cell_cents, ee)
+        nbr_cells = np.append(nbr_cells, nn_cc)
+
+    return np.unique(nbr_cells)
+
+def compute_single_nbr_lst(curr_cells, cell_cents, nbr_cells, horizon):
+    nbr_lst = []
+    temp_nbr_cents = cpy.deepcopy(nbr_cells)
+    for i in curr_cells:
+        curr_nbrs = np.empty(shape=0, dtype=int)
+        temp_nbr_cents = np.append(temp_nbr_cents, curr_cells[0:i])
+        temp_nbr_cents = np.append(temp_nbr_cents, curr_cells[i+1:])
+        index = np.argwhere(temp_nbr_cents==i)
+        temp_nbr_cents = np.delete(temp_nbr_cents, index)
+        temp_nbr_cents = np.unique(temp_nbr_cents)
+        for j in temp_nbr_cents:
+            if(la.norm((cell_cents[j]-cell_cents[i]),2)<=horizon):
+                curr_nbrs = np.append(curr_nbrs,j)
+        nbr_lst.append(np.sort(curr_nbrs))
+    
+    return nbr_lst
+
+
+def test_nbr_lst(curr_cells, opt_nbr_lst, naive_nbr_lst):
+
+    for i, c in enumerate(curr_cells):
+        if(len(opt_nbr_lst[i]) == len(naive_nbr_lst[c])):
+            print(c,'true')
+        else:
+            print(c,'FALSE, Something is wrong :(')
+
+

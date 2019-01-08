@@ -176,21 +176,10 @@ def tree_nbr_search(linear_tree, cell_cents, horizon):
     for k in kk:
         _, bin_nbrs = find_all_nbrs(k)
         nbr_cells = np.empty(0,int)
-
-        for i, bb in enumerate(bin_nbrs):
-            ee = cpy.deepcopy(linear_tree[bb])
-            ee[0] -= horizon/3
-            ee[1] += horizon/3
-
-            nn_cc = get_cell_centroid2(cell_cents, ee)
-            nbr_cells = np.append(nbr_cells, nn_cc)
-
-        nbr_cells = np.unique(nbr_cells)
-        curr_cells = get_cell_centroid2(cell_cents, linear_tree[k])
-
-        nbr_lst = nbr_lst+compute_single_nbr_lst(curr_cells, cell_cents, nbr_cells, horizon)
+        nbr_lst = nbr_lst+compute_single_nbr_lst(linear_tree, k, horizon, cell_cents)
+    
+    nbr_lst = sorted(nbr_lst, key=lambda x: x[0])
     end = tt.default_timer()
-
     print("time taken to compute neighbor list= %4.5f"%(end-start))
 
     return nbr_lst
@@ -199,39 +188,47 @@ def compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents):
     nbr_cells = np.empty(0, int)
     _, bin_nbrs = find_all_nbrs(bin_code)
 
+    dim = len(cell_cents[0])
     for bb in bin_nbrs:
         ee = cpy.deepcopy(linear_tree[bb])
-        ee[0] -= horizon/3
-        ee[1] += horizon/3
+        #for d in range(dim):
+        #    delta = 1.1*horizon - np.asscalar(np.diff(ee[:,d]))
+        #    ee[0][d] -= 0.5*delta
+        #    ee[1][d] += 0.5*delta
+
         nn_cc = get_cell_centroid2(cell_cents, ee)
         nbr_cells = np.append(nbr_cells, nn_cc)
 
     return np.unique(nbr_cells)
 
-def compute_single_nbr_lst(curr_cells, cell_cents, nbr_cells, horizon):
+def compute_single_nbr_lst(linear_tree, bin_code, horizon, cell_cents):
     nbr_lst = []
-    temp_nbr_cents = cpy.deepcopy(nbr_cells)
-    for i in curr_cells:
-        curr_nbrs = np.empty(shape=0, dtype=int)
+    nbr_cells = compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents)
+    curr_cells = get_cell_centroid2(cell_cents, linear_tree[bin_code])
+    for i, c  in enumerate(curr_cells):
+        temp_nbr_cents = cpy.deepcopy(nbr_cells)
+        curr_nbrs = []
         temp_nbr_cents = np.append(temp_nbr_cents, curr_cells[0:i])
         temp_nbr_cents = np.append(temp_nbr_cents, curr_cells[i+1:])
-        index = np.argwhere(temp_nbr_cents==i)
-        temp_nbr_cents = np.delete(temp_nbr_cents, index)
         temp_nbr_cents = np.unique(temp_nbr_cents)
         for j in temp_nbr_cents:
-            if(la.norm((cell_cents[j]-cell_cents[i]),2)<=horizon):
-                curr_nbrs = np.append(curr_nbrs,j)
-        nbr_lst.append(np.sort(curr_nbrs))
+            if(la.norm((cell_cents[j]-cell_cents[c]),2)<=horizon):
+                curr_nbrs.append(j)
+
+        curr_nbrs.sort()
+        nbr_lst.append(np.array([c]+curr_nbrs))
     
     return nbr_lst
 
 
-def test_nbr_lst(curr_cells, opt_nbr_lst, naive_nbr_lst):
+def test_nbr_lst(nbr_lst_tree, nbr_lst_naive):
 
-    for i, c in enumerate(curr_cells):
-        if(len(opt_nbr_lst[i]) == len(naive_nbr_lst[c])):
-            print(c,'true')
+    import sys
+    for i in range(len(nbr_lst_naive)):
+        if(len(nbr_lst_tree[i][1:]) == len(nbr_lst_naive[i])):
+            #print(c,'true')
+            pass
         else:
-            print(c,'FALSE, Something is wrong :(')
+                sys.exit("cell id %i doesnt have a matching nbr_lst compared to naive nbr_lst:" %i)
 
 

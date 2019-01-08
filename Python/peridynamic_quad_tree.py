@@ -145,13 +145,18 @@ class QuadTree:
         self.horizon = horizon
         self.dim = dim
 
-        while(el > 1.0*horizon):
+        while(True):
             if self.root:
-                self._put(self.root, horizon, num_leaves, self.depth+1)
-                self.depth += 1
                 ext_arry = self.iterate_quad_tree(self.root, self.depth, dim)
                 ee = ext_arry[0]
-                el = abs(min(ee[0] - ee[1]))
+                el = np.zeros(self.dim, dtype=float)
+                for d in range(dim):
+                    el[d] = abs(np.diff(ee[:,d]))
+                if ((el < horizon).any()):
+                    break
+
+                self._put(self.root, horizon, num_leaves, self.depth+1)
+                self.depth += 1
             else:
                 self.root = TreeNode(extents, 0)
 

@@ -185,16 +185,26 @@ def tree_nbr_search(linear_tree, cell_cents, horizon):
     return nbr_lst
 
 def compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents):
+
     nbr_cells = np.empty(0, int)
     _, bin_nbrs = find_all_nbrs(bin_code)
-
+    
     dim = len(cell_cents[0])
+    ee_curr = cpy.deepcopy(linear_tree[bin_code])
+    el = np.zeros(dim, dtype=float)
+    for d in range(dim):
+        el[d] = np.asscalar(np.diff(ee_curr[:,d]))
+    
+    idx = np.argmin(el, axis=0)
+    delta = 1.04*horizon - el[idx]
+    
     for bb in bin_nbrs:
         ee = cpy.deepcopy(linear_tree[bb])
-        #for d in range(dim):
-        #    delta = 1.1*horizon - np.asscalar(np.diff(ee[:,d]))
-        #    ee[0][d] -= 0.5*delta
-        #    ee[1][d] += 0.5*delta
+
+        if(ee[0][idx] < ee_curr[0][idx]):
+            ee[0][idx] -= delta
+        if(ee[1][idx] > ee_curr[1][idx]):
+            ee[1][idx] += delta
 
         nn_cc = get_cell_centroid2(cell_cents, ee)
         nbr_cells = np.append(nbr_cells, nn_cc)
@@ -225,8 +235,8 @@ def test_nbr_lst(nbr_lst_tree, nbr_lst_naive):
 
     import sys
     for i in range(len(nbr_lst_naive)):
-        if(len(nbr_lst_tree[i][1:]) == len(nbr_lst_naive[i])):
-            #print(c,'true')
+        if((nbr_lst_tree[i][1:] == nbr_lst_naive[i]).all()):
+            #print(i,'true')
             pass
         else:
                 sys.exit("cell id %i doesnt have a matching nbr_lst compared to naive nbr_lst:" %i)

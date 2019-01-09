@@ -95,7 +95,7 @@ def peridym_compute_neighbors(mesh, horizon):
                 curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
         neighbor_lst.append(np.array(curr_neighbor_lst))
-    print("time taken for computation of neighbor list for the given mesh is %4.3f seconds"%(tm.default_timer()-start))
+    print("time taken for computation of naive neighbor list for the given mesh is %4.3f sec"%(tm.default_timer()-start))
     return np.array(neighbor_lst)
 
 

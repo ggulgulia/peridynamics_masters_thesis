@@ -1,11 +1,11 @@
 from peridynamic_neighbor_data import *
+from peridynamic_quad_tree import *
+from peridynamic_linear_quad_tree import *
 from peridynamic_stiffness import*
 from peridynamic_boundary_conditions import *
 from peridynamic_infl_fun import *
 from peridynamic_materials import *
-from fenics import *
 import mshr
-import timeit as tm
 
 #m = box_mesh(Point(0,0,0), Point(2,1,1), 10,5,5)
 #m = box_mesh_with_hole(numpts=20)
@@ -20,11 +20,14 @@ dim = np.shape(cell_cent[0])[0]
 omega_fun = gaussian_infl_fun1
 E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
-horizon = 2*m.hmax()
-start = tm.default_timer()
-nbr_lst, _, _, mw = peridym_get_neighbor_data(m, horizon, omega_fun)
-end = tm.default_timer()
-print("time taken to compute neighbor data: %4.3f secs" %(end-start))
+extents = get_domain_bounding_box(m)
+horizon = 3*m.hmax()
+tree = QuadTree()
+tree.put(extents, horizon)
+
+nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
+mw = peridym_compute_weighted_volume(m, nbr_lst, horizon, omega_fun)
+
 K = computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
 bc_type = {0:'dirichlet', 1:'force'}
 bc_vals = {'dirichlet': 0, 'force': -5e8}

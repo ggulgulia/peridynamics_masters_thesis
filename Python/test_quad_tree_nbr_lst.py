@@ -5,7 +5,7 @@ from peridynamic_neighbor_data import *
 
 def generate_test_mesh(factor):
 
-    baseX = 28; baseY = 14
+    baseX = 10; baseY = 5
     numX = factor*baseX
     numY = factor*baseY
 
@@ -14,11 +14,11 @@ def generate_test_mesh(factor):
 
 def main():
 
-    num_tests = 6
+    num_tests = 10
     
-    import timeit as tt
+    import timeit as tm
     print("Starting to test the quad tree neighbor search algo")
-    start_global = tt.default_timer()
+    start_global = tm.default_timer()
 
     tree_time  = np.zeros(num_tests, float)
     naive_time = np.zeros(num_tests, float)
@@ -36,13 +36,13 @@ def main():
         tree = QuadTree()
         tree.put(extents, horizon)
 
-        start_loc = tt.default_timer()
+        start_loc = tm.default_timer()
         tree_nbr = tree_nbr_search(tree.get_linear_tree(), cell_cents, horizon)
-        tree_time[i] = tt.default_timer() - start_loc
+        tree_time[i] = tm.default_timer() - start_loc
 
-        start_loc = tt.default_timer()
+        start_loc = tm.default_timer()
         naive_nbr = peridym_compute_neighbors(mm, horizon)
-        naive_time[i] = tt.default_timer() - start_loc
+        naive_time[i] = tm.default_timer() - start_loc
 
         test_nbr_lst(tree_nbr, naive_nbr)
         print("*************end of test***************")
@@ -55,6 +55,6 @@ def main():
     plt.title("plot of time for nbr list using quad tree and naive method")
     plt.show(block=False)
 
-    print("Time for test: %4.3f seconds" %(tt.default_timer()-start_global)) 
+    print("Time for test: %4.3f seconds" %(tm.default_timer()-start_global)) 
 
     return

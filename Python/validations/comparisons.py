@@ -1,8 +1,6 @@
 from peridynamic_plane_stress import *
 from fenics_plane_stress import *
 from peridynamic_infl_fun import *
-from fenics import *
-from fenics_mesh_tools import *
 
 
 def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_=False, force=-5e8):

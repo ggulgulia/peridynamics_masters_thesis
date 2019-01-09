@@ -1,4 +1,5 @@
 from peridynamic_quad_tree import *
+import timeit as tm
 
 def find_one_nbr(nq, delNi):
 
@@ -167,10 +168,9 @@ def tree_nbr_search(linear_tree, cell_cents, horizon):
         nbr_lst 
     """
 
-    import timeit as tt
 
     print("computing the neighbor list of the mesh with horizon size of %4.6f"%horizon)
-    start = tt.default_timer()
+    start = tm.default_timer()
     kk = linear_tree.keys()
     nbr_lst = []
     for k in kk:
@@ -181,7 +181,7 @@ def tree_nbr_search(linear_tree, cell_cents, horizon):
     nbr_lst = sorted(nbr_lst, key=lambda x: x[0])
 
     nbr_lst_mod = [np.delete(ll, 0) for ll in nbr_lst]
-    end = tt.default_timer()
+    end = tm.default_timer()
     print("time taken to compute tree neighbor list= %4.5f sec"%(end-start))
 
     return nbr_lst_mod

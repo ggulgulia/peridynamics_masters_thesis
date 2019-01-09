@@ -1,8 +1,9 @@
 from peridynamic_neighbor_data import *
+from peridynamic_quad_tree import *
+from peridynamic_linear_quad_tree import *
 from peridynamic_stiffness import*
 from peridynamic_boundary_conditions import *
 from peridynamic_materials import *
-from fenics import *
 import mshr
 import timeit as tm
 from peridynamic_infl_fun import *
@@ -21,6 +22,7 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
     #omega_fun = unit_infl_fun
 
     cell_cent = get_cell_centroids(m)
+    extents = get_domain_bounding_box(m)
     cell_vol = get_cell_volumes(m)
     purtub_fact = 1e-6
     dim = np.shape(cell_cent[0])[0]
@@ -29,7 +31,9 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
         E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
         if nbr_lst is None:
-            nbr_lst, _, _, mw = peridym_get_neighbor_data(m, horizon, omega_fun)
+            tree = QuadTree()
+            tree.put(extets, horizon)
+            nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
         else:
             mw = peridym_compute_weighted_volume(m, nbr_lst, horizon, omega_fun) 
     

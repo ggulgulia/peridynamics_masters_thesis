@@ -3,6 +3,7 @@ import mshr
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+import timeit as tm
 import numpy.linalg as la
 from math import factorial as fact
 from evtk.hl import pointsToVTK

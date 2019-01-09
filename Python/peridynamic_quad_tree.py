@@ -1,6 +1,7 @@
 import numpy as np
 import copy as cpy 
 from fenics_mesh_tools import *
+import timeit as tm
 
 
 class TreeNode:

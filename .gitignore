@@ -1,5 +1,4 @@
 *.out
-test_*
 *deprecated*
 *.pyc
 Python/__pycache__/
@@ -19,3 +18,5 @@ Python/__pycache__/
 *.ele
 *.face
 *.vtu
+*.png
+*.jpeg

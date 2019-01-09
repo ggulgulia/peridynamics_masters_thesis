@@ -61,7 +61,7 @@ def get_steel_properties(dim=2):
     rho = 8050 #density kg/m3
     mu    = compute_mu(E, nu)
     bulk  = compute_bulk(E, nu, dim)
-    gamma = compute_gamma(bulk, mu, dim)
+    gamma = compute_gamma(mu, bulk, dim)
 
     return E, nu, rho, mu, bulk, gamma
 

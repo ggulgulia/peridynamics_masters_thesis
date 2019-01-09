@@ -3,6 +3,7 @@ import mshr
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
+import timeit as tm
 import numpy.linalg as la
 from math import factorial as fact
 from evtk.hl import pointsToVTK
@@ -27,7 +28,7 @@ def plot_fenics_mesh(mesh, new_fig=True):
 
     pass
 
-def plot_peridym_mesh(mesh):
+def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
     """
     plots the mesh/centroids of mesh as is expected in peridynamics
 
@@ -47,14 +48,18 @@ def plot_peridym_mesh(mesh):
     if dim == 3:
         x,y,z = cell_cent.T
         ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(x,y,z, s=70, marker='o', color='c', alpha=1.0, edgecolors='face')
+        ax.scatter(x,y,z, s=70, marker='o', color='b', alpha=1.0, edgecolors='face')
         ax.axis('off')
     
     if dim == 2 : 
         x,y = cell_cent.T
-        ax = fig.add_subplot(111)
-        ax.scatter(x,y, s=50, marker='o', color='c', alpha=1.0, edgecolors='face')
-        ax.axis=('off')
+        plt.scatter(x,y, s=300, color='c', marker='o', alpha=0.8)
+        plt.axis=('off')
+
+    if annotate==True:
+        for idx, cc in enumerate(cell_cent):
+            plt.text(cc[0], cc[1],  str(idx), color='k', verticalalignment='bottom', horizontalalignment='right', fontsize='medium')
+
 
     plt.title("peridynamics mesh")
     plt.show(block=False)
@@ -104,7 +109,7 @@ def rectangle_mesh(point1=Point(0,0), point2=Point(2,1), numptsX=10, numptsY=5):
 
     """
 
-    mesh = RectangleMesh(point1, point2, numptsX, numptsY, 'crossed')
+    mesh = RectangleMesh(point1, point2, numptsX, numptsY )
     print_mesh_stats(mesh)
     
     return mesh
@@ -187,6 +192,30 @@ def box_mesh_with_hole(point1=Point(0,0,0), point2=Point(2,1,1), cyl_cent1 = Poi
     
     return mesh
 
+
+def get_cell_centroid2(cents, extents):
+    """
+    returns the cell centroids lying within given
+    geometric extents
+
+    input:
+    ------
+        cell_cents: np.array of cell centroids
+        extents   : np.array((2,dim)) of bounding 
+                    box for sub domains
+    output:
+    -------
+        cents_in_extents 
+    """
+    cells_in_ee = np.empty(0,int)
+    for i in range(len(cents)):
+        c = cents[i]
+        if( (c > extents[0]).all() and (c <= extents[1]).all() ):
+            cells_in_ee = np.append(cells_in_ee, [i], axis=0)
+
+    return cells_in_ee
+
+
 def get_cell_centroids(mesh):
     """
     given a fenics mesh/mshr.mesh as argument, returns
@@ -264,7 +293,7 @@ def get_domain_bounding_box(mesh):
         corner_min[d] = min(coords[:,d])
         corner_max[d] = max(coords[:,d])
     
-    return corner_min, corner_max
+    return np.vstack((corner_min, corner_max))
 
 def get_peridym_mesh_bounds(mesh):
     """

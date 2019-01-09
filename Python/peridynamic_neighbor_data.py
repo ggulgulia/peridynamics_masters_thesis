@@ -1,6 +1,5 @@
 from fenics_mesh_tools import *
 from helper import *
-import peridynamic_influence_function_manager as ifm
 import timeit as tm
 from meshpy.geometry import bounding_box
 
@@ -96,12 +95,38 @@ def peridym_compute_neighbors(mesh, horizon):
                 curr_neighbor_lst.append(j) # appending the element ID to neighbor_list
 
         neighbor_lst.append(np.array(curr_neighbor_lst))
-    print("time taken for computation of neighbor list for the given mesh is %4.3f seconds"%(tm.default_timer()-start))
+    print("time taken for computation of naive neighbor list for the given mesh is %4.3f sec"%(tm.default_timer()-start))
     return np.array(neighbor_lst)
 
 
+def peridym_compute_weighted_volume(mesh, nbr_lst, horizon, omega_fun):
+    """
+    computes the weighted volume of the peridynammic 
+    mesh based on influence function and horizon value
+    """
+    cell_cent = get_cell_centroids(mesh)
+    cell_vol = get_cell_volumes(mesh)
+
+    mw = np.zeros(len(cell_vol), dtype=float) #m is wighted volume
+
+    for i in range(len(cell_cent)):
+        curr_node_coord = cell_cent[i]
+        
+        #declare empty lists for current node neighbor
+        #attributes like neighbor bond vector, bond len,
+        #and influence field 
+        #refer ch5 algo1  of handbook of peridynamic modelling
+        #by silling etal 
+
+        curr_nbr_lst = nbr_lst[i] 
+        curr_nbr_bnd_vct = cell_cent[curr_nbr_lst] - curr_node_coord
+        curr_nbr_bnd_len = la.norm(curr_nbr_bnd_vct, 2, axis=1)
+        mw[i] = sum(omega_fun(curr_nbr_bnd_vct, horizon)*curr_nbr_bnd_len**2*cell_vol[curr_nbr_lst])
+
+    return mw
+
    
-def peridym_get_neighbor_data(mesh, horizon):
+def peridym_get_neighbor_data(mesh, horizon, omega_fun):
     """
     this function computes the bond vector coordinates
     for each element in the neighborhood list of the 
@@ -111,6 +136,7 @@ def peridym_get_neighbor_data(mesh, horizon):
     ------
         mesh : meshpy.MeshInfo mesh data
         horizon : float, peridynamic horizon
+        omega_fun: pointer to the influence function
     returns:
     -------
         nbr_lst         :
@@ -118,20 +144,21 @@ def peridym_get_neighbor_data(mesh, horizon):
             bond vector for each element in neighborhood list 
         nbr_bnd_len_lst :
         nbr_infl_fld_lst:
-        mw              :
+        mw              : weighted mass 
         
 
     """
     nbr_lst = peridym_compute_neighbors(mesh, horizon)
     start = tm.default_timer()
     print("computing the remaining peridynamic neighbor data for the mesh with horizon: %4.2f" %horizon)
+
+    mw = peridym_compute_weighted_volume(mesh, nbr_lst, horizon, omega_fun)
     cell_cent = get_cell_centroids(mesh)
     cell_vol = get_cell_volumes(mesh)
 
     nbr_bnd_vector_lst = []
     nbr_bnd_len_lst = []
     nbr_infl_fld_lst = []
-    mw = np.zeros(len(cell_vol), dtype=float) #m is wighted volume
 
     for i in range(len(cell_cent)):
         curr_node_coord = cell_cent[i]
@@ -139,31 +166,16 @@ def peridym_get_neighbor_data(mesh, horizon):
         #declare empty lists for current node neighbor
         #attributes like neighbor bond vector, bond len,
         #and influence field 
-        curr_node_bnd_lst = []
-        curr_node_bnd_len_lst = []
-        curr_node_infl_fld_lst = []
         #refer ch5 algo1  of handbook of peridynamic modelling
         #by silling etal 
 
-        curr_node_nbr_lst = nbr_lst[i] 
-        for j, idx in enumerate(curr_node_nbr_lst):
-        
-            curr_nbr_coord = cell_cent[idx]
-            curr_bnd_len = la.norm((cell_cent[idx] - cell_cent[i]), 2)  
-            #curr_bnd_vctr = curr_nbr_coord - curr_node_coord
-            #curr_bnd_len = np.linalg.norm(curr_bnd_vctr,2)
-            curr_infl  = ifm.gaussian_influence_function(curr_bnd_len, horizon)            
-            curr_bnd_vctr = vect_diff(curr_nbr_coord, curr_node_coord)            
-            mw[i] += curr_infl*curr_bnd_len**2*cell_vol[idx]
+        curr_nbr_lst = nbr_lst[i] 
+        curr_nbr_bnd_vct = cell_cent[curr_nbr_lst] - curr_node_coord
+        curr_nbr_bnd_len = la.norm(curr_nbr_bnd_vct, 2, axis=1)
 
-            curr_node_bnd_lst.append(curr_bnd_vctr)
-            curr_node_bnd_len_lst.append(curr_bnd_len)
-            curr_node_infl_fld_lst.append(curr_infl)
-
-        nbr_bnd_vector_lst.append(curr_node_bnd_lst)
-        nbr_bnd_len_lst.append(curr_node_bnd_len_lst)
-        nbr_infl_fld_lst.append(curr_node_infl_fld_lst)
+        nbr_bnd_vector_lst.append(curr_nbr_bnd_vct)
+        nbr_bnd_len_lst.append(curr_nbr_bnd_len)
 
     print("time taken for computation of remaining neighbor data for the given mesh is %4.3f seconds"%(tm.default_timer()-start))
     
-    return nbr_lst, nbr_bnd_vector_lst, nbr_bnd_len_lst, nbr_infl_fld_lst, mw
+    return nbr_lst, nbr_bnd_vector_lst, nbr_bnd_len_lst, mw

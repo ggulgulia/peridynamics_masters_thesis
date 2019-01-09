@@ -185,13 +185,35 @@ def tree_nbr_search(linear_tree, cell_cents, horizon):
     return nbr_lst
 
 def compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents):
+    """
+    given a linear tree and a binary location code 
+    belonging to the tree, this method computes
+    the cell centroid ids of all the cells lying
+    in the neighborhood subdomains of the corres-
+    ponding subdomain reffered to by the binary
+    location code
 
+    input:
+    ------
+        linear_tree : dictonary, key=binary location code
+                     of subdomains, values= extents of subdomains
+        bin_code    : binary location code of subdomain whose nbrs
+                      we're interested to find
+        horizon     : float, peridynamic horizon
+        cell_cents  : np.array, centroids of cells in mesh
+
+    output:
+    -------
+        nbr_cells: np.array of all nbr cell cent ids 
+                   from the nbr subdomains corresponding
+                   to the subdomain reffered to by bin code
+    """
     nbr_cells = np.empty(0, int)
     _, bin_nbrs = find_all_nbrs(bin_code)
     
     dim = len(cell_cents[0])
     ee_curr = cpy.deepcopy(linear_tree[bin_code])
-    el = np.zeros(dim, dtype=float)
+    el = np.zeros(dim, dtype=float) #array for edge lengths
     for d in range(dim):
         el[d] = np.asscalar(np.diff(ee_curr[:,d]))
     
@@ -201,6 +223,14 @@ def compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents):
     for bb in bin_nbrs:
         ee = cpy.deepcopy(linear_tree[bb])
 
+        """
+        if the edge length is different along 
+        one of the axis, and is smaller than horizon
+        then, we need to expand it along that axis by
+        the amount it is smaller than horizon
+
+        done by the two if statements below
+        """
         if(ee[0][idx] < ee_curr[0][idx]):
             ee[0][idx] -= delta
         if(ee[1][idx] > ee_curr[1][idx]):
@@ -212,6 +242,25 @@ def compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents):
     return np.unique(nbr_cells)
 
 def compute_single_nbr_lst(linear_tree, bin_code, horizon, cell_cents):
+    """
+    given a binary location code for a sub domain and a linear quad tree
+    that the subdomain is associated with, this method computes the 
+    neighbor list of all the cell centroid ids located in the subdomain
+    in consideration.
+
+    input:
+    ------
+        linear_tree : dictonary of linear tree, key= binary location code, 
+                      values = subdomain extents
+        bin_code    : binary location code of subdomain under consideration
+        horizon     : peridynamic horizon
+        cell_cents  : np array of all cell centroids
+
+    output:
+    -------
+        nbr_lst     : nbr lst of all cell cents lying in the subdomain reffered
+                      to by the bin_code
+    """
     nbr_lst = []
     nbr_cells = compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents)
     curr_cells = get_cell_centroid2(cell_cents, linear_tree[bin_code])
@@ -233,6 +282,16 @@ def compute_single_nbr_lst(linear_tree, bin_code, horizon, cell_cents):
 
 def test_nbr_lst(nbr_lst_tree, nbr_lst_naive):
 
+    """
+    this is a helper function and checks if the 
+    nbr_lst from tree data structure is exactly 
+    same as the one obtained from naive linear 
+    search. 
+    
+    The function force exits if at any 
+    index of the cell centroid, the nbr list 
+    for that cell doesn't match
+    """
     import sys
     for i in range(len(nbr_lst_naive)):
         if((nbr_lst_tree[i][1:] == nbr_lst_naive[i]).all()):
@@ -240,5 +299,4 @@ def test_nbr_lst(nbr_lst_tree, nbr_lst_naive):
             pass
         else:
                 sys.exit("cell id %i doesnt have a matching nbr_lst compared to naive nbr_lst:" %i)
-
 

@@ -8,7 +8,7 @@ import mshr
 import timeit as tm
 from peridynamic_infl_fun import *
 
-def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8):
+def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8, structured_mesh=False):
     """
     solves the peridynamic bar with a specified load
 
@@ -21,9 +21,14 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
     #establish the influence function 
     #omega_fun = unit_infl_fun
 
-    cell_cent = get_cell_centroids(m)
+    if(structured_mesh):
+        cell_cent = structured_cell_centroids(m)
+        cell_vol  = structured_cell_volumes(m)
+    else:
+        cell_cent = get_cell_centroids(m)
+        cell_vol = get_cell_volumes(m)
+
     extents = get_domain_bounding_box(m)
-    cell_vol = get_cell_volumes(m)
     purtub_fact = 1e-6
     dim = np.shape(cell_cent[0])[0]
     
@@ -32,11 +37,10 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
 
         if nbr_lst is None:
             tree = QuadTree()
-            tree.put(extets, horizon)
+            tree.put(extents, horizon)
             nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
-        else:
-            mw = peridym_compute_weighted_volume(m, nbr_lst, horizon, omega_fun) 
-    
+        
+    mw = peridym_compute_weighted_volume(m, nbr_lst, horizon, omega_fun,structured_mesh) 
     K = computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
     bc_type = {0:'dirichlet', 1:'force'}
     bc_vals = {'dirichlet': 0, 'force': force}

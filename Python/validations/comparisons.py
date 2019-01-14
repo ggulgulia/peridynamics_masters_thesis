@@ -15,16 +15,17 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
     :returns: TODO
 
     """
-    print("*********************************************************")
-    print("*********************************************************")
-    print('solving using FEniCS:')
-    disp_cent_FE, u_disp_FE = solve_fenic_bar(mesh,npts,material, plot_=plot_, force=force)
-
     if(structured_mesh):
         cell_cent = structured_cell_centroids(mesh)
+        base_horizon = 3*np.diff(cell_cent[0:2][:,0])[0]
     else:
         cell_cent = get_cell_centroids(mesh)
     
+    print("*********************************************************")
+    print("*********************************************************")
+    print('solving using FEniCS:')
+    disp_cent_FE, u_disp_FE = solve_fenic_bar(mesh, cell_cent, npts, material, plot_=plot_, force=force)
+
     dim = np.shape(cell_cent)[1]
     
     disp_cent_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
@@ -41,6 +42,8 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
 
         disp_cent_PD_array[i] = disp_cent_i
         u_disp_PD_array[i]    = u_disp_i 
+        print("*********************************************************")
+        print("*********************************************************")
     
     top_els = np.ravel(np.argwhere(cell_cent[:,1] == np.max(cell_cent[:,1])))
 
@@ -52,10 +55,10 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
 
     for i in range(len(horizons)):
         u_disp_pd_top = u_disp_PD_array[i][top_els]
-        plt.plot(cell_cent_top[:,0], u_disp_pd_top[:,1], linewidth=2.0, label='PD Solution, delta='+str(horizons[i]))
+        plt.plot(cell_cent_top[:,0], u_disp_pd_top[:,1], linewidth=2.0, label='Horizon='+str(horizons[i]))
 
     plt.legend()
-    plt.title('displacement of top centroids mesh size: %i, hmax: %4.4f, hmin: %4.4f'%(mesh.num_cells(), mesh.hmax(), mesh.hmin()))
+    plt.title('displacement of top centroids mesh size: %i, base delta: %4.3f'%(len(cell_cent), base_horizon))
     plt.show(block=False)
     plt.savefig('FE_vs_PD_displacements')
 

@@ -45,7 +45,7 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
     bc_type = {0:'dirichlet', 1:'force'}
     bc_vals = {'dirichlet': 0, 'force': force}
     
-    K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals, cell_vol)
+    K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals, cell_vol, structured_mesh=structured_mesh)
     
     print("solving the stystem")
     start = tm.default_timer()
@@ -54,7 +54,7 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
     print("Time taken for solving the system of equation: %4.3f secs" %(end-start))
     u_disp = copy.deepcopy(sol)#
     u_disp = np.reshape(u_disp, (int(len(sol)/dim), dim))
-    a, _ = get_peridym_mesh_bounds(m)
+    a, _ = get_peridym_mesh_bounds(m, structured_mesh=structured_mesh)
     
     node_ids = a[0][0] #normal to x directon
     

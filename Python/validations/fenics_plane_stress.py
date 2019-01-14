@@ -4,7 +4,7 @@ from peridynamic_neighbor_data import *
 from peridynamic_materials import *
 import matplotlib.pyplot as plt
 
-def get_displaced_cell_centroids(m, u_fe):
+def get_displaced_cell_centroids(m, u_fe, cell_cent):
     """
     returns the displaced cell centroid of the mesh
     after FE solution
@@ -18,11 +18,10 @@ def get_displaced_cell_centroids(m, u_fe):
         u_disp: displacement vectors of each triangle 
     """
 
-    cell_cent = get_cell_centroids(m)
     dim = np.shape(cell_cent)[1]
-    u_disp = np.zeros((m.num_cells(), dim), dtype=float)
+    u_disp = np.zeros((len(cell_cent), dim), dtype=float)
 
-    for i, cell in enumerate(m.cells()):
+    for i, cell in enumerate(cell_cent):
         u_disp[i] = u_fe(cell_cent[i]) #this is expensive 
 
     disp_cent = cell_cent + u_disp
@@ -30,7 +29,7 @@ def get_displaced_cell_centroids(m, u_fe):
     return disp_cent, u_disp
 
 
-def solve_fenic_bar(mesh, npts=15, material='steel', plot_ = False, force=-5e8):
+def solve_fenic_bar(mesh, cell_cent, npts=15, material='steel', plot_ = False, force=-5e8):
     """
     solves the case for a 2D steel plate loaded statically under various loads
 
@@ -120,7 +119,7 @@ def solve_fenic_bar(mesh, npts=15, material='steel', plot_ = False, force=-5e8):
     u_fe = Function(V, name="Displacement")
     solve(a == l, u_fe, bc)
     
-    disp_cent, u_disp = get_displaced_cell_centroids(mesh, u_fe) 
+    disp_cent, u_disp = get_displaced_cell_centroids(mesh, u_fe, cell_cent) 
     
     if plot_ is True:
         plt.figure()

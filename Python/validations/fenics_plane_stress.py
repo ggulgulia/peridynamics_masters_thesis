@@ -122,8 +122,10 @@ def solve_fenic_bar(mesh, cell_cent, npts=15, material='steel', plot_ = False, f
     disp_cent, u_disp = get_displaced_cell_centroids(mesh, u_fe, cell_cent) 
     
     if plot_ is True:
-        plt.figure()
+        fig = plt.figure()
+        plt.subplot(1,2,1)
         plot(mesh)
+        plt.subplot(1,2,2)
         plot(20*u_fe, mode="displacement")
         plt.xlim(-0.5,3.5)
         plt.ylim(-0.6,1.5)

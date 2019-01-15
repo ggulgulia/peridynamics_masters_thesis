@@ -35,10 +35,10 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
     if material is 'steel':
         E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
-        if nbr_lst is None:
-            tree = QuadTree()
-            tree.put(extents, horizon)
-            nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
+    if nbr_lst is None:
+        tree = QuadTree()
+        tree.put(extents, horizon)
+        nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
         
     mw = peridym_compute_weighted_volume(m, nbr_lst, horizon, omega_fun,structured_mesh) 
     K = computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
@@ -74,5 +74,4 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
         plt.title("influence function:"+str(omega_fun))
         plt.show(block=False)
     
-
     return K, K_bound, disp_cent, u_disp

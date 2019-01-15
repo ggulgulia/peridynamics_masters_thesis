@@ -18,9 +18,11 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
     if(structured_mesh):
         cell_cent = structured_cell_centroids(mesh)
         base_horizon = 3*np.diff(cell_cent[0:2][:,0])[0]
+        el = np.diff(cell_cent[0:2][:,0])[0]
     else:
         cell_cent = get_cell_centroids(mesh)
         base_horizon = 3*mesh.hmax()
+        el = mesh.hmax()
     
     print("*********************************************************")
     print("*********************************************************")
@@ -55,11 +57,12 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
     plt.plot(cell_cent_top[:,0], u_top_fe[:,1], linewidth=2.0, label='FE Solution')
 
     for i in range(len(horizons)):
+        mm = int(horizons[i]/el)
         u_disp_pd_top = u_disp_PD_array[i][top_els]
-        plt.plot(cell_cent_top[:,0], u_disp_pd_top[:,1], linewidth=2.0, label='Horizon='+str(horizons[i]))
+        plt.plot(cell_cent_top[:,0], u_disp_pd_top[:,1], linewidth=2.0, label='Horizon='+ str(mm) +'*'+str(el))
 
     plt.legend()
-    plt.title('displacement of top centroids mesh size: %i, base delta: %4.3f'%(len(cell_cent), base_horizon))
+    plt.title('displacement of top centroids mesh size: %i, el: %4.3f'%(len(cell_cent), el))
     plt.show(block=False)
     plt.savefig('FE_vs_PD_displacements')
 

@@ -20,6 +20,7 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
         base_horizon = 3*np.diff(cell_cent[0:2][:,0])[0]
     else:
         cell_cent = get_cell_centroids(mesh)
+        base_horizon = 3*mesh.hmax()
     
     print("*********************************************************")
     print("*********************************************************")

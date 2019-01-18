@@ -12,8 +12,14 @@ import mshr
 #m = rectangle_mesh(numptsX=25, numptsY=10)
 m = rectangle_mesh_with_hole(npts=25)
 
-cell_cent = get_cell_centroids(m)
-cell_vol = get_cell_volumes(m)
+if(structured_mesh):
+    cell_cent = structured_cell_centroids(m)
+    cell_vol = structured_cell_volumes(m)
+    horizon = 3*np.diff(cell_cent[0:2][:,0])[0]
+else:
+    cell_cent = get_cell_centroids(m)
+    cell_vol = get_cell_volumes(m)
+
 purtub_fact = 1e-6
 dim = np.shape(cell_cent[0])[0]
 
@@ -25,14 +31,14 @@ horizon = 3*m.hmax()
 tree = QuadTree()
 tree.put(extents, horizon)
 
-nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
-mw = peridym_compute_weighted_volume(m, nbr_lst, horizon, omega_fun)
+nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
+mw = peridym_compute_weighted_volume(m, nbr_lst, nbr_beta_lst, horizon, omega_fun, structured_mesh)
 
-K = computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
+K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
 bc_type = {0:'dirichlet', 1:'force'}
 bc_vals = {'dirichlet': 0, 'force': -5e8}
 
-K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals, cell_vol)
+K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals, cell_vol, structured_mesh)
 
 print("solving the stystem")
 start = tm.default_timer()

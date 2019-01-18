@@ -85,7 +85,7 @@ def compare_PD_infl_funs_with_FE(horizon, mesh, npts=15, material='steel', plot_
     print("*********************************************************")
     print("*********************************************************")
     print('solving using FEniCS:')
-    disp_cent_FE, u_disp_FE = solve_fenic_bar(mesh,npts,material, plot_=plot_, force=force)
+    disp_cent_FE, u_disp_FE = solve_fenic_bar(mesh, material, force=force)
 
     if(structured_mesh):
         cell_cent = structured_cell_centroids(mesh)
@@ -112,10 +112,10 @@ def compare_PD_infl_funs_with_FE(horizon, mesh, npts=15, material='steel', plot_
     tree = QuadTree()
     extents = get_domain_bounding_box(mesh)
     tree.put(extents, horizon)
-    nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
+    nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
     for kk in keys:
         infl_fun = infl_fun_dict[kk]
-        _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizon, mesh,nbr_lst=nbr_lst, npts=npts,material=material,omega_fun=infl_fun, plot_=plot_, force=force, structured_mesh=structured_mesh)
+        _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizon, mesh,nbr_lst=nbr_lst ,material=material,omega_fun=infl_fun, force=force, structured_mesh=structured_mesh)
 
         disp_cent_PD_array[kk] = disp_cent_i
         u_disp_PD_array[kk]    = u_disp_i 

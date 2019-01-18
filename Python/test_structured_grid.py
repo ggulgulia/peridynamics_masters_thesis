@@ -24,10 +24,10 @@ def test_structured_grid():
     tree = QuadTree()
     tree.put(extents, horizon)
     
-    nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
-    mw = peridym_compute_weighted_volume(m, nbr_lst, horizon, omega_fun,structured_mesh=True)
+    nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
+    mw = peridym_compute_weighted_volume(m, nbr_lst,nbr_beta_lst, horizon, omega_fun,structured_mesh=True)
     
-    K = computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
+    K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
     bc_type = {0:'dirichlet', 1:'force'}
     bc_vals = {'dirichlet': 0, 'force': -5e8}
     

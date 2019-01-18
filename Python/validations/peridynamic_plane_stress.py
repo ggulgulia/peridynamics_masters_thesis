@@ -8,7 +8,7 @@ import mshr
 import timeit as tm
 from peridynamic_infl_fun import *
 
-def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8, structured_mesh=False):
+def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8, structured_mesh=False):
     """
     solves the peridynamic bar with a specified load
 
@@ -38,10 +38,10 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
     if nbr_lst is None:
         tree = QuadTree()
         tree.put(extents, horizon)
-        nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
+        nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
         
-    mw = peridym_compute_weighted_volume(m, nbr_lst, horizon, omega_fun,structured_mesh) 
-    K = computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
+    mw = peridym_compute_weighted_volume(m, nbr_lst, nbr_beta_lst, horizon, omega_fun,structured_mesh) 
+    K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
     bc_type = {0:'dirichlet', 1:'force'}
     bc_vals = {'dirichlet': 0, 'force': force}
     

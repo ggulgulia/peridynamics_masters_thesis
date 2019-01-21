@@ -21,7 +21,7 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol, struct_grd=False):
         ¦ /                                        ¦ / 
         ¦/__z_min__________________________________¦/
     
-        ¦z /y
+        ¦y /z
         ¦ /
         ¦/ 
        -¦------>X

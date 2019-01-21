@@ -7,6 +7,7 @@ import timeit as tm
 import numpy.linalg as la
 from math import factorial as fact
 from evtk.hl import pointsToVTK
+import copy as cpy
 
 def plot_fenics_mesh(mesh, new_fig=True):
     """
@@ -144,20 +145,28 @@ def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(3,1), hole_cent=Poi
 
 def structured_cell_centroids(mesh):
     """
-    creates a structured cell centroids and cell volumes of square lattice
-    using the fenics mesh
+    creates a structured cell centroids and cell volumes of 
+    square or cubic lattice using the fenics mesh by averaging
+    appropriate number of  2D/3D triangles 
 
     input:
     ------
-        mesh : 2D fenics mesh, not crossed topology
+        mesh : 2D/3D fenics mesh, not crossed topology
+    output:
+    ------
+        cell_cents_struct : np.array of cell centroids
+                            for corresponding structured
+                            mesh
     """
+    dim = mesh.topology().dim()
+    stride = fact(dim)
     cents = get_cell_centroids(mesh)
-    num_cells = int(mesh.num_cells()/2)
-    cell_cents_struct = np.zeros((num_cells,2),dtype=float)
+    num_cells = int(mesh.num_cells()/stride)
+    cell_cents_struct = np.zeros((num_cells,dim),dtype=float)
 
     for i in range(num_cells):
-        start = int(2*i)
-        end   = int(2*i)+2
+        start = int(stride*i)
+        end   = int(stride*i)+stride
         cell_cents_struct[i] = np.average(cents[start:end],axis=0)
 
     return cell_cents_struct
@@ -171,11 +180,12 @@ def structured_cell_volumes(mesh):
     ------
         mesh : 2D FEniCS mesh, not corssed topology
     """
-
+    dim = mesh.topology().dim()
+    stride = fact(dim)
     vols = get_cell_volumes(mesh)
-    num_cells = int(mesh.num_cells()/2)
+    num_cells = int(mesh.num_cells()/stride)
     
-    return np.ones(num_cells, dtype=float)*2*vols[0]
+    return np.ones(num_cells, dtype=float)*stride*vols[0]
 
 
 def box_mesh(point1=Point(0,0,0), point2=Point(2,1,1),
@@ -388,6 +398,100 @@ def get_peridym_mesh_bounds(mesh, struct_grd=False):
         bound_cents[(2*d+1)]   = cell_cent[bound_nodes[2*d+1][0]] #node centroids for min bound
 
     return bound_nodes, bound_cents #convert list to np array 
+
+def add_ghost_cells(mesh, bc_loc, struct_grd=False):
+    """
+    this method adds ghost layer to the mesh 
+    along the edges where bc is intended to be applied 
+    so that equivalent of peridynamic volume boundary
+    condition is on the edge/bounary of the domain 
+
+    input:
+    ------
+        mesh: FEniCS mesh 
+        bc_locations: array/list of integers specifiying the boundary 
+                      locations (see method: get_peridym_mesh_bounds)
+    output:
+    -------
+        cell_ids_ghost : np.array new cell ids  
+        cell_cent_ghost: np.array new cell centroids 
+        cell_vol_ghost : np.array new cell volume
+
+extend 
+    ...----------3:y_max----------... 
+    .  ¦                         ¦  .
+    .  ¦                         ¦  . 
+    .  ¦                         ¦  .
+    .0:x_min                 1:x_max. 
+    .  ¦                         ¦  .
+    .  ¦                         ¦  .
+    ...¦---------2:y_max---------¦...
+
+            all even boundary indices refer to min along the
+            corresponding cardinal direction {0:x_min, 2:y_min, 4:z_min}
+            and similarly all odd indices refer to max along the
+            cardinal direction
+
+            The edges belonging to min has to be extended in -ve
+            cardinal direction and those beloning to max has to be 
+            extended along +ve cardinal direction
+
+    """
+
+    dim = mesh.topology().dim()
+    dim_lst = [dd for dd in range(dim)]
+    el  = np.zeros(dim, dtype=float)
+
+    if(struct_grd):
+        cell_cent = structured_cell_centroids(mesh)
+        cell_vol  = structured_cell_volumes(mesh)
+    else:
+        cell_cent = get_cell_centroids(mesh)
+        cell_vol  = get_cell_volumes(mesh)
+    
+    new_cell_cents = cpy.deepcopy(cell_cent)
+    bound_nodes, bound_cents = get_peridym_mesh_bounds(mesh, struct_grd)
+    bound_keys = bound_nodes.keys()
+
+    for loc in bc_loc:
+        curr_nodes = bound_nodes[loc]
+        curr_cents = bound_cents[loc]
+        
+        for d in range(dim):
+            #store max of distance along successive layer
+            # as the hpyothetical edge length
+            idxs = [dd for dd in range(dim)]
+            idxs.pop(d)
+            el[d] = np.max(np.diff(np.unique(curr_cents[:,d])))
+
+            if(2*d == loc):
+                #find out the points where min along d dim occurs
+                temp_min_loc = curr_cents[np.ravel(np.argwhere(curr_cents[:,d] == np.min(curr_cents)))]
+                new_min_cents = cpy.deepcopy(temp_min_loc)
+                new_min_cents[:,d] -= el[d]
+
+                #insert the new centroids to maintain the order
+                #of array of centroids
+                for i, yy in enumerate(new_min_cents[:,idxs]):
+                    idx = np.min(np.where(np.all(cell_cent[:,idxs] == yy, axis=1)))
+                    new_cell_cents = np.insert(new_cell_cents, idx, new_min_cents[i], 0)
+
+            if(2*d+1 == loc):
+                #find out the points where max along d dim occurs
+                temp_max_loc = curr_cents[np.ravel(np.where(curr_cents[:,d] == np.max(curr_cents)))]
+
+                new_max_cents = cpy.deepcopy(temp_max_loc)
+                new_max_cents[:,d] += el[d]
+
+                #insert the new centroids to maintain the order
+                #of array of centroids
+                for i, yy in enumerate(new_max_cents[:,idxs]):
+                    idx = np.max(np.where(np.all(cell_cent[:,idxs] == yy, axis=1)))
+                    new_cell_cents = np.insert(new_cell_cents, idx+1, new_max_cents[i],0)
+                
+    new_cell_vols = np.ones(len(new_cell_cents), dtype=float)*cell_vol[0]
+
+    return new_cell_cents, new_cell_vols
 
 
 def write_to_vtk(mesh,  displacement=None, file_name="gridfile"):

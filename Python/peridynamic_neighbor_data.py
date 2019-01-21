@@ -52,7 +52,7 @@ def peridym_set_horizon(mesh, horizon=None):
         return mesh, horizon
 
 
-def peridym_compute_neighbors(mesh, horizon, structured_mesh=False):
+def peridym_compute_neighbors(mesh, horizon, struct_grd=False):
     """
     given a mesh and a horizon, this function
     rturns for each node in the mesh the 
@@ -64,7 +64,7 @@ def peridym_compute_neighbors(mesh, horizon, structured_mesh=False):
     -----
     mesh : meshpy.triangle mesh
     horizon : folat , length of peridynamic horizon
-    structured_mesh: boolean, True if we use structured cell config
+    struct_grd: boolean, True if we use structured cell config
                      from FEniCS mesh
     returns
     -------
@@ -78,7 +78,7 @@ def peridym_compute_neighbors(mesh, horizon, structured_mesh=False):
     print("computing the neighbor list of the mesh for horizon size of %f" %horizon)
     neighbor_lst = []
 
-    if(structured_mesh):
+    if(struct_grd):
         cell_cent = structured_cell_centroids(m)
     else:
         cell_cent = get_cell_centroids(mesh)
@@ -103,12 +103,12 @@ def peridym_compute_neighbors(mesh, horizon, structured_mesh=False):
     return np.array(neighbor_lst)
 
 
-def peridym_compute_weighted_volume(mesh, nbr_lst, nbr_beta_lst,  horizon, omega_fun, structured_mesh=False):
+def peridym_compute_weighted_volume(mesh, nbr_lst, nbr_beta_lst,  horizon, omega_fun, struct_grd=False):
     """
     computes the weighted volume of the peridynammic 
     mesh based on influence function and horizon value
     """
-    if(structured_mesh):
+    if(struct_grd):
         cell_cent = structured_cell_centroids(mesh)
         cell_vol = structured_cell_volumes(mesh)
     else:
@@ -135,7 +135,7 @@ def peridym_compute_weighted_volume(mesh, nbr_lst, nbr_beta_lst,  horizon, omega
     return mw
 
    
-def peridym_get_neighbor_data(mesh, horizon, omega_fun, structured_mesh=False):
+def peridym_get_neighbor_data(mesh, horizon, omega_fun, struct_grd=False):
     """
     this function computes the bond vector coordinates
     for each element in the neighborhood list of the 
@@ -146,7 +146,7 @@ def peridym_get_neighbor_data(mesh, horizon, omega_fun, structured_mesh=False):
         mesh : meshpy.MeshInfo mesh data
         horizon : float, peridynamic horizon
         omega_fun: pointer to the influence function
-        structured_mesh: boolean, if peridiynamic mesh is structured
+        struct_grd: boolean, if peridiynamic mesh is structured
     returns:
     -------
         nbr_lst         :
@@ -157,7 +157,7 @@ def peridym_get_neighbor_data(mesh, horizon, omega_fun, structured_mesh=False):
         mw              : weighted mass 
     """
 
-    if(structured_mesh):
+    if(struct_grd):
         cell_cent = structured_cell_centroids(mesh)
         cell_vol  = structured_cell_volumes(mesh)
     else:
@@ -173,7 +173,7 @@ def peridym_get_neighbor_data(mesh, horizon, omega_fun, structured_mesh=False):
     start = tm.default_timer()
     print("computing the remaining peridynamic neighbor data for the mesh with horizon: %4.2f" %horizon)
 
-    mw = peridym_compute_weighted_volume(mesh, nbr_lst, nbr_beta_lst, horizon, omega_fun, structured_mesh)
+    mw = peridym_compute_weighted_volume(mesh, nbr_lst, nbr_beta_lst, horizon, omega_fun, struct_grd)
 
     nbr_bnd_vector_lst = []
     nbr_bnd_len_lst = []

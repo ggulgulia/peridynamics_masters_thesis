@@ -3,7 +3,7 @@ from fenics_plane_stress import *
 from peridynamic_infl_fun import *
 
 
-def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_=False, force=-5e8, structured_mesh=False):
+def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_=False, force=-5e8, struct_grd=False):
     """
     compares the FE and PD solution for a simple 2D case 
 
@@ -15,7 +15,7 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
     :returns: TODO
 
     """
-    if(structured_mesh):
+    if(struct_grd):
         cell_cent = structured_cell_centroids(mesh)
         base_horizon = 3*np.diff(cell_cent[0:2][:,0])[0]
         el = np.diff(cell_cent[0:2][:,0])[0]
@@ -41,7 +41,7 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
     print('solving using Peridynamics:')
     for i in range(len(horizons)):
         _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizons[i], mesh, npts=npts,material=material,
-                                                           omega_fun=infl_fun, plot_=plot_, force=force,structured_mesh=structured_mesh)
+                                                           omega_fun=infl_fun, plot_=plot_, force=force,struct_grd=struct_grd)
 
         disp_cent_PD_array[i] = disp_cent_i
         u_disp_PD_array[i]    = u_disp_i 
@@ -70,7 +70,7 @@ def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_
 
 
 
-def compare_PD_infl_funs_with_FE(horizon, mesh, npts=15, material='steel', plot_=False, force=-5e8, structured_mesh=False):
+def compare_PD_infl_funs_with_FE(horizon, mesh, npts=15, material='steel', plot_=False, force=-5e8, struct_grd=False):
     """
     compares the FE and PD solution for a simple 2D case 
 
@@ -87,7 +87,7 @@ def compare_PD_infl_funs_with_FE(horizon, mesh, npts=15, material='steel', plot_
     print('solving using FEniCS:')
     disp_cent_FE, u_disp_FE = solve_fenic_bar(mesh, material, force=force)
 
-    if(structured_mesh):
+    if(struct_grd):
         cell_cent = structured_cell_centroids(mesh)
 
     else:
@@ -112,10 +112,10 @@ def compare_PD_infl_funs_with_FE(horizon, mesh, npts=15, material='steel', plot_
     tree = QuadTree()
     extents = get_domain_bounding_box(mesh)
     tree.put(extents, horizon)
-    nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
+    nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, struct_grd)
     for kk in keys:
         infl_fun = infl_fun_dict[kk]
-        _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizon, mesh,nbr_lst=nbr_lst ,material=material,omega_fun=infl_fun, force=force, structured_mesh=structured_mesh)
+        _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizon, mesh,nbr_lst=nbr_lst, nbr_beta_lst=nbr_beta_lst, material=material,omega_fun=infl_fun, force=force, struct_grd=struct_grd)
 
         disp_cent_PD_array[kk] = disp_cent_i
         u_disp_PD_array[kk]    = u_disp_i 

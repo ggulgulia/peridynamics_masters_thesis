@@ -9,8 +9,8 @@ import mshr
 
 
 def test_structured_grid():
-    m = RectangleMesh(Point(0,0), Point(3,1),60,30)
-    structured_mesh = True
+    m = RectangleMesh(Point(0,0), Point(2,1),20,10)
+    struct_grd = True
     cell_cent = structured_cell_centroids(m)
     cell_vol = structured_cell_volumes(m)
     purtub_fact = 1e-6
@@ -24,14 +24,14 @@ def test_structured_grid():
     tree = QuadTree()
     tree.put(extents, horizon)
     
-    nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
-    mw = peridym_compute_weighted_volume(m, nbr_lst,nbr_beta_lst, horizon, omega_fun,structured_mesh=True)
+    nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, struct_grd)
+    mw = peridym_compute_weighted_volume(m, nbr_lst,nbr_beta_lst, horizon, omega_fun,struct_grd=struct_grd)
     
     K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
     bc_type = {0:'dirichlet', 1:'force'}
     bc_vals = {'dirichlet': 0, 'force': -5e8}
     
-    K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals, cell_vol, structured_mesh)
+    K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals, cell_vol, struct_grd)
     
     print("solving the stystem")
     start = tm.default_timer()
@@ -40,7 +40,7 @@ def test_structured_grid():
     print("Time taken for solving the system of equation: %4.3f secs" %(end-start))
     u_disp = copy.deepcopy(sol)#
     u_disp = np.reshape(u_disp, (int(len(sol)/dim), dim))
-    a, _ = get_peridym_mesh_bounds(m, structured_mesh)
+    a, _ = get_peridym_mesh_bounds(m, struct_grd)
     
     node_ids = a[0][0] #normal to x directon
     

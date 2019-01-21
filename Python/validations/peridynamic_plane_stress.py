@@ -8,7 +8,7 @@ import mshr
 import timeit as tm
 from peridynamic_infl_fun import *
 
-def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8, structured_mesh=False):
+def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8, struct_grd=False):
     """
     solves the peridynamic bar with a specified load
 
@@ -21,7 +21,7 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
     #establish the influence function 
     #omega_fun = unit_infl_fun
 
-    if(structured_mesh):
+    if(struct_grd):
         cell_cent = structured_cell_centroids(m)
         cell_vol  = structured_cell_volumes(m)
     else:
@@ -38,14 +38,14 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
     if nbr_lst is None:
         tree = QuadTree()
         tree.put(extents, horizon)
-        nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
+        nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, struct_grd)
         
-    mw = peridym_compute_weighted_volume(m, nbr_lst, horizon, omega_fun,structured_mesh) 
-    K = computeK(horizon, cell_vol, nbr_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
+    mw = peridym_compute_weighted_volume(m, nbr_lst, nbr_beta_lst, horizon, omega_fun,struct_grd) 
+    K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
     bc_type = {0:'dirichlet', 1:'force'}
     bc_vals = {'dirichlet': 0, 'force': force}
     
-    K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals, cell_vol, structured_mesh=structured_mesh)
+    K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals, cell_vol, struct_grd=struct_grd)
     
     print("solving the stystem")
     start = tm.default_timer()
@@ -54,7 +54,7 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, npts=15, material='stee
     print("Time taken for solving the system of equation: %4.3f secs" %(end-start))
     u_disp = copy.deepcopy(sol)#
     u_disp = np.reshape(u_disp, (int(len(sol)/dim), dim))
-    a, _ = get_peridym_mesh_bounds(m, structured_mesh=structured_mesh)
+    a, _ = get_peridym_mesh_bounds(m, struct_grd=struct_grd)
     
     node_ids = a[0][0] #normal to x directon
     

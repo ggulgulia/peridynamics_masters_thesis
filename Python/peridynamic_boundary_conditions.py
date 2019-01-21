@@ -2,7 +2,7 @@ from helper import *
 from fenics_mesh_tools import *
 
 
-def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol, structured_mesh=False):
+def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol, struct_grd=False):
     """
     the function applies a boundary conditions on the mesh provided
     BC type : Dirichlet(fixed, displacement), Neumann
@@ -69,7 +69,7 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol, structured_mesh=False)
             # 4 : z_min
             # 5 : z_max
             #see the diagram in doc string comments above
-    a, b = get_peridym_mesh_bounds(mesh, structured_mesh)
+    a, b = get_peridym_mesh_bounds(mesh, struct_grd)
 
     #apply force on the rhs
     for bb in bound_name:

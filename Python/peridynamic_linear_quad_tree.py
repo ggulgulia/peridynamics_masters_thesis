@@ -1,4 +1,5 @@
 from peridynamic_quad_tree import *
+from peridynamic_corrections import *
 import timeit as tm
 
 def find_one_nbr(nq, delNi):
@@ -152,7 +153,7 @@ def find_all_nbrs(nq):
 
     return nbr_int, nbr_bin 
 
-def tree_nbr_search(linear_tree, cell_cents, horizon):
+def tree_nbr_search(linear_tree, cell_cents, horizon, struct_grd=False):
     """
     linear tree nbr search
 
@@ -162,6 +163,7 @@ def tree_nbr_search(linear_tree, cell_cents, horizon):
                        all subdomains
         cell_cents        : numpy array of cell centroid
         horizon          : pridynamic horizon
+        struct_grd  : boolean, whether using triangulation or squared lattice
 
     output:
     -------
@@ -173,18 +175,23 @@ def tree_nbr_search(linear_tree, cell_cents, horizon):
     start = tm.default_timer()
     kk = linear_tree.keys()
     nbr_lst = []
+    nbr_beta_lst = []
     for k in kk:
         _, bin_nbrs = find_all_nbrs(k)
         nbr_cells = np.empty(0,int)
-        nbr_lst = nbr_lst+compute_single_nbr_lst(linear_tree, k, horizon, cell_cents)
+        nbr_lst_k, nbr_beta_lst_k =compute_single_nbr_lst(linear_tree, k, horizon, cell_cents, struct_grd)
+        nbr_lst = nbr_lst + nbr_lst_k
+        nbr_beta_lst = nbr_beta_lst + nbr_beta_lst_k
     
     nbr_lst = sorted(nbr_lst, key=lambda x: x[0])
+    nbr_beta_lst = sorted(nbr_beta_lst, key=lambda x: x[0])
 
     nbr_lst_mod = [np.delete(ll, 0) for ll in nbr_lst]
+    nbr_beta_lst_mod = [np.delete(ll, 0) for ll in nbr_beta_lst]
     end = tm.default_timer()
     print("time taken to compute tree neighbor list= %4.5f sec"%(end-start))
 
-    return nbr_lst_mod
+    return nbr_lst_mod, nbr_beta_lst_mod
 
 def compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents):
     """
@@ -243,12 +250,17 @@ def compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents):
 
     return np.unique(nbr_cells)
 
-def compute_single_nbr_lst(linear_tree, bin_code, horizon, cell_cents):
+def compute_single_nbr_lst(linear_tree, bin_code, horizon, cell_cents, struct_grd):
     """
     given a binary location code for a sub domain and a linear quad tree
     that the subdomain is associated with, this method computes the 
     neighbor list of all the cell centroid ids located in the subdomain
-    in consideration.
+    in consideration and the corresponding neighbor volume fraction list
+
+    The cells may not completely lie within the spherical horizon and 
+    those that lie partially within the horizon are also accounted for 
+    in the nbr_beta_lst, beta here referring to the volume fraction of
+    the cell that lie in the spherical horizon
 
     input:
     ------
@@ -257,29 +269,52 @@ def compute_single_nbr_lst(linear_tree, bin_code, horizon, cell_cents):
         bin_code    : binary location code of subdomain under consideration
         horizon     : peridynamic horizon
         cell_cents  : np array of all cell centroids
+        struct_grd  : boolean, wheather using triangulation(unstructured grid) or not
 
     output:
     -------
         nbr_lst     : nbr lst of all cell cents lying in the subdomain reffered
                       to by the bin_code
+        nbr_beta_lst: list of volume factions of all the cells that are in the 
+                      nbr_lst. 
     """
     nbr_lst = []
+    nbr_beta_lst = []
     nbr_cells = compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents)
     curr_cells = get_cell_centroid2(cell_cents, linear_tree[bin_code])
+
+    if(struct_grd):
+        fract = 0.5 # for square lattices
+        el = np.max(np.diff(cell_cents[0:2], axis=0))
+    else:
+        fract = (1.0/3.0) #for triangulations 
+        el =abs(np.max(np.diff(cell_cents[0:3:2],axis=0))) 
+
+    delta_plus = horizon + fract*el
+    delta_minus = horizon - fract*el
+
     for i, c  in enumerate(curr_cells):
         temp_nbr_cents = cpy.deepcopy(nbr_cells)
         curr_nbrs = []
+        curr_beta = []
         temp_nbr_cents = np.append(temp_nbr_cents, curr_cells[0:i])
         temp_nbr_cents = np.append(temp_nbr_cents, curr_cells[i+1:])
         temp_nbr_cents = np.unique(temp_nbr_cents)
         for j in temp_nbr_cents:
-            if(la.norm((cell_cents[j]-cell_cents[c]),2)<=horizon):
+            xi = la.norm((cell_cents[j]-cell_cents[c]))
+            if(la.norm((cell_cents[j]-cell_cents[c]),2)<= delta_minus):
+                curr_beta.append(1.0)
+                curr_nbrs.append(j)
+            elif((delta_minus < xi) and (delta_plus >= xi)):
+                beta = (horizon + fract*el - xi)/el
+                curr_beta.append(beta)
                 curr_nbrs.append(j)
 
-        curr_nbrs.sort()
         nbr_lst.append(np.array([c]+curr_nbrs))
+        nbr_beta_lst.append(np.array([c]+curr_beta))
+
     
-    return nbr_lst
+    return nbr_lst, nbr_beta_lst
 
 
 def test_nbr_lst(nbr_lst_tree, nbr_lst_naive):

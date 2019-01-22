@@ -399,6 +399,37 @@ def get_peridym_mesh_bounds(mesh, struct_grd=False):
 
     return bound_nodes, bound_cents #convert list to np array 
 
+def get_modified_boundary_layers(cell_cent, el):
+    """
+    after adding ghost layers, the boundary layers are 
+    modified and we need the modified BL's to do 
+    further pre- and post-processing
+
+    input:
+    ------
+        cell_cent: np.array of modified cell centroids
+        el       : np array of edge lengths
+    ouput:
+    ------
+        bound_cents: np.array of cell centroids lying on BL along the 
+                     given dimension
+    """
+    dim = len(el)
+    bound_range = np.zeros(2*dim, dtype=float)
+    bound_nodes = {} #dict to store the node numbers of centroids that lie within bound_range
+    bound_cents  = {} #dict to store the node centroids corresponding to node numbers above
+    
+    for d in range(dim):
+        bound_range[2*d] = np.min(cell_cent[:,d]) + 1.001*el[d]
+        bound_range[2*d+1] = np.max(cell_cent[:,d]) -1.001*el[d]
+
+        bound_cents[2*d] = cell_cent[np.where(cell_cent[:,d] <= bound_range[2*d])]
+        bound_cents[2*d+1] = cell_cent[np.where(cell_cent[:,d] >= bound_range[2*d+1])]
+
+    return bound_cents
+
+
+
 def add_ghost_cells(mesh, bc_loc, struct_grd=False):
     """
     this method adds ghost layer to the mesh 
@@ -406,10 +437,12 @@ def add_ghost_cells(mesh, bc_loc, struct_grd=False):
     so that equivalent of peridynamic volume boundary
     condition is on the edge/bounary of the domain 
 
+    bc_loc = [0, 1, 2, 3, 4, 5] (see methd: get_peridym_mesh_bounds
+    for more details)
     input:
     ------
         mesh: FEniCS mesh 
-        bc_locations: array/list of integers specifiying the boundary 
+        bc_loc: array/list (MUST BE SORTED) of integers specifiying the boundary 
                       locations (see method: get_peridym_mesh_bounds)
     output:
     -------
@@ -417,7 +450,10 @@ def add_ghost_cells(mesh, bc_loc, struct_grd=False):
         cell_cent_ghost: np.array new cell centroids 
         cell_vol_ghost : np.array new cell volume
 
-extend 
+
+extended domain (in '.' around '- & ¦') 
+    .................................
+    .  .                         .  .
     ...----------3:y_max----------... 
     .  ¦                         ¦  .
     .  ¦                         ¦  . 
@@ -426,6 +462,8 @@ extend
     .  ¦                         ¦  .
     .  ¦                         ¦  .
     ...¦---------2:y_max---------¦...
+    .  .                         .  .
+    .................................
 
             all even boundary indices refer to min along the
             corresponding cardinal direction {0:x_min, 2:y_min, 4:z_min}
@@ -440,7 +478,6 @@ extend
 
     dim = mesh.topology().dim()
     dim_lst = [dd for dd in range(dim)]
-    el  = np.zeros(dim, dtype=float)
 
     if(struct_grd):
         cell_cent = structured_cell_centroids(mesh)
@@ -449,45 +486,53 @@ extend
         cell_cent = get_cell_centroids(mesh)
         cell_vol  = get_cell_volumes(mesh)
     
+    el = [np.max(np.diff(np.unique(cell_cent[:,d])[0:2])) for d in range(dim)]
+    el = np.array(el)
+
     new_cell_cents = cpy.deepcopy(cell_cent)
-    bound_nodes, bound_cents = get_peridym_mesh_bounds(mesh, struct_grd)
-    bound_keys = bound_nodes.keys()
 
     for loc in bc_loc:
-        curr_nodes = bound_nodes[loc]
-        curr_cents = bound_cents[loc]
-        
         for d in range(dim):
             #store max of distance along successive layer
             # as the hpyothetical edge length
             idxs = [dd for dd in range(dim)]
             idxs.pop(d)
-            el[d] = np.max(np.diff(np.unique(curr_cents[:,d])))
 
             if(2*d == loc):
+                bound_cents_d = get_modified_boundary_layers(new_cell_cents, el)
+                curr_cents = bound_cents_d[loc]
                 #find out the points where min along d dim occurs
-                temp_min_loc = curr_cents[np.ravel(np.argwhere(curr_cents[:,d] == np.min(curr_cents)))]
+                temp_min_loc = curr_cents[np.ravel(np.argwhere(curr_cents[:,d] == np.min(curr_cents[:,d])))]
                 new_min_cents = cpy.deepcopy(temp_min_loc)
                 new_min_cents[:,d] -= el[d]
 
                 #insert the new centroids to maintain the order
                 #of array of centroids
-                for i, yy in enumerate(new_min_cents[:,idxs]):
-                    idx = np.min(np.where(np.all(cell_cent[:,idxs] == yy, axis=1)))
-                    new_cell_cents = np.insert(new_cell_cents, idx, new_min_cents[i], 0)
+                if(loc==0): 
+                    for i, yy in enumerate(new_min_cents[:,idxs]):
+                        idx = np.min(np.where(np.all(new_cell_cents[:,idxs] == yy, axis=1)))
+                        new_cell_cents = np.insert(new_cell_cents, idx, new_min_cents[i], 0)
+                if(loc==2):
+                    new_cell_cents = np.vstack((new_min_cents, new_cell_cents))
+                    
 
             if(2*d+1 == loc):
+                bound_cents_d = get_modified_boundary_layers(new_cell_cents, el)
+                curr_cents = bound_cents_d[loc]
                 #find out the points where max along d dim occurs
-                temp_max_loc = curr_cents[np.ravel(np.where(curr_cents[:,d] == np.max(curr_cents)))]
+                temp_max_loc = curr_cents[np.ravel(np.where(curr_cents[:,d] == np.max(curr_cents[:,d])))]
 
                 new_max_cents = cpy.deepcopy(temp_max_loc)
                 new_max_cents[:,d] += el[d]
 
                 #insert the new centroids to maintain the order
                 #of array of centroids
-                for i, yy in enumerate(new_max_cents[:,idxs]):
-                    idx = np.max(np.where(np.all(cell_cent[:,idxs] == yy, axis=1)))
-                    new_cell_cents = np.insert(new_cell_cents, idx+1, new_max_cents[i],0)
+                if(loc==1):
+                    for i, yy in enumerate(new_max_cents[:,idxs]):
+                        idx = np.max(np.where(np.all(new_cell_cents[:,idxs] == yy, axis=1)))
+                        new_cell_cents = np.insert(new_cell_cents, idx+1, new_max_cents[i],0)
+                if(loc==3):
+                    new_cell_cents = np.vstack((new_cell_cents, new_max_cents))
                 
     new_cell_vols = np.ones(len(new_cell_cents), dtype=float)*cell_vol[0]
 

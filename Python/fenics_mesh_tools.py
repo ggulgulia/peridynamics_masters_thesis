@@ -441,7 +441,7 @@ def get_modified_boundary_layers(cell_cent, el, num_lyrs, struct_grd):
 
     return bound_nodes, bound_cents
 
-def compute_modified_extents(cell_cent, el, struct_grd=False):
+def compute_modified_extents(cell_cent, struct_grd=False):
     """
     computes the extents of the new mesh after the addition of 
     ghost layers of centroids 
@@ -455,7 +455,7 @@ def compute_modified_extents(cell_cent, el, struct_grd=False):
     :returns: TODO
 
     """
-    dim = len(el)
+    dim = len(cell_cent[0])
 
     extents = np.zeros((2, dim), float)
     min_corners = np.zeros(dim, float)
@@ -463,15 +463,28 @@ def compute_modified_extents(cell_cent, el, struct_grd=False):
 
     if(struct_grd):
         shift_fact = 0.5
+        el_fact = 1.0
     else:
+        el_fact = 3.0
         shift_fact = 1.0/3.0
 
+
     for d in range(dim):
+        xx = np.unique(cell_cent[:,d])
+        el = el_fact*np.max(np.abs(np.diff(xx[0:2])))
         min_corners[d] = np.min(cell_cent[:,d])
         max_corners[d] = np.max(cell_cent[:,d])
 
-        extents[0][d] = min_corners[d] - shift_fact*el[d]
-        extents[1][d] = max_corners[d] + shift_fact*el[d]
+        """
+        below is done to avoid round-off error due to
+        substraction of two numbers near to each other
+        
+        This occurs when corners in one of the dimension
+        remains unchanged but we still try to compute 
+        the new extents
+        """
+        extents[0][d] = round(min_corners[d] - shift_fact*el, 16)
+        extents[1][d] = round(max_corners[d] + shift_fact*el, 16)
 
     return extents
 
@@ -528,14 +541,19 @@ extended domain (in '.' around '- & ¦')
     if(struct_grd):
         cell_cent = structured_cell_centroids(mesh)
         cell_vol  = structured_cell_volumes(mesh)
-        el = [np.max(np.diff(np.unique(cell_cent[:,d])[0:2])) for d in range(dim)]
         dist_fact = 1.0 
         mul = 1 #for struct grid
+        el_fact = 1.0 
     else:
         cell_cent = get_cell_centroids(mesh)
         cell_vol  = get_cell_volumes(mesh)
-        el = dim*[np.max(np.diff(cell_cent[0::2][:,0][0:2]))]
         mul = 2 #need this for FEniCS regular triangulations
+        el_fact = 3.0
+
+    el = [] #empty list for edge length array
+    for d in range(dim):
+        xx = np.unique(cell_cent[:,d])
+        el.append(el_fact*np.max(np.diff(xx[0:2])))
 
     el = np.array(el)
     new_cell_cents = cpy.deepcopy(cell_cent)
@@ -587,7 +605,6 @@ extended domain (in '.' around '- & ¦')
                         new_cell_cents = np.vstack((new_cell_cents, new_max_cents))
                 
     new_cell_vols = np.ones(len(new_cell_cents), dtype=float)*cell_vol[0]
-    extents = compute_modified_extents(cell_cent, el)
 
     return new_cell_cents, new_cell_vols
 

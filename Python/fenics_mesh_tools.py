@@ -523,6 +523,7 @@ extended domain (in '.' around '- & ¦')
         cell_vol  = structured_cell_volumes(mesh)
         el = [np.max(np.diff(np.unique(cell_cent[:,d])[0:2])) for d in range(dim)]
         dist_fact = 1.0 
+        multiplier = 1.0 #for struct grid
     else:
         cell_cent = get_cell_centroids(mesh)
         cell_vol  = get_cell_volumes(mesh)
@@ -544,12 +545,12 @@ extended domain (in '.' around '- & ¦')
             if(2*d == loc):
                 _, bound_cents_d = get_modified_boundary_layers(new_cell_cents, el, num_lyrs)
                 curr_cents = bound_cents_d[loc]
+                coord = np.sort(np.unique(curr_cents[:,d]))[::-1]
                 #find out the points where min along d dim occurs
                 for ll in range(num_lyrs):
-                    coord = np.sort(np.unique(curr_cents[:,d]))
                     temp_min_loc = curr_cents[np.ravel(np.argwhere(curr_cents[:,d] == coord[ll]))]
                     new_min_cents = cpy.deepcopy(temp_min_loc)
-                    new_min_cents[:,d] -= dist_fact*num_lyrs*el[d]
+                    new_min_cents[:,d] -= num_lyrs*el[d]
 
                     #insert the new centroids to maintain the order
                     #of array of centroids
@@ -563,13 +564,13 @@ extended domain (in '.' around '- & ¦')
             if(2*d+1 == loc):
                 _, bound_cents_d = get_modified_boundary_layers(new_cell_cents, el, num_lyrs)
                 curr_cents = bound_cents_d[loc]
+                coord = np.sort(np.unique(curr_cents[:,d]))
                 #find out the points where max along d dim occurs
                 for ll in range(num_lyrs):
-                    coord = np.sort(np.unique(curr_cents[:,d]))[::-1]
                     temp_max_loc = curr_cents[np.ravel(np.where(curr_cents[:,d] == coord[ll]))]
 
                     new_max_cents = cpy.deepcopy(temp_max_loc)
-                    new_max_cents[:,d] += dist_fact*num_lyrs*el[d]
+                    new_max_cents[:,d] += num_lyrs*el[d]
 
                     #insert the new centroids to maintain the order
                     #of array of centroids

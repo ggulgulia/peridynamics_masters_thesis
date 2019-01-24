@@ -399,7 +399,7 @@ def get_peridym_mesh_bounds(mesh, struct_grd=False):
 
     return bound_nodes, bound_cents #convert list to np array 
 
-def get_modified_boundary_layers(cell_cent, el, num_lyrs):
+def get_modified_boundary_layers(cell_cent, el, num_lyrs, struct_grd):
     """
     after adding ghost layers, the boundary layers are 
     modified and we need the modified BL's to do 
@@ -419,12 +419,19 @@ def get_modified_boundary_layers(cell_cent, el, num_lyrs):
     bound_range = np.zeros(2*dim, dtype=float)
     bound_nodes = {} #dict to store the node numbers of centroids that lie within bound_range
     bound_cents  = {} #dict to store the node centroids corresponding to node numbers above
+    
+    if(struct_grd):
+        factor = 1
+        correction = 0
+    else:
+        factor = 2
+        correction = 1
 
     lyrs = float(num_lyrs-1)+ 0.001
     
     for d in range(dim):
-        bound_range[2*d] = np.min(cell_cent[:,d]) + lyrs*el[d]
-        bound_range[2*d+1] = np.max(cell_cent[:,d]) -lyrs*el[d]
+        bound_range[2*d] = factor*np.min(cell_cent[:,d]) + lyrs*el[d]
+        bound_range[2*d+1] = np.max(cell_cent[:,d]) -lyrs*el[d] - el[d]/3*correction
 
         bound_nodes[2*d] = np.where(cell_cent[:,d] <= bound_range[2*d])
         bound_nodes[(2*d+1)] = np.where(cell_cent[:,d] >= bound_range[2*d+1])
@@ -523,14 +530,12 @@ extended domain (in '.' around '- & ¦')
         cell_vol  = structured_cell_volumes(mesh)
         el = [np.max(np.diff(np.unique(cell_cent[:,d])[0:2])) for d in range(dim)]
         dist_fact = 1.0 
-        multiplier = 1.0 #for struct grid
+        mul = 1 #for struct grid
     else:
         cell_cent = get_cell_centroids(mesh)
         cell_vol  = get_cell_volumes(mesh)
         el = dim*[np.max(np.diff(cell_cent[0::2][:,0][0:2]))]
-        multiplier = 2 #need this for FEniCS regular triangulations
-        dist_fact = 1.0/multiplier
-        num_lyrs *= multiplier
+        mul = 2 #need this for FEniCS regular triangulations
 
     el = np.array(el)
     new_cell_cents = cpy.deepcopy(cell_cent)
@@ -543,11 +548,11 @@ extended domain (in '.' around '- & ¦')
             idxs.pop(d)
 
             if(2*d == loc):
-                _, bound_cents_d = get_modified_boundary_layers(new_cell_cents, el, num_lyrs)
+                _, bound_cents_d = get_modified_boundary_layers(new_cell_cents, el, num_lyrs,struct_grd)
                 curr_cents = bound_cents_d[loc]
                 coord = np.sort(np.unique(curr_cents[:,d]))[::-1]
                 #find out the points where min along d dim occurs
-                for ll in range(num_lyrs):
+                for ll in range(mul*num_lyrs):
                     temp_min_loc = curr_cents[np.ravel(np.argwhere(curr_cents[:,d] == coord[ll]))]
                     new_min_cents = cpy.deepcopy(temp_min_loc)
                     new_min_cents[:,d] -= num_lyrs*el[d]
@@ -562,11 +567,11 @@ extended domain (in '.' around '- & ¦')
                         new_cell_cents = np.vstack((new_min_cents, new_cell_cents))
 
             if(2*d+1 == loc):
-                _, bound_cents_d = get_modified_boundary_layers(new_cell_cents, el, num_lyrs)
+                _, bound_cents_d = get_modified_boundary_layers(new_cell_cents, el, num_lyrs, struct_grd)
                 curr_cents = bound_cents_d[loc]
                 coord = np.sort(np.unique(curr_cents[:,d]))
                 #find out the points where max along d dim occurs
-                for ll in range(num_lyrs):
+                for ll in range(mul*num_lyrs):
                     temp_max_loc = curr_cents[np.ravel(np.where(curr_cents[:,d] == coord[ll]))]
 
                     new_max_cents = cpy.deepcopy(temp_max_loc)

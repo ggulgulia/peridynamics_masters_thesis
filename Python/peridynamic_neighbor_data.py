@@ -103,17 +103,11 @@ def peridym_compute_neighbors(mesh, horizon, struct_grd=False):
     return np.array(neighbor_lst)
 
 
-def peridym_compute_weighted_volume(mesh, nbr_lst, nbr_beta_lst,  horizon, omega_fun, struct_grd=False):
+def peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst, nbr_beta_lst,  horizon, omega_fun):
     """
     computes the weighted volume of the peridynammic 
     mesh based on influence function and horizon value
     """
-    if(struct_grd):
-        cell_cent = structured_cell_centroids(mesh)
-        cell_vol = structured_cell_volumes(mesh)
-    else:
-        cell_cent = get_cell_centroids(mesh)
-        cell_vol = get_cell_volumes(mesh)
 
     mw = np.zeros(len(cell_vol), dtype=float) #m is wighted volume
 

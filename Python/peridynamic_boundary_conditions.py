@@ -2,7 +2,7 @@ from helper import *
 from fenics_mesh_tools import *
 
 
-def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol, struct_grd=False):
+def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, num_lyrs=2, struct_grd=False):
     """
     the function applies a boundary conditions on the mesh provided
     BC type : Dirichlet(fixed, displacement), Neumann
@@ -28,12 +28,17 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol, struct_grd=False):
 
     ASSUMPTION : the mesh is a rectangular mesh 
 
-    :mesh: TODO
-    :K   : tangent stiffness matrix 
-    :bc_type: TODO
-    :bc_location: TODO
-    :returns:
-    --------
+    dir_to_surface_map = {0:"x_min", 1:"x_max", 2:"y_min", 3:"y_max", 4:"z_min", 5:"z_max"}
+
+    input:
+    ------
+    cell_cent: peridynamic cell centroids
+    K   : tangent stiffness matrix 
+    bc_type: TODO
+    bc_location: TODO
+    
+    output:
+    -------
         K_bound   : np.ndarry stiffness matrix with bc applied
         u         :
 
@@ -42,16 +47,13 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol, struct_grd=False):
     print("beginning the application of boundary conditions to the given mesh")
     start = tm.default_timer()
 
-    #dictonary that maps integral numbers to appropirate surface normal
-    dir_to_surface_map = {0:"x_min", 1:"x_max", 2:"y_min", 3:"y_max", 4:"z_min", 5:"z_max"}
-
     print("boundary conditions on the mesh:")
     bound_name = bc_type.keys()
     for k in bound_name:
         print("%s node set : %s bc" %(k, bc_type[k]))
     print("\n")
 
-    dim = len(get_cell_centroids(mesh)[0])
+    dim = len(cell_cent[0])
     dof = np.shape(K)[0]
 
     K_bound = copy.deepcopy(K)
@@ -69,11 +71,15 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol, struct_grd=False):
             # 4 : z_min
             # 5 : z_max
             #see the diagram in doc string comments above
-    a, b = get_peridym_mesh_bounds(mesh, struct_grd)
+
+    """
+    to map the equivalent of volume bc to the edge, we apply the volume bc to as many number of layers within the volume as the number of ghost layers 
+    """
+    el = get_peridym_edge_length(cell_cent, struct_grd)
+    a, b = get_modified_boundary_layers(cell_cent, el, 2*num_lyrs, struct_grd)
 
     #apply force on the rhs
     for bb in bound_name:
-        
         if bc_type[bb] is "force":
             node_ids   = a[bb][0]
             node_cents = b[bb]
@@ -89,6 +95,7 @@ def peridym_apply_bc(mesh, K, bc_type, bc_vals, cell_vol, struct_grd=False):
                     rhs[nk*dim + 1] = f_density*cell_vol[nk]  #hard coded negative y-axis force 
                     #rhs has not yet bc applied to it
     #apply dirichlet bc 
+    a, b = get_modified_boundary_layers(cell_cent, el, num_lyrs, struct_grd)
     for bb in bound_name:
 
         if bc_type[bb] is "dirichlet" and bc_vals[bc_type[bb]] is 0:

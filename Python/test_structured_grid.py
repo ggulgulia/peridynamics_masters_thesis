@@ -5,13 +5,15 @@ from peridynamic_stiffness import*
 from peridynamic_boundary_conditions import *
 from peridynamic_infl_fun import *
 from peridynamic_materials import *
+from peridynamic_recover_original_mesh import *
 import mshr
 
 
 def test_structured_grid():
-    m = RectangleMesh(Point(0,0), Point(2,1),20,10)
+    m = RectangleMesh(Point(0,0), Point(2,1),10,5)
     struct_grd = True
 
+    """hard coded bcs"""
     bc_loc = [0,1]
     bc_type = {0:'dirichlet', 1:'force'}
     bc_vals = {'dirichlet': 0, 'force': -5e8}
@@ -45,28 +47,14 @@ def test_structured_grid():
     print("Time taken for solving the system of equation: %4.3f secs" %(end-start))
     u_disp = copy.deepcopy(sol)#
     u_disp = np.reshape(u_disp, (int(len(sol)/dim), dim))
-    a, _ = get_modified_boundary_layers(cell_cent, el, num_lyrs, struct_grd)
-    
-    node_ids = a[0][0] #normal to x directon
-    
-    for i, nk in enumerate(node_ids):
-        u_disp = np.insert(u_disp, nk, np.zeros(dim, dtype=float), axis=0)
-    
+
+    cell_cent, u_disp = recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, struct_grd)
     disp_cent = cell_cent + u_disp
-
-    del_ids = np.zeros(0, dtype=int)
-    for loc in bc_loc:
-        del_ids = np.concatenate((del_ids, a[loc][0]))
-    
-    cell_cent = np.delete(cell_cent, del_ids,axis=0)
-    disp_cent = np.delete(disp_cent, del_ids, axis=0)
-    u_disp    = np.delete(u_disp, del_ids, axis=0)
-
     
     if dim == 2:
         plt.figure()
         x, y = cell_cent.T
-        plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.3, label='original config')
+        plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.2, label='original config')
         x,y = (cell_cent + 40*u_disp).T
         plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label='horizon='+str(horizon))
         #plt.ylim(-0.5, 1.5)

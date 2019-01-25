@@ -399,6 +399,37 @@ def get_peridym_mesh_bounds(mesh, struct_grd=False):
 
     return bound_nodes, bound_cents #convert list to np array 
 
+def get_peridym_edge_length(cell_cent, struct_grd=False):
+    """
+    given a set of cell centroid beloning to regular (Square/Tri)
+    discretization in 2D/3D, the method returns the edge length
+
+    NOTE: el NOT EQUAL TO centroid distance
+
+    input:
+    ------
+    cell_cent : nd-array of peridynamic cell centroids 
+    struct_grd: boolean, whether the grid is struct(square lattices) unstruct(triangular lattices)
+
+    output:
+    -------
+    el       : nd array of edge length
+
+    """
+    dim = len(cell_cent[0])
+    el = np.zeros(dim, dtype = float)
+
+    if(struct_grd):
+        el_fact = 1.0
+    else:
+        el_fact = 3.0
+
+    for d in range(dim):
+        xx = np.unique(cell_cent[:,d])
+        el[d] = el_fact*np.max(np.abs(np.diff(xx[0:2])))
+
+    return el
+
 def get_modified_boundary_layers(cell_cent, el, num_lyrs, struct_grd):
     """
     after adding ghost layers, the boundary layers are 
@@ -441,7 +472,7 @@ def get_modified_boundary_layers(cell_cent, el, num_lyrs, struct_grd):
 
     return bound_nodes, bound_cents
 
-def compute_modified_extents(cell_cent, struct_grd=False):
+def compute_modified_extents(cell_cent, el, struct_grd=False):
     """
     computes the extents of the new mesh after the addition of 
     ghost layers of centroids 
@@ -461,17 +492,13 @@ def compute_modified_extents(cell_cent, struct_grd=False):
     min_corners = np.zeros(dim, float)
     max_corners = np.zeros(dim, float)
 
+    el = get_peridym_edge_length(cell_cent, struct_grd)
     if(struct_grd):
         shift_fact = 0.5
-        el_fact = 1.0
     else:
-        el_fact = 3.0
         shift_fact = 1.0/3.0
 
-
     for d in range(dim):
-        xx = np.unique(cell_cent[:,d])
-        el = el_fact*np.max(np.abs(np.diff(xx[0:2])))
         min_corners[d] = np.min(cell_cent[:,d])
         max_corners[d] = np.max(cell_cent[:,d])
 
@@ -483,8 +510,8 @@ def compute_modified_extents(cell_cent, struct_grd=False):
         remains unchanged but we still try to compute 
         the new extents
         """
-        extents[0][d] = round(min_corners[d] - shift_fact*el, 16)
-        extents[1][d] = round(max_corners[d] + shift_fact*el, 16)
+        extents[0][d] = round(min_corners[d] - shift_fact*el[d], 16)
+        extents[1][d] = round(max_corners[d] + shift_fact*el[d], 16)
 
     return extents
 
@@ -543,19 +570,12 @@ extended domain (in '.' around '- & ¦')
         cell_vol  = structured_cell_volumes(mesh)
         dist_fact = 1.0 
         mul = 1 #for struct grid
-        el_fact = 1.0 
     else:
         cell_cent = get_cell_centroids(mesh)
         cell_vol  = get_cell_volumes(mesh)
         mul = 2 #need this for FEniCS regular triangulations
-        el_fact = 3.0
 
-    el = [] #empty list for edge length array
-    for d in range(dim):
-        xx = np.unique(cell_cent[:,d])
-        el.append(el_fact*np.max(np.diff(xx[0:2])))
-
-    el = np.array(el)
+    el = get_peridym_edge_length(cell_cent, struct_grd)
     new_cell_cents = cpy.deepcopy(cell_cent)
 
     for loc in bc_loc:

@@ -10,12 +10,13 @@ def get_displaced_cell_centroids(m, u_fe, cell_cent):
     after FE solution
     input:
     ------
-        m: original FEniCS Mesh
-        u_fe: FE solution from FEniCS
+        m        : original FEniCS Mesh
+        u_fe     : FE solution from FEniCS
+        cell_cent: peridynamic cell centroid
     output:
     -------
+        u_disp   : displacement vectors of each peridynamic centroid 
         disp_cent: centroid of displaced triangualtions (in the mesh)
-        u_disp: displacement vectors of each triangle 
     """
 
     dim = np.shape(cell_cent)[1]
@@ -25,7 +26,6 @@ def get_displaced_cell_centroids(m, u_fe, cell_cent):
         u_disp[i] = u_fe(cell_cent[i]) #this is expensive 
 
     disp_cent = cell_cent + u_disp
-
     return disp_cent, u_disp
 
 
@@ -131,4 +131,4 @@ def solve_fenic_bar(mesh, cell_cent, npts=15, material='steel', plot_ = False, f
         plt.ylim(-0.6,1.5)
         plt.show(block=False)
 
-    return disp_cent, u_disp
+    return u_fe

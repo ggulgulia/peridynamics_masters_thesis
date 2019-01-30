@@ -10,7 +10,7 @@ import mshr
 
 
 def test_structured_grid():
-    m = RectangleMesh(Point(0,0), Point(2,1),10,5)
+    m = RectangleMesh(Point(0,0), Point(2,1),20, 10)
     struct_grd = True
 
     """hard coded bcs"""

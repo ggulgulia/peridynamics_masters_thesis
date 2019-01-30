@@ -76,8 +76,11 @@ def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, num_lyrs=2, struc
     to map the equivalent of volume bc to the edge, we apply the volume bc to as many number of layers within the volume as the number of ghost layers 
     """
     el = get_peridym_edge_length(cell_cent, struct_grd)
-    a, b = get_modified_boundary_layers(cell_cent, el, 2*num_lyrs, struct_grd)
 
+    ## For force bc we need equal num layers inside the domain as outside 
+    ## hence we multiply the num lyers by 2, assuming we have num_lyrs layers
+    ## of additional ghost lyer where foce bc is to be applied
+    a, b = get_modified_boundary_layers(cell_cent, el, 2*num_lyrs, struct_grd)
     #apply force on the rhs
     for bb in bound_name:
         if bc_type[bb] is "force":

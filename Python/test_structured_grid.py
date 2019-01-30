@@ -5,33 +5,40 @@ from peridynamic_stiffness import*
 from peridynamic_boundary_conditions import *
 from peridynamic_infl_fun import *
 from peridynamic_materials import *
+from peridynamic_recover_original_mesh import *
 import mshr
 
 
 def test_structured_grid():
-    m = RectangleMesh(Point(0,0), Point(2,1),20,10)
+    m = RectangleMesh(Point(0,0), Point(2,1),20, 10)
     struct_grd = True
-    cell_cent = structured_cell_centroids(m)
-    cell_vol = structured_cell_volumes(m)
+
+    """hard coded bcs"""
+    bc_loc = [0,1]
+    bc_type = {0:'dirichlet', 1:'force'}
+    bc_vals = {'dirichlet': 0, 'force': -5e8}
+    num_lyrs = 2 #num layers of cells for BC
+
+    cell_cent, cell_vol = add_ghost_cells(m, bc_loc, num_lyrs, struct_grd)
+    el = get_peridym_edge_length(cell_cent, struct_grd)
+    extents = compute_modified_extents(cell_cent, struct_grd)
+    
     purtub_fact = 1e-6
     dim = np.shape(cell_cent[0])[0]
     
     omega_fun = gaussian_infl_fun1
     E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
     
-    extents = get_domain_bounding_box(m)
     horizon = 3*np.diff(cell_cent[0:2][:,0])
     tree = QuadTree()
     tree.put(extents, horizon)
     
     nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, struct_grd)
-    mw = peridym_compute_weighted_volume(m, nbr_lst,nbr_beta_lst, horizon, omega_fun,struct_grd=struct_grd)
+    mw = peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst,nbr_beta_lst, horizon, omega_fun)
     
     K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
-    bc_type = {0:'dirichlet', 1:'force'}
-    bc_vals = {'dirichlet': 0, 'force': -5e8}
     
-    K_bound, fb = peridym_apply_bc(m, K, bc_type, bc_vals, cell_vol, struct_grd)
+    K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, 2, struct_grd)
     
     print("solving the stystem")
     start = tm.default_timer()
@@ -40,20 +47,14 @@ def test_structured_grid():
     print("Time taken for solving the system of equation: %4.3f secs" %(end-start))
     u_disp = copy.deepcopy(sol)#
     u_disp = np.reshape(u_disp, (int(len(sol)/dim), dim))
-    a, _ = get_peridym_mesh_bounds(m, struct_grd)
-    
-    node_ids = a[0][0] #normal to x directon
-    
-    for i, nk in enumerate(node_ids):
-        u_disp = np.insert(u_disp, nk, np.zeros(dim, dtype=float), axis=0)
-    
-    
+
+    cell_cent, u_disp = recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, struct_grd)
     disp_cent = cell_cent + u_disp
     
     if dim == 2:
-        x, y = cell_cent.T
         plt.figure()
-        plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
+        x, y = cell_cent.T
+        plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.2, label='original config')
         x,y = (cell_cent + 40*u_disp).T
         plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label='horizon='+str(horizon))
         #plt.ylim(-0.5, 1.5)

@@ -153,7 +153,7 @@ def find_all_nbrs(nq):
 
     return nbr_int, nbr_bin 
 
-def tree_nbr_search(linear_tree, cell_cents, horizon, struct_grd=False):
+def tree_nbr_search(linear_tree, cell_cents, horizon, vol_corr=True, struct_grd=False):
     """
     linear tree nbr search
 
@@ -163,6 +163,7 @@ def tree_nbr_search(linear_tree, cell_cents, horizon, struct_grd=False):
                        all subdomains
         cell_cents        : numpy array of cell centroid
         horizon          : pridynamic horizon
+        vol_corr    : boolean whether we need volume correction or not
         struct_grd  : boolean, whether using triangulation or squared lattice
 
     output:
@@ -179,13 +180,24 @@ def tree_nbr_search(linear_tree, cell_cents, horizon, struct_grd=False):
     for k in kk:
         _, bin_nbrs = find_all_nbrs(k)
         nbr_cells = np.empty(0,int)
-        nbr_lst_k, nbr_beta_lst_k =compute_single_nbr_lst(linear_tree, k, horizon, cell_cents, struct_grd)
+        nbr_lst_k, nbr_beta_lst_k =compute_single_nbr_lst(linear_tree, k, horizon, cell_cents, vol_corr, struct_grd)
         nbr_lst = nbr_lst + nbr_lst_k
         nbr_beta_lst = nbr_beta_lst + nbr_beta_lst_k
     
+    """ 
+    both nbr_lst and nbr_beta_lst have first entry of the array
+    as the parent cell index which points to the corresponding 
+    nbr lst for that cell. nbr_lst at this point is unsorted. 
+    Hence the nbr_lst & nbr_beta_lst is first sorted based on the 
+    first entry (which is the cell index) and then this cell
+    index is removed from both the list
+    """
+
+    ### SORT based on cell idx
     nbr_lst = sorted(nbr_lst, key=lambda x: x[0])
     nbr_beta_lst = sorted(nbr_beta_lst, key=lambda x: x[0])
 
+    ## REMOVE the cell idx
     nbr_lst_mod = [np.delete(ll, 0) for ll in nbr_lst]
     nbr_beta_lst_mod = [np.delete(ll, 0) for ll in nbr_beta_lst]
     end = tm.default_timer()
@@ -250,7 +262,7 @@ def compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents):
 
     return np.unique(nbr_cells)
 
-def compute_single_nbr_lst(linear_tree, bin_code, horizon, cell_cents, struct_grd):
+def compute_single_nbr_lst(linear_tree, bin_code, horizon, cell_cents, vol_corr, struct_grd):
     """
     given a binary location code for a sub domain and a linear quad tree
     that the subdomain is associated with, this method computes the 
@@ -269,6 +281,7 @@ def compute_single_nbr_lst(linear_tree, bin_code, horizon, cell_cents, struct_gr
         bin_code    : binary location code of subdomain under consideration
         horizon     : peridynamic horizon
         cell_cents  : np array of all cell centroids
+        vol_corr    : boolean wheather we need volume correction or not
         struct_grd  : boolean, wheather using triangulation(unstructured grid) or not
 
     output:
@@ -283,37 +296,43 @@ def compute_single_nbr_lst(linear_tree, bin_code, horizon, cell_cents, struct_gr
     nbr_cells = compute_nbr_sub_domain_cells(linear_tree, bin_code, horizon, cell_cents)
     curr_cells = get_cell_centroid2(cell_cents, linear_tree[bin_code])
 
-    if(struct_grd):
-        fract = 0.5 # for square lattices
-        el = np.max(np.diff(cell_cents[0:2], axis=0))
-    else:
-        fract = (1.0/3.0) #for triangulations 
-        el =abs(np.max(np.diff(cell_cents[0:3:2],axis=0))) 
-
-    delta_plus = horizon + fract*el
-    delta_minus = horizon - fract*el
-
     for i, c  in enumerate(curr_cells):
         temp_nbr_cents = cpy.deepcopy(nbr_cells)
         curr_nbrs = []
-        curr_beta = []
         temp_nbr_cents = np.append(temp_nbr_cents, curr_cells[0:i])
         temp_nbr_cents = np.append(temp_nbr_cents, curr_cells[i+1:])
         temp_nbr_cents = np.unique(temp_nbr_cents)
-        for j in temp_nbr_cents:
-            xi = la.norm((cell_cents[j]-cell_cents[c]))
-            if(la.norm((cell_cents[j]-cell_cents[c]),2)<= delta_minus):
-                curr_beta.append(1.0)
-                curr_nbrs.append(j)
-            elif((delta_minus < xi) and (delta_plus >= xi)):
-                beta = (horizon + fract*el - xi)/el
-                curr_beta.append(beta)
-                curr_nbrs.append(j)
+        if(vol_corr==True):
+            #compute correction factor range
+            if(struct_grd):
+                fract = 0.5 # for square lattices
+                el = np.max(np.diff(cell_cents[0:2], axis=0))
+            else:
+                fract = (1.0/3.0) #for triangulations 
+                el =abs(np.max(np.diff(cell_cents[0:3:2],axis=0))) 
+
+            delta_plus = horizon + fract*el
+            delta_minus = horizon - fract*el
+            curr_beta = []
+            for j in temp_nbr_cents:
+                xi = la.norm((cell_cents[j]-cell_cents[c]))
+                if(la.norm((cell_cents[j]-cell_cents[c]),2)<= delta_minus):
+                    curr_beta.append(1.0)
+                    curr_nbrs.append(j)
+                elif((delta_minus < xi) and (delta_plus >= xi)):
+                    beta = (horizon + fract*el - xi)/el
+                    curr_beta.append(beta)
+                    curr_nbrs.append(j)
+
+        elif(vol_corr==False):
+            for j in temp_nbr_cents:
+                if(la.norm((cell_cents[j]-cell_cents[c]),2)<=horizon):
+                    curr_nbrs.append(j)
+            curr_beta = [1]*len(curr_nbrs)
 
         nbr_lst.append(np.array([c]+curr_nbrs))
         nbr_beta_lst.append(np.array([c]+curr_beta))
 
-    
     return nbr_lst, nbr_beta_lst
 
 

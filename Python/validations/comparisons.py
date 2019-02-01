@@ -3,7 +3,7 @@ from fenics_convergence import *
 from peridynamic_infl_fun import *
 
 
-def compare_PD_horizons_with_FE(npts=15, material='steel', plot_=False, force=-5e8, struct_grd=False):
+def compare_PD_horizons_with_FE(npts=15, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
     """
     compares the FE and PD solution with varying horizon 
     for a simple 2D case 
@@ -84,8 +84,7 @@ def compare_PD_horizons_with_FE(npts=15, material='steel', plot_=False, force=-5
         u_disp_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
 
         for i in range(len(horizons)):
-            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizons[i], curr_mesh, npts=npts,material=material,
-                                                               omega_fun=infl_fun, plot_=plot_, force=force,struct_grd=struct_grd)
+            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizons[i], curr_mesh, npts=npts,material=material, omega_fun=infl_fun, plot_=plot_, force=force, vol_corr, struct_grd=struct_grd)
 
             disp_cent_PD_array[i] = disp_cent_i
             u_disp_PD_array[i]    = u_disp_i 
@@ -125,7 +124,7 @@ def compare_PD_horizons_with_FE(npts=15, material='steel', plot_=False, force=-5
 
 
 
-def compare_PD_infl_funs_with_FE(npts=15, material='steel', plot_=False, force=-5e8, struct_grd=False):
+def compare_PD_infl_funs_with_FE(npts=15, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
     """
     compares the FE and PD solution for a simple 2D case 
     
@@ -219,9 +218,8 @@ def compare_PD_infl_funs_with_FE(npts=15, material='steel', plot_=False, force=-
         print("*********************************************************")
         print('solving using Peridynamics:')
         tree = QuadTree()
-        extents = get_domain_bounding_box(mesh)
         tree.put(extents, horizon)
-        nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, struct_grd)
+        nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, vol_corr, struct_grd)
         for kk in keys:
             infl_fun = infl_fun_dict[kk]
             _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizon, curr_mesh, nbr_lst=nbr_lst, nbr_beta_lst=nbr_beta_lst, material=material,omega_fun=infl_fun, force=force, struct_grd=struct_grd)

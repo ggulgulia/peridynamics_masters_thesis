@@ -3,13 +3,12 @@ from peridynamic_quad_tree import *
 from peridynamic_linear_quad_tree import *
 from peridynamic_stiffness import*
 from peridynamic_boundary_conditions import *
-from peridynamic_orignal_mesh import *
 from peridynamic_materials import *
 import mshr
 import timeit as tm
 from peridynamic_infl_fun import *
 
-def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8, struct_grd=False):
+def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, npts=15, material='steel', omega_fun=None, plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
     """
     solves the peridynamic bar with a specified load
 
@@ -35,7 +34,7 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, npts
     if (nbr_lst==None or nbr_beta_lst==None):
         tree = QuadTree()
         tree.put(extents, horizon)
-        nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, struct_grd)
+        nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, vol_corr, struct_grd)
         
     mw = peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst, nbr_beta_lst, horizon, omega_fun) 
     K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)

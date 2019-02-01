@@ -79,7 +79,7 @@ def peridym_compute_neighbors(mesh, horizon, struct_grd=False):
     neighbor_lst = []
 
     if(struct_grd):
-        cell_cent = structured_cell_centroids(m)
+        cell_cent = structured_cell_centroids(mesh)
     else:
         cell_cent = get_cell_centroids(mesh)
     

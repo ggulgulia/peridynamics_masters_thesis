@@ -5,11 +5,10 @@ from peridynamic_stiffness import*
 from peridynamic_boundary_conditions import *
 from peridynamic_infl_fun import *
 from peridynamic_materials import *
-from peridynamic_recover_original_mesh import *
 import mshr
 
 
-def test_structured_grid():
+def test_structured_grid(vol_corr=True):
     m = RectangleMesh(Point(0,0), Point(2,1),20, 10)
     struct_grd = True
 
@@ -29,11 +28,11 @@ def test_structured_grid():
     omega_fun = gaussian_infl_fun1
     E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
     
-    horizon = 3*np.diff(cell_cent[0:2][:,0])
+    horizon = 3*np.abs(np.diff(cell_cent[0:2][:,0])[0])
     tree = QuadTree()
     tree.put(extents, horizon)
     
-    nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, struct_grd)
+    nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, vol_corr, struct_grd)
     mw = peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst,nbr_beta_lst, horizon, omega_fun)
     
     K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)

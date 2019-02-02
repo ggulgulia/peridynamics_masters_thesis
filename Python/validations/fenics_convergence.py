@@ -130,15 +130,14 @@ def fenics_mesh_convergence(struct_grd=False, tol=None, plot_=True):
 
     plt.figure()
     colors = get_colors(len(u_disp_top_lst)+1)
-    markers = ['1','2','3','4','s','p','*','h','+','x','o','^','x','d', 'v','<', '>', ',','|']
     xx = cell_cent_top_fine[:,0]
     ii = 0
     for i,_ in enumerate(u_disp_top_lst):
         yy = u_disp_top_lst[i][:,1]
-        plt.plot(xx, yy, color=colors[i], linewidth=2, marker=markers[i], markerfacecolor=colors[i], markersize=8, label='num cells:'+str(mesh_lst[i].num_cells()))
+        plt.plot(xx, yy, color=colors[i], linewidth=2, label='num cells:'+str(mesh_lst[i].num_cells()))
         ii += 1
 
-    plt.plot(xx, u_disp_top_fine[:,1], color=colors[ii], linewidth=2, marker=markers[ii], markerfacecolor=colors[ii], markersize=8, label='num cells:'+str(fine_mesh.num_cells()))
+    plt.plot(xx, u_disp_top_fine[:,1], color=colors[ii], linewidth=2,  label='num cells:'+str(fine_mesh.num_cells()))
     plt.title('mesh convergence for FE soln, bar of size 3x1, load=-5e-8, tol=%.3e'%tol)
     plt.legend()
     plt.show(block=False)

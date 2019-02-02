@@ -1,5 +1,4 @@
 from peridynamic_quad_tree import *
-from peridynamic_corrections import *
 import timeit as tm
 
 def find_one_nbr(nq, delNi):

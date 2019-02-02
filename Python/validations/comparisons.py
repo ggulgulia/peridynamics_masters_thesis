@@ -84,7 +84,7 @@ def compare_PD_horizons_with_FE(npts=15, material='steel', plot_=False, force=-5
         u_disp_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
 
         for i in range(len(horizons)):
-            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizons[i], curr_mesh, npts=npts,material=material, omega_fun=infl_fun, plot_=plot_, force=force, vol_corr, struct_grd=struct_grd)
+            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizons[i], curr_mesh, npts=npts,material=material, omega_fun=infl_fun, plot_=plot_, force=force, vol_corr=vol_corr, struct_grd=struct_grd)
 
             disp_cent_PD_array[i] = disp_cent_i
             u_disp_PD_array[i]    = u_disp_i 
@@ -139,17 +139,18 @@ def compare_PD_infl_funs_with_FE(npts=15, material='steel', plot_=False, force=-
 
     """
     
-    infl_fun_dict = {'omega1':gaussian_infl_fun1,
-                      'omega2':gaussian_infl_fun2,
-                      'omega3':parabolic_infl_fun1,
-                      'omega4':parabolic_infl_fun2}
-
+    infl_fun_dict = {'omega1':gaussian_infl_fun1}
+#    infl_fun_dict = {'omega1':gaussian_infl_fun1,
+#                      'omega2':gaussian_infl_fun2,
+#                      'omega3':parabolic_infl_fun1,
+#                      'omega4':parabolic_infl_fun2}
+#
     horizon = 0.2400048
 
     print("*********************************************************")
     print("*********************************************************")
     print('solving using Finite Elements:')
-    tol = 1e-5 #tolerance for convergence of FE solution
+    tol = 1e-2 #tolerance for convergence of FE solution
     _,_, mesh_lst, u_fe_conv = fenics_mesh_convergence(struct_grd, tol, plot_=False)
     print("*********************************************************")
     print("*********************************************************")
@@ -222,7 +223,7 @@ def compare_PD_infl_funs_with_FE(npts=15, material='steel', plot_=False, force=-
         nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, vol_corr, struct_grd)
         for kk in keys:
             infl_fun = infl_fun_dict[kk]
-            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizon, curr_mesh, nbr_lst=nbr_lst, nbr_beta_lst=nbr_beta_lst, material=material,omega_fun=infl_fun, force=force, struct_grd=struct_grd)
+            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizon, curr_mesh, nbr_lst=nbr_lst, nbr_beta_lst=nbr_beta_lst, material=material,omega_fun=infl_fun, force=force, vol_corr=vol_corr,struct_grd=struct_grd)
 
             disp_cent_PD_array[kk] = disp_cent_i
             u_disp_PD_array[kk]    = u_disp_i 

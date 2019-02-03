@@ -29,14 +29,13 @@ def get_displaced_cell_centroids(m, u_fe, cell_cent):
     return disp_cent, u_disp
 
 
-def solve_fenic_bar(mesh, cell_cent, npts=15, material='steel', plot_ = False, force=-5e8):
+def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e8):
     """
     solves the case for a 2D steel plate loaded statically under various loads
 
     input:
     ------
         mesh : FEniCS mesh
-        npts : number of discretization points for 2D plate with circular hole
         material: 
         plot_: boolean for showing plots of FE solution
         force: value of force we want to apply
@@ -49,9 +48,6 @@ def solve_fenic_bar(mesh, cell_cent, npts=15, material='steel', plot_ = False, f
     L = 3.
     H = 1.
     
-#   mesh = rectangle_mesh_with_hole(npts=npts)
-    #mesh = rectangle_mesh(Point(0,0), Point(3,1), numptsX=20, numptsY=10)
-
     
     def eps(v):
         return sym(grad(v))

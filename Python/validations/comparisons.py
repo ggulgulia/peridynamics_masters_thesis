@@ -167,7 +167,6 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, material='steel', plot_=Fal
             print("(UNSTRUCTURED) grid size of equivalent Peridynamic grid: %i" %len(cell_cent))
 
         horizons = np.array([0.2400048, 0.300006, 0.3600072, 0.4200048])
-        horizons = np.array([0.2400048])
         #declare empty storage for each horizon in 'horizons' array and curr_mesh  
         infl_fun = gaussian_infl_fun2
         disp_cent_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
@@ -234,7 +233,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, material='steel', plot_=Fa
     #                  'omega2':gaussian_infl_fun2,
     #                  'omega3':parabolic_infl_fun1,
     #                  'omega4':parabolic_infl_fun2}
-    infl_fun_lst = [gaussian_infl_fun1]
+    infl_fun_lst = [gaussian_infl_fun1, gaussian_infl_fun2, parabolic_infl_fun1, parabolic_infl_fun2]
     infl_fun_name = ['narrow gaussian', 'standard gaussian', 'peridigm parabola' 'standard parabola']
 
     horizon = 0.2400048

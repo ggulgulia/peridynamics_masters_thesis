@@ -44,7 +44,7 @@ def computeTheta(u, horizon, nbr_lst, nbr_beta_lst, trv_lst,cell_vol, cell_cent,
 
 
 #vectorized version of Felix's code
-def computeInternalForce(d,u,horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent, mw, bulk, mu, gamma, omega_fun):
+def computeInternalForce(curr_cell,u,horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent, mw, bulk, mu, gamma, omega_fun):
     """
     computes the internal force using pairwise force function
 
@@ -57,7 +57,7 @@ def computeInternalForce(d,u,horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent
    
     #compute dilatation for each node
     theta=np.zeros(num_els, dtype=float)
-    trv_lst = np.insert(nbr_lst[d],0,d)
+    trv_lst = np.insert(nbr_lst[curr_cell],0,curr_cell)
 
     theta = computeTheta(u, horizon, nbr_lst, nbr_beta_lst, trv_lst, cell_vol, cell_cent, mw, gamma, omega_fun)
     
@@ -78,9 +78,9 @@ def computeInternalForce(d,u,horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent
         M = xi_plus_eta/mod_xi_plus_eta[:,None]
         
         cur_nbr_cell_vol = (cell_vol[curr_nbr]*curr_beta_lst)[:,None]
-        f[i] += sum(M*cur_nbr_cell_vol*t[:,None])*cell_vol[i]
-        f[curr_nbr] -= M*cur_nbr_cell_vol*t[:,None]*cell_vol[i]
-
+        cell_vol_coll = cur_nbr_cell_vol*cell_vol[i] 
+        f[i] += sum(M*cell_vol_coll*t[:,None])
+        f[curr_nbr] -= M*cell_vol_coll*t[:,None]
     return f
 
     

@@ -76,7 +76,7 @@ def computeInternalForce(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol,
     
     dim = len(cell_cent[0])
     num_els=len(cell_vol)
-    lamda = 3*bulkMod*(bulkMod- E)/(9*bulkMod - E)
+    lamda = 3*bulkMod*(3*bulkMod- E)/(9*bulkMod - E)
     mu = shearMod
     bondDamage = 0.0
 
@@ -91,17 +91,17 @@ def computeInternalForce(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol,
         curr_nbrs = nbr_lst[idx]
         curr_beta_lst = nbr_beta_lst[idx]
         xi = cell_cent[curr_nbrs] - cell_cent[idx]
-        y_xi = u[curr_nbrs] - u[idx]
+        y_xi = xi - u[idx]
         omega = omega_fun(xi, horizon)
-        temp = (1.0 - bondDamage)*omega*cell_vol[curr_nbrs]*nbr_beta_lst[idx]
+        temp = (1.0 - bondDamage)*omega*cell_vol[curr_nbrs]*curr_beta_lst
         
         for j, jdx in enumerate(curr_nbrs):
             curr_xi = np.matrix(xi[j])
             curr_y_xi = np.transpose(np.matrix(y_xi[j]))
             curr_xi_trans = np.transpose(curr_xi)
-            res_shp = temp[j]*np.matmul(curr_xi_trans, curr_xi)*temp[j]
-            res_dfm = temp[j]*np.matmul(curr_y_xi, curr_xi)*temp[j]
-            shape_tensor += res_shp 
+            res_shp = np.outer(curr_xi, xi[j])
+            res_dfm = np.outer(y_xi[j], xi[j])
+            shape_tensor     += res_shp 
             def_grad_tensor  += res_dfm
 
         K_shp = shape_tensor
@@ -113,7 +113,7 @@ def computeInternalForce(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol,
         temp2 = np.matmul(S1_piola, K_inv)
         
         for j, jdx in enumerate(curr_nbrs):
-            temp3 = np.matmul(temp2, xi[j])*cell_vol[jdx]*cell_vol[idx]
+            temp3 = np.transpose(np.matmul(temp2, xi[j]))*cell_vol[jdx]*cell_vol[idx]
             T_global[idx] += temp[j]*temp3 
             T_global[jdx] -= temp[j]*temp3
 
@@ -173,7 +173,7 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, she
             f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulkMod,shearMod,gamma, E, omega_fun)
             
             for dd in range(dim):
-                K_naive[dd::dim][:,dim*i+d] = (f_p[:,dd] - f_m[:,dd])*0.5*inv_small_val
+                K_naive[dd::dim][:,dim*i+d] += (f_p[:,dd] - f_m[:,dd])*0.5*inv_small_val
     
     end = tm.default_timer()
     print("Time taken for the composition of tangent stiffness matrix seconds: %4.3f seconds\n" %(end-start))

@@ -34,19 +34,19 @@ def computeSecondPiolaStressTensor(E_green, lamda, mu):
 
     input:
     -----
-    E : 2nd Order Green Strain Tensor
-    mu: lame's first parameter
-    lamda: lame's second parameter
+    E_green : 2nd Order Green Strain Tensor
+    lamda   : lame's first parameter
+    mu      : lame's second parameter
 
     output:
     -------
-    S2 : 2nd order tensor, 2nd piola kirchoff setress tensor 
+    S2_piola : 2nd order tensor, 2nd piola kirchoff setress tensor 
     """
 
     dim = np.shape(E_green)[0]
     trace = sum(E_green[d][d] for d in range(dim))
-    S2 = lamda*trace*np.identity(dim) + 2*mu*E_green
-    return S2
+    S2_piola = lamda*trace*np.identity(dim) + 2*mu*E_green
+    return S2_piola 
 
 
 ## Internal force routinee based on correspondance elastic material
@@ -82,7 +82,7 @@ def computeInternalForce(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol,
 
     #compute dilatation for each node
     trv_lst = np.insert(nbr_lst[curr_cell],0,curr_cell)
-    T_global=np.zeros((len(cell_cent),dim), dtype=float) #placeholder for force state
+    f_global=np.zeros((len(cell_cent),dim), dtype=float) #placeholder for force state
 
     # Compute pairwise contributions to the global force density vector
     for idx in trv_lst:
@@ -91,16 +91,16 @@ def computeInternalForce(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol,
         curr_nbrs = nbr_lst[idx]
         curr_beta_lst = nbr_beta_lst[idx]
         xi = cell_cent[curr_nbrs] - cell_cent[idx]
-        y_xi = xi - u[idx]
+        #y_xi = xi - u[idx]
+        y_xi_curr = cell_cent[idx] + u[idx]
+        y_xi_nbrs = cell_cent[curr_nbrs] + u[curr_nbrs]
+        y_xi = y_xi_nbrs - y_xi_curr
         omega = omega_fun(xi, horizon)
-        temp = (1.0 - bondDamage)*omega*cell_vol[curr_nbrs]*curr_beta_lst
+        omega_damaged = (1.0 - bondDamage)*omega*cell_vol[curr_nbrs]*curr_beta_lst
         
         for j, jdx in enumerate(curr_nbrs):
-            curr_xi = np.matrix(xi[j])
-            curr_y_xi = np.transpose(np.matrix(y_xi[j]))
-            curr_xi_trans = np.transpose(curr_xi)
-            res_shp = np.outer(curr_xi, xi[j])
-            res_dfm = np.outer(y_xi[j], xi[j])
+            res_shp = omega_damaged[j]*np.outer(xi[j], xi[j])
+            res_dfm = omega_damaged[j]*np.outer(y_xi[j], xi[j])
             shape_tensor     += res_shp 
             def_grad_tensor  += res_dfm
 
@@ -113,11 +113,11 @@ def computeInternalForce(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol,
         temp2 = np.matmul(S1_piola, K_inv)
         
         for j, jdx in enumerate(curr_nbrs):
-            temp3 = np.transpose(np.matmul(temp2, xi[j]))*cell_vol[jdx]*cell_vol[idx]
-            T_global[idx] += temp[j]*temp3 
-            T_global[jdx] -= temp[j]*temp3
+            temp3 = omega_damaged[j]*np.transpose(np.matmul(temp2, xi[j]))*cell_vol[jdx]*cell_vol[idx]
+            f_global[idx] += temp3 
+            f_global[jdx] -= temp3
 
-    return T_global
+    return f_global
 
     
 def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, shearMod, bulkMod, gamma, omega_fun):

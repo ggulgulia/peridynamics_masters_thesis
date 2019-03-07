@@ -3,8 +3,16 @@ import numpy.linalg as la
 import matplotlib.pyplot as plt
 from peridynamic_neighbor_data import*
 from fenics_mesh_tools import *
+from scipy.integrate import quad
 
-
+def integrand(r):
+    """ 
+    integrand for the 'exact' integral needed for 
+    the stability factor in the correspondence material 
+    model in peridynamics
+    """
+    return math.exp(-r**2)*r**4
+    
 def computeGreenStrinTensor(def_grad_tensor):
     """
     computes the green strain tensor using equation
@@ -48,9 +56,42 @@ def computeSecondPiolaStressTensor(E_green, lamda, mu):
     S2_piola = lamda*trace*np.identity(dim) + 2*mu*E_green
     return S2_piola 
 
+def compute_alpha2D(mu, mwi):
+    """
+    computes the final gamma value 
+    for 2D plane stress 
 
-## Internal force routinee based on correspondance elastic material
-def computeInternalForce(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent, mw, bulkMod, shearMod, gamma, E, omega_fun):
+    input:
+    ------
+    mu: shear modulus
+    mwi: weighted volume of the cell 
+    
+    output:
+    -------
+    alpha : double , see literature
+
+    """
+    return 8*mu/mwi
+
+
+def compute_alpha3D(mu, mwi):
+    """
+    computes the final gamma value 
+    for 3D plane stress 
+
+    input:
+    ------
+    mu: shear modulus
+    mwi: weighted volume of the cell 
+    
+    output:
+    -------
+    alpha: double, see literature
+
+    """
+    return 15*mu/mwi
+
+def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent, mw, bulkMod, shearMod, gamma, E, lamda, gamma_corr, omega_fun):
     """
     computes the force state based on the correspondence model 
     for Peridynamics
@@ -75,9 +116,10 @@ def computeInternalForce(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol,
     """
     
     dim = len(cell_cent[0])
+
     num_els=len(cell_vol)
-    lamda = 3*bulkMod*(3*bulkMod- E)/(9*bulkMod - E)
     mu = shearMod
+    compute_alpha = compute_alpha3D if dim==3 else compute_alpha2D
     bondDamage = 0.0
 
     #compute dilatation for each node
@@ -91,7 +133,6 @@ def computeInternalForce(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol,
         curr_nbrs = nbr_lst[idx]
         curr_beta_lst = nbr_beta_lst[idx]
         xi = cell_cent[curr_nbrs] - cell_cent[idx]
-        #y_xi = xi - u[idx]
         y_xi_curr = cell_cent[idx] + u[idx]
         y_xi_nbrs = cell_cent[curr_nbrs] + u[curr_nbrs]
         y_xi = y_xi_nbrs - y_xi_curr
@@ -111,15 +152,87 @@ def computeInternalForce(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol,
         S2_piola = computeSecondPiolaStressTensor(E_green, lamda, mu)
         S1_piola = np.matmul(F,S2_piola)
         temp2 = np.matmul(S1_piola, K_inv)
-        
+
         for j, jdx in enumerate(curr_nbrs):
-            temp3 = omega_damaged[j]*np.transpose(np.matmul(temp2, xi[j]))*cell_vol[jdx]*cell_vol[idx]
-            f_global[idx] += temp3 
-            f_global[jdx] -= temp3
+            z_xi = y_xi[j] - np.matmul(F, xi[j])  
+            #gamma_corr *= compute_alpha(mu, mw[idx])
+            temp3 = omega_damaged[j]*(np.transpose(np.matmul(temp2, xi[j])) + gamma_corr*z_xi) 
+            f_global[idx] += temp3*cell_vol[jdx] 
+            f_global[jdx] -= temp3*cell_vol[idx]
 
     return f_global
 
+
+## Internal force routinee based on correspondance elastic material
+def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent, mw, bulkMod, shearMod, gamma, E, lamda, gamma_corr, omega_fun):
+    """
+    computes the force state based on the correspondence model 
+    for Peridynamics
+
+    input:
+    ------
+        curr_cell: TODO
+        u: TODO
+        horizon: TODO
+        nbr_beta_lst: TODO
+        nbr_beta_lst: TODO
+        cell_vol: TODO
+        cell_cent: TODO
+        bulkMod: TODO
+        shearMod: TODO
+        omega_fun: TODO
+
+    output:
+    -------
+        T : internal force state (different from peridynamic force state density)
     
+    """
+    
+    dim = len(cell_cent[0])
+
+    num_els=len(cell_vol)
+    mu = shearMod
+    compute_alpha = compute_alpha3D if dim==3 else compute_alpha2D
+    bondDamage = 0.0
+
+    #compute dilatation for each node
+    trv_lst = np.insert(nbr_lst[curr_cell],0,curr_cell)
+    f_global=np.zeros((len(cell_cent),dim), dtype=float) #placeholder for force state
+
+    # Compute pairwise contributions to the global force density vector
+    for idx in trv_lst:
+        shape_tensor = np.zeros((dim, dim), dtype=float)
+        def_grad_tensor = np.zeros((dim, dim), dtype=float)
+        curr_nbrs = nbr_lst[idx]
+        curr_beta_lst = nbr_beta_lst[idx]
+        xi = cell_cent[curr_nbrs] - cell_cent[idx]
+        y_xi_curr = cell_cent[idx] + u[idx]
+        y_xi_nbrs = cell_cent[curr_nbrs] + u[curr_nbrs]
+        y_xi = y_xi_nbrs - y_xi_curr
+        omega = omega_fun(xi, horizon)
+        omega_damaged = (1.0 - bondDamage)*omega*cell_vol[curr_nbrs]*curr_beta_lst
+        
+        for j, jdx in enumerate(curr_nbrs):
+            res_shp = omega_damaged[j]*np.outer(xi[j], xi[j])
+            res_dfm = omega_damaged[j]*np.outer(y_xi[j], xi[j])
+            shape_tensor     += res_shp 
+            def_grad_tensor  += res_dfm
+
+        K_shp = shape_tensor
+        K_inv = la.inv(K_shp)
+        F = np.matmul(def_grad_tensor, K_inv)
+        E_green = computeGreenStrinTensor(F)
+        S2_piola = computeSecondPiolaStressTensor(E_green, lamda, mu)
+        S1_piola = np.matmul(F,S2_piola)
+        temp2 = np.matmul(S1_piola, K_inv)
+
+        for j, jdx in enumerate(curr_nbrs):
+            temp3 = omega_damaged[j]*np.transpose(np.matmul(temp2, xi[j])) 
+            f_global[idx] += temp3*cell_vol[jdx] 
+            f_global[jdx] -= temp3*cell_vol[idx]
+
+    return f_global
+
 def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, shearMod, bulkMod, gamma, omega_fun):
     
     """
@@ -153,6 +266,22 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, she
 
     import timeit as tm
     start = tm.default_timer()
+    lamda = 3*bulkMod*(3*bulkMod- E)/(9*bulkMod - E)
+
+    """
+    alpha = 15*mu/mw if dim ==3 else 8*mu/mw
+    alpha depends on individual mw of the cell in consideration
+    hence we do 'inplace computation' of the final gamma_corr
+    """
+     
+    correct_zero_energy_modes = False
+
+    if correct_zero_energy_modes:
+        computeInternalForce = computeInternalForce_correct_zero_energy_mode
+        gamma_corr = 9*bulkMod/(math.pi*quad(integrand, 0, horizon)[0]) #alpha is still missing
+    else:
+        computeInternalForce = computeInternalForce_naive
+        gamma_corr=None
 
     # Compose stiffness matrix
     num_els = len(cell_vol)
@@ -169,8 +298,8 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, she
             u_e_p[i][d]= 1.0*small_val
             u_e_m[i][d]= -1.0*small_val
             
-            f_p=computeInternalForce(i,u_e_p,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulkMod,shearMod,gamma, E, omega_fun)
-            f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulkMod,shearMod,gamma, E, omega_fun)
+            f_p=computeInternalForce(i,u_e_p,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulkMod,shearMod,gamma, E, lamda, gamma_corr, omega_fun)
+            f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulkMod,shearMod,gamma, E, lamda, gamma_corr, omega_fun)
             
             for dd in range(dim):
                 K_naive[dd::dim][:,dim*i+d] += (f_p[:,dd] - f_m[:,dd])*0.5*inv_small_val

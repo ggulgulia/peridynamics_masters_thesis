@@ -70,6 +70,14 @@ def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst
     computes the force state based on the correspondence model 
     for Peridynamics
 
+    this routine computes the stabilized corresponedence material model 
+    based on the paper : Stability of peridynamic peridynamic correspondence
+    material models and their particle discretizations by S.A Silling
+    Elsvier Journal
+    Specifically internalForceComputation employes equation 56 in this paper
+
+    Note: 'literature' referred to in the code points to this journal
+
     input:
     ------
         curr_cell: TODO
@@ -113,11 +121,6 @@ def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst
         omega = omega_fun(xi, horizon)
         omega_damaged = (1.0 - bondDamage)*omega
         
-        #for j, jdx in enumerate(curr_nbrs):
-        #    res_shp = omega_damaged[j]*np.outer(xi[j], xi[j])
-        #    res_dfm = omega_damaged[j]*np.outer(y_xi[j], xi[j])
-        #    shape_tensor     += res_shp 
-        #    def_grad_tensor  += res_dfm
         shape_tensor = np.sum(np.einsum('ij,ik->ijk', xi, xi)*omega_damaged[:,None,None],axis=0)
         def_grad_tensor = np.sum(np.einsum('ij,ik->ijk', y_xi, xi)*omega_damaged[:,None,None], axis=0)
 
@@ -130,15 +133,16 @@ def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst
         temp2 = np.matmul(S1_piola, K_inv)
 
         curr_cell_vol *= cell_vol[idx]
-        temp2_vect = y_xi - np.einsum('ij,kj->ki',F,xi)
+
+        #vectorized computation of z<xi> as in equation 38 of literature
+        temp2_vect = y_xi - np.einsum('ij,kj->ki',F,xi) 
+
+
+        #vectorized computation of T_hat<xi> as in equation 56. 
+        # Note the dV multiplication is done here to fit in the vectorized computation appropriately
         temp3_vect = (np.einsum('ij,kj->ki', temp2, xi) + gamma_corr*temp2_vect)*omega_damaged[:,None]*curr_cell_vol[:,None]
         f_global[idx] += sum(temp3_vect)
         f_global[curr_nbrs] -= temp3_vect
-        #for j, jdx in enumerate(curr_nbrs):
-        #    z_xi = y_xi[j] - np.matmul(F, xi[j])  
-        #    temp3 = omega_damaged[j]*(np.transpose(np.matmul(temp2, xi[j])) + gamma_corr*z_xi)*curr_cell_vol[j]
-        #    f_global[idx] += temp3
-        #    f_global[jdx] -= temp3
 
     return f_global
 
@@ -149,6 +153,9 @@ def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cel
     computes the force state based on the correspondence model 
     for Peridynamics
 
+    this version of internal force doesn't account for the correction
+    of zero energy modes and computes the Material response of the 
+    correspondence model as in equation 17 of the literature
     input:
     ------
         curr_cell: TODO
@@ -193,11 +200,6 @@ def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cel
         omega = omega_fun(xi, horizon)
         omega_damaged = (1.0 - bondDamage)*omega
         
-        #for j, jdx in enumerate(curr_nbrs):
-        #    res_shp = omega_damaged[j]*np.outer(xi[j], xi[j])
-        #    res_dfm = omega_damaged[j]*np.outer(y_xi[j], xi[j])
-        #    shape_tensor     += res_shp 
-        #    def_grad_tensor  += res_dfm
 
         shape_tensor = np.sum(np.einsum('ij,ik->ijk', xi, xi)*omega_damaged[:,None,None],axis=0)
         def_grad_tensor = np.sum(np.einsum('ij,ik->ijk', y_xi, xi)*omega_damaged[:,None,None], axis=0)
@@ -214,10 +216,6 @@ def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cel
         temp3_vect = np.einsum('ij,kj->ki', temp2, xi)*omega_damaged[:,None]*curr_cell_vol[:,None]
         f_global[idx] += sum(temp3_vect)
         f_global[curr_nbrs] -= temp3_vect
-        #for j, jdx in enumerate(curr_nbrs):
-        #    temp3 = omega_damaged[j]*np.transpose(np.matmul(temp2, xi[j]))*curr_cell_vol[j] 
-        #    f_global[idx] += temp3 
-        #    f_global[jdx] -= temp3
 
     return f_global
 

@@ -13,6 +13,14 @@ def integrand(r):
     """
     return math.exp(-r**2)*r**4
     
+def integrand2(r):
+    """ 
+    integrand for the 'exact' integral needed for 
+    the stability factor in the correspondence material 
+    model in peridynamics
+    """
+    return math.exp(-r**2)
+    
 def computeGreenStrinTensor(def_grad_tensor):
     """
     computes the green strain tensor using equation
@@ -56,40 +64,6 @@ def computeSecondPiolaStressTensor(E_green, lamda, mu):
     S2_piola = lamda*trace*np.identity(dim) + 2*mu*E_green
     return S2_piola 
 
-def compute_alpha2D(mu, mwi):
-    """
-    computes the final gamma value 
-    for 2D plane stress 
-
-    input:
-    ------
-    mu: shear modulus
-    mwi: weighted volume of the cell 
-    
-    output:
-    -------
-    alpha : double , see literature
-
-    """
-    return 8*mu/mwi
-
-
-def compute_alpha3D(mu, mwi):
-    """
-    computes the final gamma value 
-    for 3D plane stress 
-
-    input:
-    ------
-    mu: shear modulus
-    mwi: weighted volume of the cell 
-    
-    output:
-    -------
-    alpha: double, see literature
-
-    """
-    return 15*mu/mwi
 
 def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent, mw, bulkMod, shearMod, gamma, E, lamda, gamma_corr, omega_fun):
     """
@@ -119,7 +93,6 @@ def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst
 
     num_els=len(cell_vol)
     mu = shearMod
-    compute_alpha = compute_alpha3D if dim==3 else compute_alpha2D
     bondDamage = 0.0
 
     #compute dilatation for each node
@@ -132,33 +105,40 @@ def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst
         def_grad_tensor = np.zeros((dim, dim), dtype=float)
         curr_nbrs = nbr_lst[idx]
         curr_beta_lst = nbr_beta_lst[idx]
+        curr_cell_vol = cell_vol[curr_nbrs]*curr_beta_lst
         xi = cell_cent[curr_nbrs] - cell_cent[idx]
         y_xi_curr = cell_cent[idx] + u[idx]
         y_xi_nbrs = cell_cent[curr_nbrs] + u[curr_nbrs]
         y_xi = y_xi_nbrs - y_xi_curr
         omega = omega_fun(xi, horizon)
-        omega_damaged = (1.0 - bondDamage)*omega*cell_vol[curr_nbrs]*curr_beta_lst
+        omega_damaged = (1.0 - bondDamage)*omega
         
-        for j, jdx in enumerate(curr_nbrs):
-            res_shp = omega_damaged[j]*np.outer(xi[j], xi[j])
-            res_dfm = omega_damaged[j]*np.outer(y_xi[j], xi[j])
-            shape_tensor     += res_shp 
-            def_grad_tensor  += res_dfm
+        #for j, jdx in enumerate(curr_nbrs):
+        #    res_shp = omega_damaged[j]*np.outer(xi[j], xi[j])
+        #    res_dfm = omega_damaged[j]*np.outer(y_xi[j], xi[j])
+        #    shape_tensor     += res_shp 
+        #    def_grad_tensor  += res_dfm
+        shape_tensor = np.sum(np.einsum('ij,ik->ijk', xi, xi)*omega_damaged[:,None,None],axis=0)
+        def_grad_tensor = np.sum(np.einsum('ij,ik->ijk', y_xi, xi)*omega_damaged[:,None,None], axis=0)
 
-        K_shp = shape_tensor
+        K_shp = shape_tensor*cell_vol[idx]
         K_inv = la.inv(K_shp)
-        F = np.matmul(def_grad_tensor, K_inv)
+        F = np.matmul(def_grad_tensor*cell_vol[idx], K_inv)
         E_green = computeGreenStrinTensor(F)
         S2_piola = computeSecondPiolaStressTensor(E_green, lamda, mu)
         S1_piola = np.matmul(F,S2_piola)
         temp2 = np.matmul(S1_piola, K_inv)
 
-        for j, jdx in enumerate(curr_nbrs):
-            z_xi = y_xi[j] - np.matmul(F, xi[j])  
-            #gamma_corr *= compute_alpha(mu, mw[idx])
-            temp3 = omega_damaged[j]*(np.transpose(np.matmul(temp2, xi[j])) + gamma_corr*z_xi) 
-            f_global[idx] += temp3*cell_vol[jdx] 
-            f_global[jdx] -= temp3*cell_vol[idx]
+        curr_cell_vol *= cell_vol[idx]
+        temp2_vect = y_xi - np.einsum('ij,kj->ki',F,xi)
+        temp3_vect = (np.einsum('ij,kj->ki', temp2, xi) + gamma_corr*temp2_vect)*omega_damaged[:,None]*curr_cell_vol[:,None]
+        f_global[idx] += sum(temp3_vect)
+        f_global[curr_nbrs] -= temp3_vect
+        #for j, jdx in enumerate(curr_nbrs):
+        #    z_xi = y_xi[j] - np.matmul(F, xi[j])  
+        #    temp3 = omega_damaged[j]*(np.transpose(np.matmul(temp2, xi[j])) + gamma_corr*z_xi)*curr_cell_vol[j]
+        #    f_global[idx] += temp3
+        #    f_global[jdx] -= temp3
 
     return f_global
 
@@ -192,44 +172,52 @@ def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cel
 
     num_els=len(cell_vol)
     mu = shearMod
-    compute_alpha = compute_alpha3D if dim==3 else compute_alpha2D
     bondDamage = 0.0
 
     #compute dilatation for each node
     trv_lst = np.insert(nbr_lst[curr_cell],0,curr_cell)
     f_global=np.zeros((len(cell_cent),dim), dtype=float) #placeholder for force state
-
+    
+    curr_cell_vol_factor = 1.0 #curr_cell centroid is the centre of the horizon
     # Compute pairwise contributions to the global force density vector
     for idx in trv_lst:
         shape_tensor = np.zeros((dim, dim), dtype=float)
         def_grad_tensor = np.zeros((dim, dim), dtype=float)
         curr_nbrs = nbr_lst[idx]
         curr_beta_lst = nbr_beta_lst[idx]
+        curr_cell_vol = cell_vol[curr_nbrs]*curr_beta_lst
         xi = cell_cent[curr_nbrs] - cell_cent[idx]
         y_xi_curr = cell_cent[idx] + u[idx]
         y_xi_nbrs = cell_cent[curr_nbrs] + u[curr_nbrs]
         y_xi = y_xi_nbrs - y_xi_curr
         omega = omega_fun(xi, horizon)
-        omega_damaged = (1.0 - bondDamage)*omega*cell_vol[curr_nbrs]*curr_beta_lst
+        omega_damaged = (1.0 - bondDamage)*omega
         
-        for j, jdx in enumerate(curr_nbrs):
-            res_shp = omega_damaged[j]*np.outer(xi[j], xi[j])
-            res_dfm = omega_damaged[j]*np.outer(y_xi[j], xi[j])
-            shape_tensor     += res_shp 
-            def_grad_tensor  += res_dfm
+        #for j, jdx in enumerate(curr_nbrs):
+        #    res_shp = omega_damaged[j]*np.outer(xi[j], xi[j])
+        #    res_dfm = omega_damaged[j]*np.outer(y_xi[j], xi[j])
+        #    shape_tensor     += res_shp 
+        #    def_grad_tensor  += res_dfm
 
-        K_shp = shape_tensor
+        shape_tensor = np.sum(np.einsum('ij,ik->ijk', xi, xi)*omega_damaged[:,None,None],axis=0)
+        def_grad_tensor = np.sum(np.einsum('ij,ik->ijk', y_xi, xi)*omega_damaged[:,None,None], axis=0)
+
+        K_shp = shape_tensor*cell_vol[idx]
         K_inv = la.inv(K_shp)
-        F = np.matmul(def_grad_tensor, K_inv)
+        F = np.matmul(def_grad_tensor*cell_vol[idx], K_inv)
         E_green = computeGreenStrinTensor(F)
         S2_piola = computeSecondPiolaStressTensor(E_green, lamda, mu)
         S1_piola = np.matmul(F,S2_piola)
         temp2 = np.matmul(S1_piola, K_inv)
-
-        for j, jdx in enumerate(curr_nbrs):
-            temp3 = omega_damaged[j]*np.transpose(np.matmul(temp2, xi[j])) 
-            f_global[idx] += temp3*cell_vol[jdx] 
-            f_global[jdx] -= temp3*cell_vol[idx]
+        
+        curr_cell_vol *=cell_vol[idx]
+        temp3_vect = np.einsum('ij,kj->ki', temp2, xi)*omega_damaged[:,None]*curr_cell_vol[:,None]
+        f_global[idx] += sum(temp3_vect)
+        f_global[curr_nbrs] -= temp3_vect
+        #for j, jdx in enumerate(curr_nbrs):
+        #    temp3 = omega_damaged[j]*np.transpose(np.matmul(temp2, xi[j]))*curr_cell_vol[j] 
+        #    f_global[idx] += temp3 
+        #    f_global[jdx] -= temp3
 
     return f_global
 
@@ -274,11 +262,12 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, she
     hence we do 'inplace computation' of the final gamma_corr
     """
      
-    correct_zero_energy_modes = False
+    correct_zero_energy_modes = True
 
     if correct_zero_energy_modes:
         computeInternalForce = computeInternalForce_correct_zero_energy_mode
-        gamma_corr = 9*bulkMod/(math.pi*quad(integrand, 0, horizon)[0]) #alpha is still missing
+        G = 9.0 #positive constant of order 1, from paper mailed by Dr Silling
+        gamma_corr = 18*G*bulkMod/(math.pi*quad(integrand2, 0, horizon)[0]) #alpha is still missing
     else:
         computeInternalForce = computeInternalForce_naive
         gamma_corr=None

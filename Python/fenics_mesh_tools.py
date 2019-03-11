@@ -143,6 +143,25 @@ def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(3,1), hole_cent=Poi
     
     return mesh
 
+def tensile_test_bar(numpts = 60):
+
+    outer = mshr.Rectangle(Point(-100, -10), Point(100, 10))
+    barLo = mshr.Rectangle(Point(-30, 6.25), Point(30, 10))
+    barHi = mshr.Rectangle(Point(-30, -10), Point(30, -6.25))
+    c1    = mshr.Circle(Point(-30, -19.5), 13.4)
+    c2    = mshr.Circle(Point(30, -19.5), 13.4)
+    c3    = mshr.Circle(Point(-30, 19.5), 13.4)
+    c4    = mshr.Circle(Point(30, 19.5), 13.4)
+    domain = outer - barLo - barHi - c1 - c2 - c3 -c4
+    
+    mm = mshr.generate_mesh(domain, numpts)
+    plt.figure()
+    plot(mm, color='k')
+    plt.xlim(-120, 120)
+    plt.ylim(-15, 15)
+    plt.show(block=False)
+    #return mshr.generate_mesh(domain, numpts)
+
 def structured_cell_centroids(mesh):
     """
     creates a structured cell centroids and cell volumes of 

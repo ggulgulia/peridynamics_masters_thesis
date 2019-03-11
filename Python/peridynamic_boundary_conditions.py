@@ -30,9 +30,8 @@ def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, 
     for kk in keys:
         bc_name = bc_type[kk]
         if(bc_name == 'dirichlet'):
-            node_ids = a[kk][0]
-
-            for i, nk in enumerate(node_ids):
+            dir_node_ids = a[kk][0]
+            for i, nk in enumerate(dir_node_ids):
                 u_disp = np.insert(u_disp, nk, np.zeros(dim, dtype=float), axis=0)
 
         del_ids = np.concatenate((del_ids, a[kk][0]), axis=0)
@@ -42,7 +41,43 @@ def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, 
 
     return orig_cell_cent, orig_u_disp
     
+def recover_stiffness_for_original_mesh(K, cell_cent, el, bc_type, num_lyrs, struct_grd=False):
+    """
+    routine to generate the tangent stiffness matrix for the 
+    grid without addiditonal ghost boundary layers
+
+_________:
+    ------
+        K:  tangent stiffness matrix for grid with ghost layers 
+        cell_cent: cell centroid for grid with ghost layers 
+        el: edge length
+        bc_type: dictonary for boundary conditions
+        num_lyrs: int for num of ghost layers applied
+        struct_grd: boolean
+    output:
+    ------
+        K_orig : 
+
+    """
+    dim = len(cell_cent[0])
+    a, b = get_boundary_layers(cell_cent, el, num_lyrs, struct_grd)
+    del_ids = np.zeros(0, dtype=int)
+    key = bc_type.keys()
     
+    K_orig = cpy.deepcopy(K)
+
+    for kk in key:
+        del_ids = np.concatenate((del_ids, a[kk][0]))
+
+    for i, nk in enumerate(del_ids):
+        for d in range(dim):
+            K_orig = np.delete(K_orig, (nk-i)*dim, axis=0) #deletes the row
+            K_orig = np.delete(K_orig, (nk-i)*dim, axis=1) #deletes the col
+    
+    return K_orig
+    
+
+
 def get_boundary_layers(cell_cent, el, num_lyrs, struct_grd):
     """
     after adding ghost layers, the boundary layers are 

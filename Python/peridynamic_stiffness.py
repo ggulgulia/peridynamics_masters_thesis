@@ -113,7 +113,7 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu,
     ------
         K : numpy nd array , the tangent stiffness matrix
     """
-    print("Beginning to compute the tangent stiffness matrix")
+    print("Beginning to compute the tangent stiffness matrix using LPS material model")
 
     import timeit as tm
     start = tm.default_timer()

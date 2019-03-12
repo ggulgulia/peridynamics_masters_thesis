@@ -40,12 +40,12 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
             print("(STRUCTURED) grid size of eqivalent Peridynamics grid: %i" %len(cell_cent))
         else:
             cell_cent = get_cell_centroids(curr_mesh)
-            horizons = np.arange(0.8, 1.6, 0.2)*5.001*curr_mesh.hmax()
+            #horizons = np.arange(0.8, 1.6, 0.2)*5.001*curr_mesh.hmax()
+            horizons = np.array([0.164, 0.246, 0.33])
             el = get_peridym_edge_length(cell_cent, struct_grd)
             print("(UNSTRUCTURED) grid size of equivalent Peridynamic grid: %i" %len(cell_cent))
 
         #horizons = np.array([0.2400048, 0.300006, 0.3600072, 0.4200048])
-        horizons = np.array([0.1, 0.15])
         #declare empty storage for each horizon in 'horizons' array and curr_mesh  
         infl_fun = gaussian_infl_fun2
         disp_cent_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)

@@ -9,8 +9,9 @@ import mshr
 
 
 def test_structured_grid(vol_corr=True):
-    m = RectangleMesh(Point(0,0), Point(2,1),20, 10)
-    struct_grd = True
+    m = RectangleMesh(Point(0,0), Point(2,1), 10, 5)
+    struct_grd = False
+    vol_corr = True
 
     """hard coded bcs"""
     bc_loc = [0,1]
@@ -28,7 +29,7 @@ def test_structured_grid(vol_corr=True):
     omega_fun = gaussian_infl_fun1
     E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
     
-    horizon = 3*np.abs(np.diff(cell_cent[0:2][:,0])[0])
+    horizon = 2.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
     tree = QuadTree()
     tree.put(extents, horizon)
     
@@ -72,4 +73,4 @@ def test_structured_grid(vol_corr=True):
         ax.axis('off')
         plt.legend()
         plt.show(block=False)
-    
+    return K, disp_cent

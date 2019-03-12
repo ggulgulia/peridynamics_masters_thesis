@@ -1,9 +1,9 @@
 from peridynamic_neighbor_data import *
 from peridynamic_quad_tree import *
 from peridynamic_linear_quad_tree import *
-from peridynamic_stiffness import*
+#from peridynamic_stiffness import*
 from peridynamic_solvers import direct_solver
-#from peridynamic_correspondence import *
+from peridynamic_correspondence import *
 from peridynamic_boundary_conditions import *
 from peridynamic_infl_fun import *
 from peridynamic_materials import *
@@ -11,14 +11,14 @@ import mshr
 
 #m = box_mesh(Point(0,0,0), Point(2,1,1), 10,5,5)
 #m = box_mesh_with_hole(numpts=20)
-m = rectangle_mesh(numptsX=10, numptsY=5)
+m = rectangle_mesh(numptsX=20, numptsY=10)
 #m = rectangle_mesh_with_hole(npts=25)
 
 struct_grd = True
 vol_corr = False
-bc_type = {'dirichlet':0,'forceX':3}
-bc_vals = {'dirichlet':0,'forceX':50e8}
-bc_loc = [0,3]
+bc_type = {'dirichlet':0,'forceY':1}
+bc_vals = {'dirichlet':0,'forceY':-5e8}
+bc_loc = [0,1]
 num_lyrs = 2 #num of additional layers on boundary
 cell_cent, cell_vol = add_ghost_cells(m, bc_loc, num_lyrs, struct_grd) 
 
@@ -31,7 +31,7 @@ dim = np.shape(cell_cent[0])[0]
 omega_fun = gaussian_infl_fun2
 E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
-horizon = 3.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
+horizon = 2.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
 #horizon = 0.3001
 tree = QuadTree()
 tree.put(extents, horizon)
@@ -58,4 +58,4 @@ internal_force_flat = np.matmul(K_orig, u_disp_flat)
 for d in range(dim):
     internal_force[:,d] = internal_force_flat[d::dim]
 
-disp_cent = plot_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, zoom=40)
+disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=True, zoom=40)

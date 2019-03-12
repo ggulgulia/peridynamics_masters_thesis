@@ -63,6 +63,41 @@ def generate_mesh_list(corner1=Point(0,0), corner2=Point(3,1), numptsX=30, numpt
     return mesh_lst
 
 
+def generate_mesh_list_for_pd_tests():
+    """
+    generates 2 separate lists of fenics mesh
+    ensuring consistent particle sizes
+    in non-uniform and uniform mesh distribution
+
+    input: None
+    ------
+
+    output:
+    -------
+        unstrct_msh_lst : list of fenics mesh for unstruct_grid test
+        struct_msh_lst  : list of FEniCS mesh for struct_grd test
+        
+    """
+
+    unstrct_msh_lst = []
+    struct_msh_lst  = []
+
+    delta = 10;
+    particle_count = np.array([600, 1200, 1800, 2400], dtype=float)
+    minNumptsX = 30;
+    
+    for i, particles in enumerate(particle_count):
+        numptsX = int(minNumptsX + i*delta)
+        numptsY = int(particles/numptsX)
+        m = RectangleMesh(Point(0,0), Point(3,1), numptsX, numptsY)
+        struct_msh_lst.append(m)
+
+        numptsY = int(numptsY*0.5)
+        m = RectangleMesh(Point(0,0), Point(3,1), numptsX, numptsY)
+        unstrct_msh_lst.append(m)
+
+    return unstrct_msh_lst, struct_msh_lst
+
 def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, plot_=True):
     """
     checks the convergence of fenics for a 

@@ -65,6 +65,50 @@ def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
     plt.title("peridynamics mesh")
     plt.show(block=False)
 
+def plot_displaced_soln(cell_cent, u_disp, horizon, dim, zoom=40):
+    """
+    plots the displaced cell centroids after a solution 
+    step. Additionally retrns the final cell centroid
+    after additon of displacement field in the orginal
+    configuration
+
+    input:
+    ------
+    cell_cent: np.array of cell centroids 
+    u_disp   : np.array of displacement field 
+    zoom     : magnification desired in plot 
+    
+    output:
+    --------
+    disp_cent : final configuration after displacement
+
+    """
+    disp_cent = cell_cent + u_disp
+    
+    if dim == 2:
+        x, y = cell_cent.T
+        plt.figure()
+        plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
+        x,y = (cell_cent + zoom*u_disp).T 
+        plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label='horizon='+str(horizon))
+        plt.legend()
+        plt.show(block=False)
+
+    if dim == 3:
+        from mpl_toolkits.mplot3d import Axes3D 
+        x, y, z = cell_cent.T
+        fig = plt.figure() 
+        ax = fig.add_subplot(111, projection='3d') 
+        ax.scatter(x,y,z, s=300, color='r', marker='o', alpha=0.1, label='original config')
+        x,y,z = (cell_cent + zoom*u_disp)
+
+        ax.scatter(x,y,z,s=300, color='g', marker='o', alpha=1.0, label='deformed config')
+        ax.axis('off')
+        plt.legend()
+        plt.show(block=False)
+
+    return disp_cent
+
 
 def print_mesh_stats(mesh):
     """

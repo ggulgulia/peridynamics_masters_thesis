@@ -63,7 +63,7 @@ def generate_mesh_list(corner1=Point(0,0), corner2=Point(3,1), numptsX=30, numpt
     return mesh_lst
 
 
-def fenics_mesh_convergence(struct_grd=False, tol=None, plot_=True):
+def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, plot_=True):
     """
     checks the convergence of fenics for a 
     2D displacement 
@@ -76,7 +76,7 @@ def fenics_mesh_convergence(struct_grd=False, tol=None, plot_=True):
     if(tol == None):
         tol = 1e-5
 
-    mesh_lst = generate_mesh_list(num_meshes=20)
+    mesh_lst = generate_mesh_list(num_meshes=20, numptsX=numptsX, numptsY=numptsY)
     num = len(mesh_lst)
     dim = len(mesh_lst[0].coordinates()[0])
     fine_mesh = mesh_lst[-1]

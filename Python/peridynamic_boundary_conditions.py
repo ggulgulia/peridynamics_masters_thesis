@@ -212,9 +212,8 @@ def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, num_lyrs=2, struc
 
     dim = len(cell_cent[0])
     dof = np.shape(K)[0]
-
     K_bound = copy.deepcopy(K)
-
+    force_dir = {"forceX": 0, "forceY":1, "forceZ":2}
     #rhs is a 1-D array
     rhs = np.zeros(dof,dtype=float) #create a rhs filled with zeros
 
@@ -241,7 +240,6 @@ def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, num_lyrs=2, struc
     #apply force on the rhs
     for bcn in bc_name:
         if bcn[0:5] == "force":
-            force_dir = {"forceX": 0, "forceY":1, "forceZ":2}
             bb = bc_type[bcn] #bc location on grid according to comments above
             dd = force_dir[bcn]
             node_ids   = a[bb][0]

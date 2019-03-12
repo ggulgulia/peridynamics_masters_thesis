@@ -8,6 +8,7 @@ import mshr
 import timeit as tm
 from peridynamic_infl_fun import *
 
+
 def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, material='steel', omega_fun=None, plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
     """
     solves the peridynamic bar with a specified load
@@ -17,8 +18,8 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, mate
     print('horizon value: %4.3f\n'%horizon)
 
     
-    bc_type = {0:'dirichlet', 1:'force'}
-    bc_vals = {'dirichlet': 0, 'force': force}
+    bc_type = {'dirichlet':0, 'forceY':1}
+    bc_vals = {'dirichlet': 0, 'forceY': force}
     bc_loc = [0,1]
     num_lyrs = 2
     cell_cent, cell_vol = add_ghost_cells(m, bc_loc, num_lyrs, struct_grd) 

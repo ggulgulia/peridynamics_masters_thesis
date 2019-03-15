@@ -10,11 +10,14 @@ from peridynamic_materials import *
 import mshr
 
 #m = box_mesh(Point(0,0,0), Point(2,1,1), 10,5,5)
-#m = box_mesh_with_hole(numpts=20)
-m = rectangle_mesh(numptsX=20, numptsY=10)
+m = box_mesh_with_hole(numpts=20)
+#domain = mshr.Rectangle(Point(0,0), Point(3,1))
+#m = mshr.generate_mesh(domain, 30)
+#m = RectangleMesh(Point(0,0), Point(2,1), 20, 10)
+#m = rectangle_mesh(numptsX=20, numptsY=10)
 #m = rectangle_mesh_with_hole(npts=25)
 
-struct_grd = True
+struct_grd = False
 vol_corr = False
 bc_type = {'dirichlet':0,'forceY':1}
 bc_vals = {'dirichlet':0,'forceY':-5e8}
@@ -31,7 +34,7 @@ dim = np.shape(cell_cent[0])[0]
 omega_fun = gaussian_infl_fun2
 E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
-horizon = 2.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
+horizon = 4.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
 #horizon = 0.3001
 tree = QuadTree()
 tree.put(extents, horizon)
@@ -58,4 +61,4 @@ internal_force_flat = np.matmul(K_orig, u_disp_flat)
 for d in range(dim):
     internal_force[:,d] = internal_force_flat[d::dim]
 
-disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=True, zoom=40)
+disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=True, zoom=20)

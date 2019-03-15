@@ -85,14 +85,16 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, plot_=False, zoom=40):
     """
     disp_cent = cell_cent + u_disp
     
+    dpi = 3
+    legend_size = {'size': str(8*dpi)}
     if plot_:
         if dim == 2:
             x, y = cell_cent.T
             plt.figure()
-            plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
+            #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
             x,y = (cell_cent + zoom*u_disp).T 
-            plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label='horizon='+str(horizon))
-            plt.legend()
+            plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+str(horizon))
+            plt.legend(prop=legend_size)
             plt.show(block=False)
 
         if dim == 3:

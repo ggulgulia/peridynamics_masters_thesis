@@ -37,7 +37,7 @@ def main():
         tree.put(extents, horizon)
 
         start_loc = tm.default_timer()
-        tree_nbr = tree_nbr_search(tree.get_linear_tree(), cell_cents, horizon)
+        tree_nbr, _ = tree_nbr_search(tree.get_linear_tree(), cell_cents, horizon, vol_corr=False)
         tree_time[i] = tm.default_timer() - start_loc
 
         start_loc = tm.default_timer()
@@ -57,4 +57,4 @@ def main():
 
     print("Time for test: %4.3f seconds" %(tm.default_timer()-start_global)) 
 
-    return
+    return tree_time, naive_time, mesh_size

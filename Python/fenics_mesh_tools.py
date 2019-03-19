@@ -53,6 +53,7 @@ def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
         ax.axis('off')
     
     if dim == 2 : 
+        ax = fig.add_subplot(111)
         x,y = cell_cent.T
         plt.scatter(x,y, s=300, color='c', marker='o', alpha=0.8)
         plt.axis=('off')
@@ -62,8 +63,59 @@ def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
             plt.text(cc[0], cc[1],  str(idx), color='k', verticalalignment='bottom', horizontalalignment='right', fontsize='medium')
 
 
+    ax.set_aspect('equal')
     plt.title("peridynamics mesh")
     plt.show(block=False)
+
+def get_displaced_soln(cell_cent, u_disp, horizon, dim, plot_=False, zoom=40):
+    """
+    plots the displaced cell centroids after a solution 
+    step. Additionally retrns the final cell centroid
+    after additon of displacement field in the orginal
+    configuration
+
+    input:
+    ------
+    cell_cent: np.array of cell centroids 
+    u_disp   : np.array of displacement field 
+    zoom     : magnification desired in plot 
+    
+    output:
+    --------
+    disp_cent : final configuration after displacement
+
+    """
+    disp_cent = cell_cent + u_disp
+    
+    dpi = 3
+    legend_size = {'size': str(8*dpi)}
+    if plot_:
+        fig = plt.figure()
+        if dim == 2:
+            ax = fig.add_subplot(111)
+            x, y = cell_cent.T
+            #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
+            x,y = (cell_cent + zoom*u_disp).T 
+            plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+str(horizon))
+            plt.legend(prop=legend_size)
+            plt.ylim(-0.5, 1.5)
+            plt.xlim(-0.5, 2.5)
+
+        if dim == 3:
+            from mpl_toolkits.mplot3d import Axes3D 
+            x, y, z = cell_cent.T
+            fig = plt.figure() 
+            ax = fig.add_subplot(111, projection='3d') 
+            ax.scatter(x,y,z, s=300, color='r', marker='o', alpha=0.1, label='original config')
+            x,y,z = (cell_cent + zoom*u_disp)
+
+            ax.scatter(x,y,z,s=300, color='g', marker='o', alpha=1.0, label='deformed config')
+            ax.axis('off')
+            plt.legend()
+
+        ax.set_aspect('equal')
+        plt.show(block=False)
+    return disp_cent
 
 
 def print_mesh_stats(mesh):
@@ -142,6 +194,27 @@ def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(3,1), hole_cent=Poi
     print_mesh_stats(mesh)
     
     return mesh
+
+def tensile_test_bar(numpts = 60, plot_=True):
+
+    outer = mshr.Rectangle(Point(-100, -10), Point(100, 10))
+    barLo = mshr.Rectangle(Point(-30, 6.25), Point(30, 10))
+    barHi = mshr.Rectangle(Point(-30, -10), Point(30, -6.25))
+    c1    = mshr.Circle(Point(-30, -19.5), 13.4)
+    c2    = mshr.Circle(Point(30, -19.5), 13.4)
+    c3    = mshr.Circle(Point(-30, 19.5), 13.4)
+    c4    = mshr.Circle(Point(30, 19.5), 13.4)
+    domain = outer - barLo - barHi - c1 - c2 - c3 -c4
+    
+    mm = mshr.generate_mesh(domain, numpts)
+
+    if plot_:
+        plt.figure()
+        plot(mm, color='k')
+        plt.xlim(-120, 120)
+        plt.ylim(-20, 20)
+        plt.show(block=False)
+    return  mm
 
 def structured_cell_centroids(mesh):
     """
@@ -342,6 +415,16 @@ def get_domain_bounding_box(mesh):
     
     return np.vstack((corner_min, corner_max))
 
+def get_deformed_mesh_domain_bbox(cell_cent, dim):
+
+    corner_min = np.zeros(dim ,float)
+    corner_max = np.zeros(dim, float)
+    for d in range(dim):
+        corner_min[d] = min(cell_cent[:,d])
+        corner_max[d] = max(cell_cent[:,d])
+
+    return np.vstack((corner_min, corner_max))
+
 def get_peridym_mesh_bounds(mesh, struct_grd=False):
     """
     returns lists of elements and centroids of corresponding elements
@@ -492,7 +575,6 @@ def compute_modified_extents(cell_cent, el, struct_grd=False):
     min_corners = np.zeros(dim, float)
     max_corners = np.zeros(dim, float)
 
-    el = get_peridym_edge_length(cell_cent, struct_grd)
     if(struct_grd):
         shift_fact = 0.5
     else:

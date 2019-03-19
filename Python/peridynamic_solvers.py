@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.linalg as la
 import timeit as tm
-
+import copy as cpy
 def jacobi(A, b, TOL=1e-10):
     """
     solves the linear system Ax = b
@@ -69,3 +69,36 @@ def gauss_seidel(A, b, TOL=1e-5):
     print("Number of Gauss Seidel Solves: %i"%iters)
     print("Time taken to solve a linear system of %i equations with tolearance upto %4.7f is %4.3f seconds" %(n, TOL, end-start))
     return x
+
+
+def direct_solver(A, rhs, dim, reshape=True):
+    """
+    solves the peridynamic system (Kx = f)
+    and returns the solution (displacement field
+    for e.g)
+
+    if the flag reshape is true, the solution 
+    will be reshaped in the solution is reshaped 
+    appropriately
+
+    input:
+    ------
+        A : np.ndarray, square matrix with bc applied
+        rhs: np array 1 dim, force vector for eg
+        dim: dimension of the domain/problem
+        reshape: boolean, see docstring
+    output:
+    -------
+        x : np.array solution, reshaped if flag reshape is true
+    """
+    print("solving the stystem")
+    start = tm.default_timer()
+    x = la.solve(A, rhs)
+    end = tm.default_timer()
+    print("Time taken for solving the system of equation: %4.3f secs" %(end-start))
+
+    if reshape:
+        x_reshaped = cpy.deepcopy(x)
+        x_reshaped = np.reshape(x_reshaped, (int(len(x)/dim), dim))
+    
+    return x_reshaped

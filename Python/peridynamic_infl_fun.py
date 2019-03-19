@@ -120,27 +120,43 @@ def plot_1D_influence_functions():
 
     usage: simply call the function and observe the plots
     """
-
-    def omega1(domain, horizon):
-        """
-        1d unit unit_influence function 
-        """
-        return np.ones(len(domain),dtype=float)*(abs(domain)<horizon).astype(float)
     
-    def omega2(domain, horizon, p=1):
+    dpi = 3
+    legend_size = {'size': str(5*dpi)}
+    axis_font = {'size': str(int(3*dpi))}
+    title_font = {'size': str(18*dpi)}
+    legend_size = {'size': str(12*dpi)}
+    tick_size = 12*dpi
+    marker_size=100*3.5*dpi
+    
+    def omega1(domain, horizon, p=1):
         """
         1d gaussian influence function 
         """
         bnd_len = np.abs(domain)
 
         return np.exp(-(bnd_len/(p*horizon))**2)*(np.abs(domain)<horizon).astype(float)
+        
+    def omega2(domain, horizon, q=0.5):
+        """
+        1d narrow gaussian influence function 
+        """
+        bnd_len = np.abs(domain)
 
+        return np.exp(-(bnd_len/(q*horizon))**2)*(np.abs(domain)<horizon).astype(float)
+    
     def omega3(domain, horizon):
         """
-        1d inverted parabolic influence function 
+        1d unit unit_influence function 
         """
+        return np.ones(len(domain),dtype=float)*(abs(domain)<horizon).astype(float)
+    
+    #def omega3(domain, horizon):
+    #    """
+    #    1d inverted parabolic influence function 
+    #    """
 
-        return (abs(domain)/horizon)**2*(abs(domain)<horizon).astype(float)
+    #    return (abs(domain)/horizon)**2*(abs(domain)<horizon).astype(float)
 
     def omega4(domain, horizon):
         """
@@ -167,17 +183,17 @@ def plot_1D_influence_functions():
     domain = np.arange(-1.0, 1.0+deltaX, deltaX)
     horizon = 0.5
     plt.figure()
-    plt.plot(domain, omega1(domain, horizon), linewidth=3.0, label='unit')
-    plt.plot(domain, omega2(domain, horizon), linewidth=3.0, label='exponential')
-    plt.plot(domain, omega3(domain, horizon), linewidth=3.0, label='invert parabola')
-    plt.plot(domain, omega4(domain, horizon), linewidth=3.0, label='parabola')
-    plt.plot(domain, omega5(domain, horizon), linewidth=3.0, label='peridigm parabola')
+    plt.plot(domain, omega1(domain, horizon), linewidth=3.0, label=r'$\mathbf{\omega}_{1}\langle\xi\rangle$')
+    plt.plot(domain, omega2(domain, horizon), linewidth=3.0, label=r'$\mathbf{\omega}_{2}\langle\xi\rangle$')
+    plt.plot(domain, omega3(domain, horizon), linewidth=3.0, label=r'$\mathbf{\omega}_{3}\langle\xi\rangle$')
+    plt.plot(domain, omega4(domain, horizon), linewidth=3.0, label=r'$\mathbf{\omega}_{4}\langle\xi\rangle$')
+    plt.plot(domain, omega5(domain, horizon), linewidth=3.0, label=r'$\mathbf{\omega}_{5}\langle\xi\rangle$')
 
-    plt.legend(loc=2)
+    plt.legend(prop = legend_size)
     plt.xlim(-1.0,1.0)
     plt.ylim(-0.5, 1.5)
-    plt.xlabel("bond length")
-    plt.ylabel("value of influene function")
+    plt.xlabel(r'bond length $\xi$', fontsize=10*dpi, **axis_font)
+    plt.ylabel(r'influence function $\mathbf{\omega}_{i}\langle\xi\rangle$', fontsize=10*dpi, **axis_font)
     plt.title("Various peridynamic influence functions(tested with horizon="+str(horizon)+")")
     plt.show(block=False)
 

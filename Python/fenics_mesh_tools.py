@@ -575,7 +575,6 @@ def compute_modified_extents(cell_cent, el, struct_grd=False):
     min_corners = np.zeros(dim, float)
     max_corners = np.zeros(dim, float)
 
-    el = get_peridym_edge_length(cell_cent, struct_grd)
     if(struct_grd):
         shift_fact = 0.5
     else:

@@ -33,7 +33,7 @@ def recover_bc_dictonary_with_unique_values(bc_type):
     return bc_type_new
 
     
-def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, struct_grd=False, expnd_u_dsp=True):
+def recover_original_peridynamic_mesh(cell_cent, u_disp, bc_type, ghost_lyr_node_ids,  struct_grd=False, expnd_u_dsp=True):
     """
     given the cell_centroids (with ghost layer on original peridynamic mesh)
     and the locations where the bc's have been applied, the method
@@ -44,9 +44,7 @@ def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, 
     cell_cent   : cell centroids with ghost layers where bc has been applied
     u_disp      : displacement field (nodal points fixed dirichlet are deletd 
                   in the soln array)
-    el          : numpy arrays of edge length
     bc_type     : dictonary of structured grid 
-    num_lyrs    : num of layers in ghost cells for dirichlet bc 
     struct_grd  : boolean, whether or not struct grid 
     expnd_u_dsp : boolean, whether the retrun value should include 
                      u_disp with ghost layer of dirichlet nodes added 
@@ -62,7 +60,8 @@ def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, 
     bc_typ = bc_type_new.keys()
 
     dim = len(cell_cent[0])
-    a, b = get_boundary_layers(cell_cent, el, num_lyrs, struct_grd)
+    a = ghost_lyr_node_ids
+    b = get_bound_cell_cents(ghost_lyr_node_ids, cell_cent)
     u_dsp_ghst = cpy.deepcopy(u_disp)
 
     del_ids = np.zeros(0, dtype = int) #placeholder for ghost lyer node ids
@@ -83,7 +82,7 @@ def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, 
     else:
         return  orig_cell_cent, orig_u_dsp 
     
-def recover_stiffness_for_original_mesh(K, cell_cent, el, bc_type, num_lyrs, struct_grd=False):
+def recover_stiffness_for_original_mesh(K, cell_cent, bc_type, ghost_lyr_node_ids, struct_grd=False):
     """
     routine to generate the tangent stiffness matrix for the 
     grid without addiditonal ghost boundary layers
@@ -94,7 +93,6 @@ _________:
         cell_cent: cell centroid for grid with ghost layers 
         el: edge length
         bc_type: dictonary for boundary conditions
-        num_lyrs: int for num of ghost layers applied
         struct_grd: boolean
     output:
     ------
@@ -102,14 +100,13 @@ _________:
 
     """
     dim = len(cell_cent[0])
-    a, b = get_boundary_layers(cell_cent, el, num_lyrs, struct_grd)
+    a = ghost_lyr_node_ids
+    b = get_bound_cell_cents(ghost_lyr_node_ids, cell_cent)
     del_ids = np.zeros(0, dtype=int)
-    bc_type_new = recover_bc_dictonary_with_unique_values(bc_type)
-    bc_typ = bc_type_new.keys()
     K_orig = cpy.deepcopy(K)
 
-    for bct in bc_typ:
-        kk = bc_type_new[bct]
+    del_keys = ghost_lyr_node_ids.keys()
+    for kk in del_keys:
         del_ids = np.concatenate((del_ids, a[kk][0]))
 
     del_ids = np.unique(del_ids)
@@ -122,7 +119,7 @@ _________:
     
 
 
-def get_boundary_layers(cell_cent, el, num_lyrs, struct_grd):
+def get_boundary_layers(cell_cent, el, num_lyrs, bc_loc, struct_grd):
     """
     after adding ghost layers, the boundary layers are 
     modified and we need the modified BL's to do 
@@ -161,13 +158,38 @@ def get_boundary_layers(cell_cent, el, num_lyrs, struct_grd):
         bound_nodes[2*d] = np.where(cell_cent[:,d] <= bound_range[2*d])
         bound_nodes[(2*d+1)] = np.where(cell_cent[:,d] >= bound_range[2*d+1])
 
-        bound_cents[2*d]   = cell_cent[bound_nodes[2*d][0]]
-        bound_cents[2*d+1] = cell_cent[bound_nodes[2*d+1][0]]
 
-    return bound_nodes, bound_cents
+    #store only those key value pair that are in the bc_loc
+    keys = bound_nodes.keys()
+    keys_temp = [kk for kk in keys]
+    for kk in keys_temp:
+        if kk not in bc_loc:
+            bound_nodes.pop(kk, None)
+            
+    return bound_nodes
 
+def get_bound_cell_cents(bound_nodes, cell_cent):
+    """
+    TODO : doc string
+
+    input:
+    -------
+        bound_node_ids:
+        cell_cent     :
+        dim           :
+
+    output:
+    -------
+        bound_cell_cent: 
+    """
+    bound_cents = {}
+    keys = bound_nodes.keys()
+    for kk in keys:
+        bound_cents[kk]   = cell_cent[bound_nodes[kk][0]]
+
+    return bound_cents
     
-def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, num_lyrs=2, struct_grd=False):
+def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, node_ids_frc, struct_grd=False):
     """
     the function applies a boundary conditions on the mesh provided
     BC type : Dirichlet(fixed, displacement), Neumann
@@ -225,32 +247,17 @@ def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, num_lyrs=2, struc
     #rhs is a 1-D array
     rhs = np.zeros(dof,dtype=float) #create a rhs filled with zeros
 
-    # 'a': dictonary is node numbers for boundaries 
-    # 'b': dictonary are the corresponding node centroids
-    # a.keys() = {0,1,2,3,4,5,} with each key mapping to the normals along axes as outlined below:
-            # 0 : x_min
-            # 1 : x_max
-            # 2 : y_min
-            # 3 : y_max
-            # 4 : z_min
-            # 5 : z_max
-            #see the diagram in doc string comments above
-
     """
     to map the equivalent of volume bc to the edge, we apply the volume bc to as many number of layers within the volume as the number of ghost layers 
     """
-    el = get_peridym_edge_length(cell_cent, struct_grd)
 
-    ## For force bc we need equal num layers inside the domain as outside 
-    ## hence we multiply the num lyers by 2, assuming we have num_lyrs layers
-    ## of additional ghost lyer where foce bc is to be applied
-    a, b = get_boundary_layers(cell_cent, el, 2*num_lyrs, struct_grd)
     #apply force on the rhs
     for bcn in bc_name:
         if bcn[0:5] == "force":
+            b = get_bound_cell_cents(node_ids_frc, cell_cent)
             bb = bc_type[bcn] #bc location on grid according to comments above
             dd = force_dir[bcn]
-            node_ids   = a[bb][0]
+            node_ids   = node_ids_frc[bb][0]
             node_cents = b[bb]
             vol_sum = sum(cell_vol[node_ids])
             f_density = bc_vals[bcn]/vol_sum #external force applied as force density
@@ -264,12 +271,11 @@ def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, num_lyrs=2, struc
                     rhs[nk*dim + dd] = f_density*cell_vol[nk]  #hard coded negative y-axis force 
                     #rhs has not yet bc applied to it
     #apply dirichlet bc 
-    a, b = get_boundary_layers(cell_cent, el, num_lyrs, struct_grd)
     for bcn in bc_name:
-
         if bcn is "dirichlet" and bc_vals[bcn] is 0:
+            b = get_bound_cell_cents(node_ids_dir, cell_cent)
             bb = bc_type[bcn]
-            node_ids   = a[bb][0]
+            node_ids   = node_ids_dir[bb][0]
             print("applying dirichlet bc on %s nodes" )
 
             for i, nk in enumerate(node_ids):

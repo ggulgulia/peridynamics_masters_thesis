@@ -98,7 +98,7 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, plot_=False, zoom=40):
             x,y = (cell_cent + zoom*u_disp).T 
             plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+str(horizon))
             plt.legend(prop=legend_size)
-            plt.ylim(1.5, -0.5)
+            plt.ylim(-0.5, 1.5)
             plt.xlim(-0.5, 2.5)
 
         if dim == 3:

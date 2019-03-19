@@ -2,6 +2,7 @@ from peridynamic_neighbor_data import *
 from peridynamic_quad_tree import *
 from peridynamic_linear_quad_tree import *
 from peridynamic_stiffness import*
+from peridynamic_solvers import direct_solver
 from peridynamic_boundary_conditions import *
 from peridynamic_infl_fun import *
 from peridynamic_materials import *
@@ -9,23 +10,26 @@ import mshr
 
 
 def test_structured_grid(vol_corr=True):
-    m = RectangleMesh(Point(0,0), Point(2,1), 10, 5)
-    struct_grd = False
+    m = RectangleMesh(Point(0,0), Point(2,1), 20, 10)
+    struct_grd = True
     vol_corr = True
 
     """hard coded bcs"""
     bc_loc = [0,1]
-    bc_type = {0:'dirichlet', 1:'force'}
-    bc_vals = {'dirichlet': 0, 'force': -5e8}
+    bc_type = {'dirichlet':0, 'forceY':1}
+    bc_vals = {'dirichlet':0, 'forceY':-5e8}
     num_lyrs = 2 #num layers of cells for BC
 
     cell_cent, cell_vol = add_ghost_cells(m, bc_loc, num_lyrs, struct_grd)
     el = get_peridym_edge_length(cell_cent, struct_grd)
-    extents = compute_modified_extents(cell_cent, struct_grd)
-    
-    purtub_fact = 1e-6
+    extents = compute_modified_extents(cell_cent, el, struct_grd)
     dim = np.shape(cell_cent[0])[0]
     
+    #boundary conditions managment
+    node_ids_dir = get_boundary_layers(cell_cent, el, num_lyrs, bc_loc, struct_grd)
+    node_ids_frc = get_boundary_layers(cell_cent, el, 2*num_lyrs, bc_loc, struct_grd)
+    ghost_lyr_node_ids = node_ids_dir
+
     omega_fun = gaussian_infl_fun1
     E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
     
@@ -38,39 +42,9 @@ def test_structured_grid(vol_corr=True):
     
     K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)
     
-    K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, 2, struct_grd)
+    K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, node_ids_frc, struct_grd)
+    u_disp = direct_solver(K_bound, fb, dim, reshape=True) 
+    cell_cent_orig, u_disp_orig, u_disp_ghost = recover_original_peridynamic_mesh(cell_cent, u_disp, bc_type, ghost_lyr_node_ids, struct_grd)
+    disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=True, zoom=10)
     
-    print("solving the stystem")
-    start = tm.default_timer()
-    sol = np.linalg.solve(K_bound, fb)
-    end = tm.default_timer()
-    print("Time taken for solving the system of equation: %4.3f secs" %(end-start))
-    u_disp = copy.deepcopy(sol)#
-    u_disp = np.reshape(u_disp, (int(len(sol)/dim), dim))
-
-    cell_cent, u_disp = recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, struct_grd)
-    disp_cent = cell_cent + u_disp
-    
-    if dim == 2:
-        plt.figure()
-        x, y = cell_cent.T
-        plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.2, label='original config')
-        x,y = (cell_cent + 40*u_disp).T
-        plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label='horizon='+str(horizon))
-        #plt.ylim(-0.5, 1.5)
-        plt.legend()
-        plt.show(block=False)
-    
-    if dim == 3:
-        from mpl_toolkits.mplot3d import Axes3D
-        
-        x, y, z = cell_cent.T
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        ax.scatter(x,y,z, s=300, color='r', marker='o', alpha=0.1, label='original config')
-        x,y,z = disp_cent.T
-        ax.scatter(x,y,z,s=300, color='g', marker='o', alpha=1.0, label='deformed config')
-        ax.axis('off')
-        plt.legend()
-        plt.show(block=False)
     return K, disp_cent

@@ -10,10 +10,10 @@ from peridynamic_materials import *
 import mshr
 
 #m = box_mesh(Point(0,0,0), Point(2,1,1), 10,5,5)
-m = box_mesh_with_hole(numpts=20)
+#m = box_mesh_with_hole(numpts=20)
 #domain = mshr.Rectangle(Point(0,0), Point(3,1))
 #m = mshr.generate_mesh(domain, 30)
-#m = RectangleMesh(Point(0,0), Point(2,1), 20, 10)
+m = RectangleMesh(Point(0,0), Point(2,1), 20, 10)
 #m = rectangle_mesh(numptsX=20, numptsY=10)
 #m = rectangle_mesh_with_hole(npts=25)
 
@@ -34,7 +34,7 @@ dim = np.shape(cell_cent[0])[0]
 omega_fun = gaussian_infl_fun2
 E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
-horizon = 4.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
+horizon = 2.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
 #horizon = 0.3001
 tree = QuadTree()
 tree.put(extents, horizon)
@@ -47,18 +47,8 @@ K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, num_lyr
 
 u_disp = direct_solver(K_bound, fb, dim, reshape=True)
 
-cell_cent_orig, u_disp_orig = recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, struct_grd)
+cell_cent_orig, u_disp_orig, u_disp_ghost = recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, struct_grd)
 K_orig = recover_stiffness_for_original_mesh(K, cell_cent, el, bc_type, num_lyrs, struct_grd)
 
 u_disp_flat = np.zeros(len(cell_cent_orig)*dim, dtype=float)
-internal_force = np.zeros( (len(cell_cent_orig), dim), dtype=float)
-
-#flatten the array and compute internal forces in the particles
-for d in range(dim):
-    u_disp_flat[d::dim] = u_disp_orig[:,d]
-
-internal_force_flat = np.matmul(K_orig, u_disp_flat)
-for d in range(dim):
-    internal_force[:,d] = internal_force_flat[d::dim]
-
 disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=True, zoom=20)

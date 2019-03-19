@@ -53,6 +53,7 @@ def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
         ax.axis('off')
     
     if dim == 2 : 
+        ax = fig.add_subplot(111)
         x,y = cell_cent.T
         plt.scatter(x,y, s=300, color='c', marker='o', alpha=0.8)
         plt.axis=('off')
@@ -62,6 +63,7 @@ def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
             plt.text(cc[0], cc[1],  str(idx), color='k', verticalalignment='bottom', horizontalalignment='right', fontsize='medium')
 
 
+    ax.set_aspect('equal')
     plt.title("peridynamics mesh")
     plt.show(block=False)
 
@@ -88,14 +90,16 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, plot_=False, zoom=40):
     dpi = 3
     legend_size = {'size': str(8*dpi)}
     if plot_:
+        fig = plt.figure()
         if dim == 2:
+            ax = fig.add_subplot(111)
             x, y = cell_cent.T
-            plt.figure()
             #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
             x,y = (cell_cent + zoom*u_disp).T 
             plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+str(horizon))
             plt.legend(prop=legend_size)
-            plt.show(block=False)
+            plt.ylim(1.5, -0.5)
+            plt.xlim(-0.5, 2.5)
 
         if dim == 3:
             from mpl_toolkits.mplot3d import Axes3D 
@@ -108,8 +112,9 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, plot_=False, zoom=40):
             ax.scatter(x,y,z,s=300, color='g', marker='o', alpha=1.0, label='deformed config')
             ax.axis('off')
             plt.legend()
-            plt.show(block=False)
 
+        ax.set_aspect('equal')
+        plt.show(block=False)
     return disp_cent
 
 
@@ -408,6 +413,16 @@ def get_domain_bounding_box(mesh):
         corner_min[d] = min(coords[:,d])
         corner_max[d] = max(coords[:,d])
     
+    return np.vstack((corner_min, corner_max))
+
+def get_deformed_mesh_domain_bbox(cell_cent, dim):
+
+    corner_min = np.zeros(dim ,float)
+    corner_max = np.zeros(dim, float)
+    for d in range(dim):
+        corner_min[d] = min(cell_cent[:,d])
+        corner_max[d] = max(cell_cent[:,d])
+
     return np.vstack((corner_min, corner_max))
 
 def get_peridym_mesh_bounds(mesh, struct_grd=False):

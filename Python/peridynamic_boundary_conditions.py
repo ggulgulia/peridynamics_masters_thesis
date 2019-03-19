@@ -33,7 +33,7 @@ def recover_bc_dictonary_with_unique_values(bc_type):
     return bc_type_new
 
     
-def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, struct_grd=False):
+def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, struct_grd=False, expnd_u_dsp=True):
     """
     given the cell_centroids (with ghost layer on original peridynamic mesh)
     and the locations where the bc's have been applied, the method
@@ -41,17 +41,21 @@ def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, 
 
     input:
     ------
-    cell_cent : TODO
-    u_disp    : TODO
-    el        : numpy arrays of edge length
-    bc_type   :
-    num_lyrs  : 
-    struct_grd: TODO
-    
+    cell_cent   : cell centroids with ghost layers where bc has been applied
+    u_disp      : displacement field (nodal points fixed dirichlet are deletd 
+                  in the soln array)
+    el          : numpy arrays of edge length
+    bc_type     : dictonary of structured grid 
+    num_lyrs    : num of layers in ghost cells for dirichlet bc 
+    struct_grd  : boolean, whether or not struct grid 
+    expnd_u_dsp : boolean, whether the retrun value should include 
+                     u_disp with ghost layer of dirichlet nodes added 
+                     to it
     output:
     -------
     orig_cell_cent :
-    orig_u_disp    :
+    orig_u_dsp     :
+    u_disp_ghst    : u_disp with ghost layer of fixed dirichlet nodes added to it 
 
     """
     bc_type_new = recover_bc_dictonary_with_unique_values(bc_type)
@@ -59,6 +63,7 @@ def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, 
 
     dim = len(cell_cent[0])
     a, b = get_boundary_layers(cell_cent, el, num_lyrs, struct_grd)
+    u_dsp_ghst = cpy.deepcopy(u_disp)
 
     del_ids = np.zeros(0, dtype = int) #placeholder for ghost lyer node ids
     for bct in bc_typ:
@@ -66,14 +71,17 @@ def recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, 
         if(bct == 'dirichlet'):
             dir_node_ids = a[bc_loc][0]
             for i, nk in enumerate(dir_node_ids):
-                u_disp = np.insert(u_disp, nk, np.zeros(dim, dtype=float), axis=0)
+                u_dsp_ghst = np.insert(u_dsp_ghst, nk, np.zeros(dim, dtype=float), axis=0)
         del_ids = np.concatenate((del_ids, a[bc_loc][0]), axis=0)
 
     del_ids = np.unique(del_ids)
     orig_cell_cent = np.delete(cell_cent, del_ids, axis=0)
-    orig_u_disp    = np.delete(u_disp, del_ids, axis=0)
+    orig_u_dsp    = np.delete(u_dsp_ghst, del_ids, axis=0)
 
-    return orig_cell_cent, orig_u_disp
+    if expnd_u_dsp:
+        return orig_cell_cent, orig_u_dsp, u_dsp_ghst
+    else:
+        return  orig_cell_cent, orig_u_dsp 
     
 def recover_stiffness_for_original_mesh(K, cell_cent, el, bc_type, num_lyrs, struct_grd=False):
     """

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from peridynamic_neighbor_data import*
 from fenics_mesh_tools import *
 
-def computeTheta(u, horizon, nbr_lst, nbr_beta_lst, trv_lst,cell_vol, cell_cent, mw, gamma, omega_fun):
+def computeTheta_quasistatic(u, horizon, nbr_lst, nbr_beta_lst, trv_lst,cell_vol, cell_cent, mw, gamma, omega_fun):
     """
     computes the dilatation vector, theta
 
@@ -44,7 +44,7 @@ def computeTheta(u, horizon, nbr_lst, nbr_beta_lst, trv_lst,cell_vol, cell_cent,
 
 
 #vectorized version of Felix's code
-def computeInternalForce(curr_cell,u,horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent, mw, bulk, mu, gamma, omega_fun):
+def computeInternalForce_quasistatic(curr_cell,u,horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent, mw, bulk, mu, gamma, omega_fun):
     """
     computes the internal force using pairwise force function
 
@@ -59,7 +59,7 @@ def computeInternalForce(curr_cell,u,horizon, nbr_lst, nbr_beta_lst, cell_vol, c
     theta=np.zeros(num_els, dtype=float)
     trv_lst = np.insert(nbr_lst[curr_cell],0,curr_cell)
 
-    theta = computeTheta(u, horizon, nbr_lst, nbr_beta_lst, trv_lst, cell_vol, cell_cent, mw, gamma, omega_fun)
+    theta = computeTheta_quasistatic(u, horizon, nbr_lst, nbr_beta_lst, trv_lst, cell_vol, cell_cent, mw, gamma, omega_fun)
     
     # Compute pairwise contributions to the global force density vector
     f=np.zeros((num_els,dim), dtype=float)
@@ -84,7 +84,7 @@ def computeInternalForce(curr_cell,u,horizon, nbr_lst, nbr_beta_lst, cell_vol, c
     return f
 
     
-def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun):
+def updateK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp):
     
     """
     computes the tangent stiffness matrix based on central difference method
@@ -128,13 +128,13 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu,
     
     for i in range(num_els):
         for d in range(dim):
-            u_e_p=np.zeros((num_els,dim), dtype=float)
-            u_e_m=np.zeros((num_els,dim), dtype=float)
+            u_e_p= copy.deepcopy(u_disp)
+            u_e_m= copy.deepcopy(u_disp)
             u_e_p[i][d]+= 1.0*small_val
             u_e_m[i][d]-= 1.0*small_val
     
-            f_p=computeInternalForce(i,u_e_p,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulk,mu,gamma, omega_fun)
-            f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulk,mu,gamma, omega_fun)
+            f_p=computeInternalForce_quasistatic(i,u_e_p,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulk,mu,gamma, omega_fun)
+            f_m=computeInternalForce_quasistatic(i,u_e_m,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulk,mu,gamma, omega_fun)
             
             for dd in range(dim):
                 K_naive[dd::dim][:,dim*i+d] = (f_p[:,dd] - f_m[:,dd])*0.5*inv_small_val

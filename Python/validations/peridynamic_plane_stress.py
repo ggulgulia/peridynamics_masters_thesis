@@ -24,12 +24,16 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, mate
     bc_loc = [0,1]
     num_lyrs = 2
     cell_cent, cell_vol = add_ghost_cells(m, bc_loc, num_lyrs, struct_grd) 
-    
     el = get_peridym_edge_length(cell_cent, struct_grd) 
     extents = compute_modified_extents(cell_cent, el, struct_grd)
-    purtub_fact = 1e-6
     dim = m.topology().dim() 
     
+    
+    #boudary conditions management
+    node_ids_dir = get_boundary_layers(cell_cent, el, num_lyrs, bc_loc, struct_grd)
+    node_ids_frc = get_boundary_layers(cell_cent, el, 2*num_lyrs, bc_loc, struct_grd)
+    ghost_lyr_node_ids = node_ids_dir
+
     if material is 'steel':
         E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
@@ -41,11 +45,11 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, mate
     mw = peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst, nbr_beta_lst, horizon, omega_fun) 
     K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)   
     #apply bc
-    K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, num_lyrs, struct_grd)
+    K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, node_ids_frc, struct_grd)
     #solve
     u_disp = direct_solver(K_bound, fb, dim, reshape=True)
    
-    cell_cent_orig, u_disp_orig = recover_original_peridynamic_mesh(cell_cent, u_disp, el, bc_type, num_lyrs, struct_grd)
+    cell_cent_orig, u_disp_orig, _ = recover_original_peridynamic_mesh(cell_cent, u_disp, bc_type, ghost_lyr_node_ids, struct_grd)
     #disp_cent = u_disp + cell_cent
     
     disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=plot_, zoom=40)

@@ -2,7 +2,6 @@ from peridynamic_neighbor_data import *
 from peridynamic_quad_tree import *
 from peridynamic_linear_quad_tree import *
 from peridynamic_stiffness import*
-from quasistatic_stiffness import *
 from peridynamic_solvers import direct_solver
 from peridynamic_boundary_conditions import *
 from peridynamic_infl_fun import *
@@ -57,7 +56,7 @@ def run_quasistatic_test():
         nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, vol_corr, struct_grd)
         mw = peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst, nbr_beta_lst, horizon, omega_fun)
         
-        K = updateK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)
+        K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)
         
         K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, node_ids_frc, struct_grd)
         

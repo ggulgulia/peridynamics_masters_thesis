@@ -84,7 +84,7 @@ def computeInternalForce(curr_cell,u,horizon, nbr_lst, nbr_beta_lst, cell_vol, c
     return f
 
     
-def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun):
+def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp):
     
     """
     computes the tangent stiffness matrix based on central difference method
@@ -108,6 +108,7 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu,
         cell_cent: centroid of each element in peridynamic discretization
         E, nu, mu, bulk, gamma : material properites
         omega_fun : pointer to peridynamic influence function
+        u_disp  : displacement field
 
     output:
     ------
@@ -128,8 +129,8 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu,
     
     for i in range(num_els):
         for d in range(dim):
-            u_e_p=np.zeros((num_els,dim), dtype=float)
-            u_e_m=np.zeros((num_els,dim), dtype=float)
+            u_e_p = cpy.deepcopy(u_disp)
+            u_e_m = cpy.deepcopy(u_disp)
             u_e_p[i][d]+= 1.0*small_val
             u_e_m[i][d]-= 1.0*small_val
     

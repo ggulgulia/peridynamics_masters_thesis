@@ -88,15 +88,14 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=Fal
     disp_cent = cell_cent + u_disp
     
     dpi = 3
-    Dpi=8
-    legend_size = {'size': str(15*Dpi)}
-    fig = plt.figure(figsize=(96, 64), dpi=Dpi)
+    legend_size = {'size': str(8*dpi)}
+    fig = plt.figure()
     if dim == 2:
         ax = fig.add_subplot(111)
         x, y = cell_cent.T
         #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
         x,y = (cell_cent + zoom*u_disp).T 
-        plt.scatter(x,y, s=300*4*Dpi, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+str(horizon))
+        plt.scatter(x,y, s=150, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+str(horizon))
         plt.legend(prop=legend_size)
         plt.ylim(-0.5, 1.5)
         plt.xlim(-0.5, 2.5)
@@ -106,10 +105,10 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=Fal
         x, y, z = cell_cent.T
         fig = plt.figure() 
         ax = fig.add_subplot(111, projection='3d') 
-        ax.scatter(x,y,z, s=300, color='r', marker='o', alpha=0.1, label='original config')
+        ax.scatter(x,y,z, s=150, color='r', marker='o', alpha=0.1, label='original config')
         x,y,z = (cell_cent + zoom*u_disp)
 
-        ax.scatter(x,y,z,s=300*4*Dpi, color='g', marker='o', alpha=1.0, label='deformed config')
+        ax.scatter(x,y,z,s=150, color='g', marker='o', alpha=1.0, label='deformed config')
         ax.axis('off')
         plt.legend()
 

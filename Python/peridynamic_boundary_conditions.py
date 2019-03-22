@@ -142,8 +142,6 @@ def get_boundary_layers(cell_cent, el, num_lyrs, bc_loc, struct_grd):
     dim = len(el)
     bound_range = np.zeros(2*dim, dtype=float)
     bound_nodes = {} #dict to store the node numbers of centroids that lie within bound_range
-    bound_cents  = {} #dict to store the node centroids corresponding to node numbers above
-    
     if(struct_grd):
         fctr = 1
         corr = 0
@@ -154,7 +152,6 @@ def get_boundary_layers(cell_cent, el, num_lyrs, bc_loc, struct_grd):
         lyrs = float(num_lyrs)+ 0.0001
 
     lyrs = 1.0001*float(num_lyrs-1)
-    
     for d in range(dim):
         bound_range[2*d] = np.min(cell_cent[:,d]) + corr*np.diff(np.unique(cell_cent[:,d])[0:2])[0] + lyrs*el[d]
         bound_range[2*d+1] = np.max(cell_cent[:,d]) - corr*np.diff(np.unique(cell_cent[:,d])[0:2])[0] - lyrs*el[d]
@@ -162,8 +159,9 @@ def get_boundary_layers(cell_cent, el, num_lyrs, bc_loc, struct_grd):
         bound_nodes[2*d] = np.where(cell_cent[:,d] <= bound_range[2*d])
         bound_nodes[(2*d+1)] = np.where(cell_cent[:,d] >= bound_range[2*d+1])
 
-
     #store only those key value pair that are in the bc_loc
+    #this in the end returns mesh with ghost layer cells, 
+    #if they've been applied already
     keys = bound_nodes.keys()
     keys_temp = [kk for kk in keys]
     for kk in keys_temp:
@@ -174,17 +172,19 @@ def get_boundary_layers(cell_cent, el, num_lyrs, bc_loc, struct_grd):
 
 def get_bound_cell_cents(bound_nodes, cell_cent):
     """
-    TODO : doc string
+    returns all the centroids in a separate dictonary
+    which corresponds to the node ids reffered to in 
+    parameter bound_nodes
 
     input:
     -------
-        bound_node_ids:
-        cell_cent     :
-        dim           :
+        bound_node : node ids along specified boundary 
+        cell_cent  : global cell centroid array
 
     output:
     -------
-        bound_cell_cent: 
+        bound_cell_cent:  dictonary of cell cent along boundaries 
+                          which are the keys in bound_nodes
     """
     bound_cents = {}
     keys = bound_nodes.keys()
@@ -225,8 +225,13 @@ def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, nod
     ------
     cell_cent: peridynamic cell centroids
     K   : tangent stiffness matrix 
-    bc_type: TODO
-    bc_location: TODO
+    bc_type: dictonary of bc type and integral location signature (dir_to_surface_map above)
+    bc_vals: dictonary of bc type and corresponding value 
+    cell_vol: nparray of cell volumes
+    node_ids_dir: node ids where dirichlet bc is applied 
+    node_ids_frc: node ids where  force bc is applied 
+    struct_grd: boolean wheterh structured grid used
+
     
     output:
     -------
@@ -282,9 +287,6 @@ def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, nod
         bound_location = bc_type[bcn]
         node_ids   = node_ids_dir[bound_location][0]
         if bcn is "dirichlet" and bc_vals[bcn] is 0:
-            #b = get_bound_cell_cents(node_ids_dir, cell_cent)
-            #bound_location = bc_type[bcn]
-            #node_ids   = node_ids_dir[bound_location][0]
             print("applying %s bc on node set %s"%(bcn, node_loc_dict[bound_location]))
 
             for i, nk in enumerate(node_ids):
@@ -295,7 +297,7 @@ def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, nod
         
         #if bcn is 'dirichletX' or 'dirichletY' or 'dirichletZ'
         if len(bcn)==10  and bc_vals[bcn] is 0:
-            print("applying %s bc on node set"%(bcn, ) )
+            print("applying %s bc on node set %s"%(bcn,node_loc_dict[bound_location]) )
             for i, nk in enumerate(node_ids):
                 idx = nk*dim + dd 
                 K_bound[idx] = 0.0; K_bound[:,idx] = 0.0;

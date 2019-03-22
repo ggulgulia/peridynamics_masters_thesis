@@ -67,7 +67,7 @@ def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
     plt.title("peridynamics mesh")
     plt.show(block=False)
 
-def get_displaced_soln(cell_cent, u_disp, horizon, dim, plot_=False, zoom=40):
+def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=False, save_fig=False, zoom=40):
     """
     plots the displaced cell centroids after a solution 
     step. Additionally retrns the final cell centroid
@@ -88,33 +88,40 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, plot_=False, zoom=40):
     disp_cent = cell_cent + u_disp
     
     dpi = 3
-    legend_size = {'size': str(8*dpi)}
+    Dpi=8
+    legend_size = {'size': str(15*Dpi)}
+    fig = plt.figure(figsize=(96, 64), dpi=Dpi)
+    if dim == 2:
+        ax = fig.add_subplot(111)
+        x, y = cell_cent.T
+        #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
+        x,y = (cell_cent + zoom*u_disp).T 
+        plt.scatter(x,y, s=300*4*Dpi, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+str(horizon))
+        plt.legend(prop=legend_size)
+        plt.ylim(-0.5, 1.5)
+        plt.xlim(-0.5, 2.5)
+
+    if dim == 3:
+        from mpl_toolkits.mplot3d import Axes3D 
+        x, y, z = cell_cent.T
+        fig = plt.figure() 
+        ax = fig.add_subplot(111, projection='3d') 
+        ax.scatter(x,y,z, s=300, color='r', marker='o', alpha=0.1, label='original config')
+        x,y,z = (cell_cent + zoom*u_disp)
+
+        ax.scatter(x,y,z,s=300*4*Dpi, color='g', marker='o', alpha=1.0, label='deformed config')
+        ax.axis('off')
+        plt.legend()
+
+    ax.set_aspect('equal')
+
     if plot_:
-        fig = plt.figure()
-        if dim == 2:
-            ax = fig.add_subplot(111)
-            x, y = cell_cent.T
-            #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
-            x,y = (cell_cent + zoom*u_disp).T 
-            plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+str(horizon))
-            plt.legend(prop=legend_size)
-            plt.ylim(-0.5, 1.5)
-            plt.xlim(-0.5, 2.5)
-
-        if dim == 3:
-            from mpl_toolkits.mplot3d import Axes3D 
-            x, y, z = cell_cent.T
-            fig = plt.figure() 
-            ax = fig.add_subplot(111, projection='3d') 
-            ax.scatter(x,y,z, s=300, color='r', marker='o', alpha=0.1, label='original config')
-            x,y,z = (cell_cent + zoom*u_disp)
-
-            ax.scatter(x,y,z,s=300, color='g', marker='o', alpha=1.0, label='deformed config')
-            ax.axis('off')
-            plt.legend()
-
-        ax.set_aspect('equal')
         plt.show(block=False)
+
+    if save_fig:
+        plt.savefig(data_dir)
+        plt.close(fig)
+
     return disp_cent
 
 
@@ -124,27 +131,11 @@ def print_mesh_stats(mesh):
     num cells, num vertices, max edge length, min edge length
 
     :mesh: TODO
-    :returns: TODO
-
     """
     print("num cells: %i\nnum vertices: %i\nmax edge length: %4.5f\nmin edge length: %4.5f\n \
           "%(mesh.num_cells(), mesh.num_vertices(), mesh.hmax(), mesh.hmin()))
     pass
 
-def uniform_square_mesh(point1=(0.0, 0.0), point2=(2.0, 1.0), nptsX=20, nptsY=10):
-    """
-    returns a domain descricitized with square mesh 
-    """
-
-    dx = (point2[0] - point1[0])/(nptsX+1)
-    dy = (point2[1] - point1[1])/(nptsY+1)
-    cell_volume = dx*dy
-    #mesh = {}
-
-    #mesh['volum'] = volume
-    #mesh['centroid'] = centroids 
-
-    #return mesh
 
 def rectangle_mesh(point1=Point(0,0), point2=Point(2,1), numptsX=10, numptsY=5):
     """

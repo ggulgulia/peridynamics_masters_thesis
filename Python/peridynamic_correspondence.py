@@ -65,7 +65,7 @@ def computeSecondPiolaStressTensor(E_green, lamda, mu):
     return S2_piola 
 
 
-def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent, mw, bulkMod, shearMod, gamma, E, lamda, gamma_corr, omega_fun):
+def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, bnd_dmg_lst, cell_vol, cell_cent, mw, bulkMod, shearMod, gamma, E, lamda, gamma_corr, omega_fun):
     """
     computes the force state based on the correspondence model 
     for Peridynamics
@@ -85,6 +85,7 @@ def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst
         horizon: TODO
         nbr_beta_lst: TODO
         nbr_beta_lst: TODO
+        bnd_dmg_lst : TODO
         cell_vol: TODO
         cell_cent: TODO
         bulkMod: TODO
@@ -101,7 +102,6 @@ def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst
 
     num_els=len(cell_vol)
     mu = shearMod
-    bondDamage = 0.0
 
     #compute dilatation for each node
     trv_lst = np.insert(nbr_lst[curr_cell],0,curr_cell)
@@ -119,7 +119,7 @@ def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst
         y_xi_nbrs = cell_cent[curr_nbrs] + u[curr_nbrs]
         y_xi = y_xi_nbrs - y_xi_curr
         omega = omega_fun(xi, horizon)
-        omega_damaged = (1.0 - bondDamage)*omega
+        omega_damaged = (1.0 - bnd_dmg_lst[idx])*omega
         
         shape_tensor = np.sum(np.einsum('ij,ik->ijk', xi, xi)*omega_damaged[:,None,None],axis=0)
         def_grad_tensor = np.sum(np.einsum('ij,ik->ijk', y_xi, xi)*omega_damaged[:,None,None], axis=0)
@@ -148,7 +148,7 @@ def computeInternalForce_correct_zero_energy_mode(curr_cell ,u, horizon, nbr_lst
 
 
 ## Internal force routinee based on correspondance elastic material
-def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cell_vol, cell_cent, mw, bulkMod, shearMod, gamma, E, lamda, gamma_corr, omega_fun):
+def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, bnd_dmg_lst, cell_vol, cell_cent, mw, bulkMod, shearMod, gamma, E, lamda, gamma_corr, omega_fun):
     """
     computes the force state based on the correspondence model 
     for Peridynamics
@@ -163,6 +163,7 @@ def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cel
         horizon: TODO
         nbr_beta_lst: TODO
         nbr_beta_lst: TODO
+        bnd_dmg_lst : TODO
         cell_vol: TODO
         cell_cent: TODO
         bulkMod: TODO
@@ -179,7 +180,6 @@ def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cel
 
     num_els=len(cell_vol)
     mu = shearMod
-    bondDamage = 0.0
 
     #compute dilatation for each node
     trv_lst = np.insert(nbr_lst[curr_cell],0,curr_cell)
@@ -198,8 +198,7 @@ def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cel
         y_xi_nbrs = cell_cent[curr_nbrs] + u[curr_nbrs]
         y_xi = y_xi_nbrs - y_xi_curr
         omega = omega_fun(xi, horizon)
-        omega_damaged = (1.0 - bondDamage)*omega
-        
+        omega_damaged = (1.0 - bnd_dmg_lst[idx] )*omega
 
         shape_tensor = np.sum(np.einsum('ij,ik->ijk', xi, xi)*omega_damaged[:,None,None],axis=0)
         def_grad_tensor = np.sum(np.einsum('ij,ik->ijk', y_xi, xi)*omega_damaged[:,None,None], axis=0)
@@ -219,7 +218,7 @@ def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, cel
 
     return f_global
 
-def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, shearMod, bulkMod, gamma, omega_fun, u_disp):
+def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, shearMod, bulkMod, gamma, omega_fun, u_disp):
     
     """
     computes the tangent stiffness matrix based on central difference method
@@ -238,6 +237,7 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, she
         cell_vol: numpy array of cell volume
         nbr_lst : numpy array of peridynamic neighbor list
         nbr_beta_lst: list of volume fraction corresponding to the
+        bnd_dmg_lst:  nbr_lst type indicating bond damage 
                     nbr_lst
         mw      : weighted volume
         cell_cent: centroid of each element in peridynamic discretization
@@ -286,8 +286,8 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, she
             u_e_p[i][d]= 1.0*small_val
             u_e_m[i][d]= -1.0*small_val
             
-            f_p=computeInternalForce(i,u_e_p,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulkMod,shearMod,gamma, E, lamda, gamma_corr, omega_fun)
-            f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,nbr_beta_lst,cell_vol,cell_cent,mw,bulkMod,shearMod,gamma, E, lamda, gamma_corr, omega_fun)
+            f_p=computeInternalForce(i,u_e_p,horizon,nbr_lst,nbr_beta_lst,bnd_dmg_lst, cell_vol,cell_cent,mw,bulkMod,shearMod,gamma, E, lamda, gamma_corr, omega_fun)
+            f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,nbr_beta_lst,bnd_dmg_lst, cell_vol,cell_cent,mw,bulkMod,shearMod,gamma, E, lamda, gamma_corr, omega_fun)
             
             for dd in range(dim):
                 K_naive[dd::dim][:,dim*i+d] += (f_p[:,dd] - f_m[:,dd])*0.5*inv_small_val

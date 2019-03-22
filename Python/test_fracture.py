@@ -16,16 +16,19 @@ def run_fracture_test():
     #m = box_mesh_with_hole(numpts=20)
     #domain = mshr.Rectangle(Point(0,0), Point(3,1))
     #m = mshr.generate_mesh(domain, 30)
-    m = RectangleMesh(Point(0,0), Point(2,1), 40, 20)
+    m = RectangleMesh(Point(0,0), Point(2,1), 30, 15)
     #m = rectangle_mesh(numptsX=20, numptsY=10)
     #m = rectangle_mesh_with_hole(npts=25)
     
     struct_grd = True
-    vol_corr = True
+    vol_corr   = True
+    dmg_flag   = True
+    save_fig   = True
+    pplot      = False
     
     f0 = -1e8
-    delta_t = 0.00001
-    ft = -1e9
+    delta_t = 0.0001
+    ft = -5e9
     
     bc_type = {'dirichlet':0,'forceY':1}
     bc_vals = {'dirichlet':0,'forceY':0}
@@ -47,16 +50,17 @@ def run_fracture_test():
 
     num_steps = 200
     u_disp = np.zeros((len(cell_cent), dim), dtype=float)
-
+    
     G0 = 1000000/2
     s0 = s0 = compute_critical_stretch(G0, bulk, horizon)
 
-
-    pwd = getcwd()
-    today = dttm.now().strftime("%Y%m%d%%H%M%S")
-    data_dir_top = path.join(pwd, 'fractue_test_'+today)
-    mkdir(data_dir_top)
-    save_fig=True
+    if save_fig:
+        pwd = getcwd()
+        today = dttm.now().strftime("%Y%m%d%%H%M%S")
+        data_dir_top = path.join(pwd, 'fractue_test_'+today)
+        mkdir(data_dir_top)
+    else:
+        data_dir_top = None
 
     for i in range(num_steps):
         
@@ -72,18 +76,21 @@ def run_fracture_test():
         tree.put(extents, horizon)
         
         nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, vol_corr, struct_grd)
-        bnd_dmg_lst = compute_bond_damage(s0, cell_cent, nbr_lst, u_disp)
+        bnd_dmg_lst = compute_bond_damage(s0, cell_cent, nbr_lst, u_disp, dmg_flag)
         mw = peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst, nbr_beta_lst, horizon, omega_fun)
         
         K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)
         
         K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, node_ids_frc, struct_grd)
         
-        img_name = 'fracture_test_00'+str(i)+'.png'
-        data_dir = path.join(data_dir_top, img_name)
+        img_name = 'fracture_test_'+str(i).zfill(3)+'.png'
+        if save_fig:
+            data_dir = path.join(data_dir_top, img_name)
+        else:
+            data_dir = None
         u_disp = direct_solver(K_bound, fb, dim, reshape=True)
         cell_cent_orig, u_disp_orig, u_disp_ghost = recover_original_peridynamic_mesh(cell_cent, u_disp, bc_type, ghost_lyr_node_ids, struct_grd)
-        disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, data_dir, plot_=False, save_fig=True, zoom=10)
+        disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, data_dir, plot_=pplot, save_fig=save_fig, zoom=10)
 
         u_disp = u_disp_ghost
         cell_cent += u_disp

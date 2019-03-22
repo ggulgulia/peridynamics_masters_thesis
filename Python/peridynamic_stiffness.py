@@ -27,7 +27,7 @@ def computeTheta(u, horizon, nbr_lst, nbr_beta_lst, bnd_dmg_lst, trv_lst,cell_vo
     num_els = len(cell_vol)
     dim = np.shape(cell_cent[0])[0]
     theta = np.zeros(num_els, dtype=float)
-
+    
     for i in trv_lst:
         curr_nbr = nbr_lst[i]
         curr_beta_lst = nbr_beta_lst[i]
@@ -43,7 +43,6 @@ def computeTheta(u, horizon, nbr_lst, nbr_beta_lst, bnd_dmg_lst, trv_lst,cell_vo
     return theta
 
 
-#vectorized version of Felix's code
 def computeInternalForce(curr_cell,u,horizon, nbr_lst, nbr_beta_lst, bnd_dmg_lst, cell_vol, cell_cent, mw, bulk, mu, gamma, omega_fun):
     """
     computes the internal force using pairwise force function
@@ -63,6 +62,7 @@ def computeInternalForce(curr_cell,u,horizon, nbr_lst, nbr_beta_lst, bnd_dmg_lst
     
     # Compute pairwise contributions to the global force density vector
     f=np.zeros((num_els,dim), dtype=float)
+
     for i in trv_lst:
         curr_nbr = nbr_lst[i]
         curr_beta_lst = nbr_beta_lst[i]
@@ -83,7 +83,8 @@ def computeInternalForce(curr_cell,u,horizon, nbr_lst, nbr_beta_lst, bnd_dmg_lst
         f[curr_nbr] -= M*cell_vol_coll*t[:,None]
     return f
 
-    
+            
+#@jit(nopython=True, parallel=True)
 def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp):
     
     """
@@ -127,6 +128,7 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cen
     small_val=1e-6 #purtub factor
     inv_small_val = 1.0/small_val
     
+
     for i in range(num_els):
         for d in range(dim):
             u_e_p = cpy.deepcopy(u_disp)
@@ -136,7 +138,6 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cen
     
             f_p=computeInternalForce(i,u_e_p,horizon,nbr_lst,nbr_beta_lst, bnd_dmg_lst, cell_vol,cell_cent,mw,bulk,mu,gamma, omega_fun)
             f_m=computeInternalForce(i,u_e_m,horizon,nbr_lst,nbr_beta_lst, bnd_dmg_lst, cell_vol,cell_cent,mw,bulk,mu,gamma, omega_fun)
-            
             for dd in range(dim):
                 K_naive[dd::dim][:,dim*i+d] = (f_p[:,dd] - f_m[:,dd])*0.5*inv_small_val
     

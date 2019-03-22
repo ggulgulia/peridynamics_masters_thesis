@@ -14,7 +14,7 @@ import mshr
 #m = box_mesh_with_hole(numpts=20)
 #domain = mshr.Rectangle(Point(0,0), Point(3,1))
 #m = mshr.generate_mesh(domain, 30)
-m = RectangleMesh(Point(0,0), Point(2,1), 15, 8)
+m = RectangleMesh(Point(0,0), Point(2,1), 20, 10)
 #m = rectangle_mesh(numptsX=20, numptsY=10)
 #m = rectangle_mesh_with_hole(npts=25)
 

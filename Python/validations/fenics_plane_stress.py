@@ -1,5 +1,6 @@
 from __future__ import print_function
 from fenics import *
+from fenics_mesh_tools import get_domain_bounding_box 
 from peridynamic_neighbor_data import *
 from peridynamic_materials import *
 import matplotlib.pyplot as plt
@@ -45,9 +46,9 @@ def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e
         disp_cent : centroids of elements after FE solution
         u_disp    : displacement of each centroid
     """
-    L = 3.
-    H = 1.
-    
+    mesh_ext = get_domain_bounding_box(mesh)
+    L_min = mesh_ext[0][0]; H_min = mesh_ext[0][1]
+    L_max = mesh_ext[1][0]; H_max = mesh_ext[1][1] 
     
     def eps(v):
         return sym(grad(v))
@@ -57,21 +58,21 @@ def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e
     
     class LeftEdge(SubDomain):
         def inside(self, x, on_boundary):
-            return (on_boundary and abs(x[0]) < FENICS_EPS*1e3)
+            return (on_boundary and abs(x[0] - L_min) < FENICS_EPS*1e3)
     
     class RightEdge(SubDomain):
         def inside(self, x, on_boundary):
             tol = 1e-6
-            return on_boundary and abs(x[0] - L) < FENICS_EPS*1e3
+            return on_boundary and abs(x[0] - L_max) < FENICS_EPS*1e3
     
     class BottomEdge(SubDomain):
         def inside(self, x, on_boundary):
-            return on_boundary and abs(x[1]) < FENICS_EPS*1e3
+            return on_boundary and abs(x[1] - H_min) < FENICS_EPS*1e3
     
     class TopEdge(SubDomain):
         def inside(self, x, on_boundary):
             tol = 1e-6
-            return on_boundary and abs(x[1] - H) < FENICS_EPS*1e3
+            return on_boundary and abs(x[1] - H_max) < FENICS_EPS*1e3
     
     ## separate edges
     left_edge   = LeftEdge()
@@ -119,12 +120,12 @@ def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e
     
     if plot_ is True:
         fig = plt.figure()
-        plt.subplot(1,2,1)
-        plot(mesh)
-        plt.subplot(1,2,2)
-        plot(20*u_fe, mode="displacement")
-        plt.xlim(-0.5,3.5)
-        plt.ylim(-0.6,1.5)
+        #plt.subplot(1,2,1)
+        plot(mesh, color='k', linewidth=1.5, alpha=0.5)
+        #plt.subplot(1,2,2)
+        plot(10*u_fe, mode="displacement")
+        plt.xlim(L_min-0.5,L_max+0.5)
+        plt.ylim(H_min-0.5,L_max+0.5)
         plt.show(block=False)
 
     return u_fe

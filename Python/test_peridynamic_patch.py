@@ -10,12 +10,12 @@ from peridynamic_materials import *
 from peridynamic_damage import *
 import mshr
 
-m = RectangleMesh(Point(0,0), Point(2,1), 40, 20)
+m = RectangleMesh(Point(0,0), Point(3,1), 60, 20)
 
 struct_grd = True
 vol_corr = False
 bc_type = {'dirichletX':0,'forceX':1}
-bc_vals = {'dirichletX':0,'forceX':500e8}
+bc_vals = {'dirichletX':0,'forceX':10e9}
 bc_loc = [0,1]
 num_lyrs = 2 #num of additional layers on boundary
 cell_cent, cell_vol = add_ghost_cells(m, bc_loc, num_lyrs, struct_grd) 
@@ -51,9 +51,18 @@ K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cen
 K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, node_ids_frc, struct_grd)
 
 u_disp = direct_solver(K_bound, fb, dim, reshape=True)
-
+#
 cell_cent_orig, u_disp_orig, u_disp_ghost = recover_original_peridynamic_mesh(cell_cent, u_disp, bc_type, ghost_lyr_node_ids, struct_grd)
-K_orig = recover_stiffness_for_original_mesh(K, cell_cent, bc_type, ghost_lyr_node_ids, struct_grd)
+disp_cent = cell_cent_orig + 10*u_disp_orig
 
-u_disp_flat = np.zeros(len(cell_cent_orig)*dim, dtype=float)
-disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=True, zoom=20)
+####################################################
+########## PLOT ##############
+Xc,Yc = cell_cent_orig.T
+Xd,Yd = disp_cent.T
+fig = plt.figure()
+ax = fig.add_subplot(111)
+plt.scatter(Xd, Yd, marker='o', s=300, color='b', alpha=0.7, label='original config')
+plt.scatter(Xc, Yc, marker='o', s=300, color='r', alpha=0.2, label='deformed config')
+plt.legend()
+ax.set_aspect('equal')
+plt.show(block=False)

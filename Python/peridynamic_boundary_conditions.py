@@ -70,7 +70,7 @@ def recover_original_peridynamic_mesh(cell_cent, u_disp, bc_type, ghost_lyr_node
     dirichlet_dict = {'dirichletX':0, 'dirichletY':1, 'dirichletZ':2}
     for bct in bc_typ:
         bc_loc = bc_type[bct]
-        dir_node_ids = a[bc_loc][0]
+        #dir_node_ids = a[bc_loc][0]
         if(bct == 'dirichlet'):
             for i, nk in enumerate(dir_node_ids):
                 u_dsp_ghst = np.insert(u_dsp_ghst, nk, np.zeros(dim, dtype=float), axis=0)

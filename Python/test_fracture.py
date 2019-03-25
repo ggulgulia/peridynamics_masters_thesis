@@ -53,7 +53,7 @@ def run_fracture_test():
     u_disp = np.zeros((len(cell_cent), dim), dtype=float)
     
     G0 = 1000000/2
-    s0 = s0 = compute_critical_stretch(G0, bulk, horizon)
+    s0 = compute_critical_stretch(G0, bulk, horizon)
 
     if save_fig:
         pwd = getcwd()

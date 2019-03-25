@@ -5,7 +5,9 @@ for peridynamic function
 import numpy as np
 import numpy.linalg as la
 import matplotlib.pyplot as plt
+from numba import jit
 
+@jit(parallel=True)
 def gaussian_infl_fun1(zeta, horizon):
     """
     returns a guassian influence function 

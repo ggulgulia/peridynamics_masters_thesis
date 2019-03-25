@@ -86,7 +86,26 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=Fal
 
     """
     disp_cent = cell_cent + u_disp
+
+    if plot_ or save_fig:
+        plot_displaced_solution(cell_cent, disp_cent, horizon, dim, data_dir, plot_, save_fig, zoom)
     
+
+    return disp_cent
+
+def plot_displaced_solution(cell_cent, disp_cent, horizon, dim, data_dir=None, plot_= True, save_fig=False, zoom=20):
+    """
+    plots the displaced solution 
+
+    cell_cent : centroids in original config 
+    disp_cent: displaced cell centroids of particles 
+    horizon: peridynamic horizon 
+    dim: dimension of the problem 
+    data_dir: dirictory where image has to be saved 
+    save_fig: boolean whether plot needs to be saved 
+    zoom: magnification factor for zooming the plots 
+
+    """
     dpi = 3
     legend_size = {'size': str(6*dpi)}
     fig = plt.figure()
@@ -120,8 +139,7 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=Fal
     if save_fig:
         plt.savefig(data_dir)
         plt.close(fig)
-
-    return disp_cent
+    pass
 
 
 def print_mesh_stats(mesh):

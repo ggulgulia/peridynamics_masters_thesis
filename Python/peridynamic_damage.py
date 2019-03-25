@@ -1,6 +1,7 @@
 import numpy.linalg as la
 import math 
 import numpy as np
+import copy as cpy
 
 def compute_critical_stretch(G0, bulkMod, horizon):
     """

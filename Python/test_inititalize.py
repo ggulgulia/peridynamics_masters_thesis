@@ -19,7 +19,9 @@ m = RectangleMesh(Point(0,0), Point(2,1), 20, 10)
 #m = rectangle_mesh_with_hole(npts=25)
 
 struct_grd = True
-vol_corr = False
+vol_corr   = False
+bnd_dmg    = False
+
 bc_type = {'dirichlet':0, 'forceY':1}
 bc_vals = {'dirichlet':0, 'forceY':-5e8}
 bc_loc = [0,1]
@@ -38,21 +40,27 @@ node_cents_force = get_bound_cell_cents(node_ids_force, cell_cent)
 omega_fun = gaussian_infl_fun2
 E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
+########################################
+########### Initialize ################
 horizon = 2.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
 #horizon = 0.3001
 tree = QuadTree()
 tree.put(extents, horizon)
 
-G0 = 1000000/2 
-s0 = compute_critical_stretch(G0, bulk, horizon)
-
 nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, vol_corr, struct_grd)
 mw = peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst, nbr_beta_lst, horizon, omega_fun)
-
-#initialize 
 u_disp = np.zeros((len(cell_cent), dim), dtype=float)
-bnd_dmg_lst = compute_bond_damage(s0, cell_cent, nbr_lst, u_disp)
+if dmg_flag:
+    G0 = 1000000/2 
+    s0 = compute_critical_stretch(G0, bulk, horizon)
+else:
+    G0 = 0.0
+    s0 = 1e5
 
+bnd_dmg_lst = bnd_dmg_lst = compute_bond_damage(s0, cell_cent, nbr_lst, u_disp, dmg_flag)
+
+########################################
+################# solve ################
 K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)
 K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dirichlet, node_ids_force, struct_grd)
 

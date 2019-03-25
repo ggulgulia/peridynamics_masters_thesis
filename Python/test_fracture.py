@@ -27,8 +27,9 @@ def run_fracture_test():
     pplot      = False
     
     f0 = -1e8
-    delta_t = 0.0001
+    delta_t = 0.0005
     ft = -5e9
+    t  = 0.0
     
     bc_type = {'dirichlet':0,'forceY':1}
     bc_vals = {'dirichlet':0,'forceY':0}
@@ -48,7 +49,7 @@ def run_fracture_test():
 
     horizon = 3.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
 
-    num_steps = 200
+    num_steps = 500
     u_disp = np.zeros((len(cell_cent), dim), dtype=float)
     
     G0 = 1000000/2
@@ -67,8 +68,11 @@ def run_fracture_test():
         print("********************************************")
         print("********************************************")
         print("START : time step %i"%i)
+        
+        t = (i+1)*delta_t
+        force = f0 + ft*i*delta_t + 0.10*ft*t**2
+        print("appyling external body force: %.4g" %force)
 
-        force = f0 + ft*i*delta_t
         bc_vals['forceY'] = force
         extents = compute_modified_extents(cell_cent, el, struct_grd)
         

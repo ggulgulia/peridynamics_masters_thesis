@@ -88,7 +88,7 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=Fal
     disp_cent = cell_cent + u_disp
     
     dpi = 3
-    legend_size = {'size': str(8*dpi)}
+    legend_size = {'size': str(6*dpi)}
     fig = plt.figure()
     if dim == 2:
         ax = fig.add_subplot(111)

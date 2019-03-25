@@ -30,13 +30,13 @@ def get_displaced_cell_centroids(m, u_fe, cell_cent):
     return disp_cent, u_disp
 
 
-def solve_fenic_shear(mesh, cell_cent,  material='steel', plot_ = False, force=10e8):
+def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=10e9):
     """
     solves the case for a 2D steel plate loaded statically under various loads
 
     input:
     ------
-        mesh : FEniCS mesh
+        mesh : 2D FEniCS mesh
         material: 
         plot_: boolean for showing plots of FE solution
         force: value of force we want to apply
@@ -47,9 +47,10 @@ def solve_fenic_shear(mesh, cell_cent,  material='steel', plot_ = False, force=1
         u_disp    : displacement of each centroid
     """
     mesh_ext = get_domain_bounding_box(mesh)
+
     L_min = mesh_ext[0][0]; H_min = mesh_ext[0][1]
     L_max = mesh_ext[1][0]; H_max = mesh_ext[1][1]
-
+    
     def eps(v):
         return sym(grad(v))
     
@@ -58,7 +59,7 @@ def solve_fenic_shear(mesh, cell_cent,  material='steel', plot_ = False, force=1
     
     class LeftEdge(SubDomain):
         def inside(self, x, on_boundary):
-            return (on_boundary and abs(x[0] - L_min) < FENICS_EPS*1e3)
+            return (on_boundary and abs(x[0]-L_min) < FENICS_EPS*1e3)
     
     class RightEdge(SubDomain):
         def inside(self, x, on_boundary):
@@ -67,7 +68,7 @@ def solve_fenic_shear(mesh, cell_cent,  material='steel', plot_ = False, force=1
     
     class BottomEdge(SubDomain):
         def inside(self, x, on_boundary):
-            return on_boundary and abs(x[1] - H_min) < FENICS_EPS*1e3
+            return on_boundary and abs(x[1]-H_min) < FENICS_EPS*1e3
     
     class TopEdge(SubDomain):
         def inside(self, x, on_boundary):
@@ -108,11 +109,11 @@ def solve_fenic_shear(mesh, cell_cent,  material='steel', plot_ = False, force=1
     
     #Neumann Boundary condition for traction force
     g = inner(Constant((force,0)),v) #
-    l = g*ds(4)
+    l = g*ds(5)
         
     #Applying bc and solving
     #bc = DirichletBC(V.sub(0), Constant(0.), left_edge)
-    bc = DirichletBC(V, Constant((0., 0.)), left_edge)
+    bc = DirichletBC(V.sub(0), Constant(0.), left_edge)
     u_fe = Function(V, name="Displacement")
     solve(a == l, u_fe, bc)
     
@@ -123,9 +124,9 @@ def solve_fenic_shear(mesh, cell_cent,  material='steel', plot_ = False, force=1
         #plt.subplot(1,2,1)
         plot(mesh, color='k', linewidth=1.5, alpha=0.5)
         #plt.subplot(1,2,2)
-        plot(20*u_fe, mode="displacement")
-        plt.xlim(-0.5,3.5)
-        plt.ylim(-0.6,1.5)
+        plot(10*u_fe, mode="displacement")
+        plt.xlim(L_min-0.5,L_max+0.5)
+        plt.ylim(H_min-0.5,H_max+0.5)
         plt.show(block=False)
 
     return u_fe

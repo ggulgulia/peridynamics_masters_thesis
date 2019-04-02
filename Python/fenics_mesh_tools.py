@@ -29,24 +29,48 @@ def plot_fenics_mesh(mesh, new_fig=True):
 
     pass
 
-def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
+def plot_peridym_mesh(mesh=None, cell_cent=None, disp_cent=None, annotate=False):
     """
     plots the mesh/centroids of mesh as is expected in peridynamics
-
+    
+    either mesh or cell_cent is to be provided by user
+    neither provinding mesh nor providing cell_cent is 
+    wrong
     input:
     ------
         mesh: 2D-tri/3D-tet mesh from FEniCS
+        cell_cent: particle positions in euclidean space
+        disp_cent: displaced centroids after some load condition
+        annotate: wether we wish to annotate the particle positions
     output:
     -------
         plots the centroids of tri/tets in FEniCS mesh
 
     """
 
-    cell_cent = get_cell_centroids(mesh)
+    if mesh == None and (cell_cent==None).any():
+        raise AssertionError("provide either fenics mesh or cell centroid of PD particles")
+    if mesh != None and (cell_cent==None).any():
+        cell_cent = get_cell_centroids(mesh)
+    if cell_cent.any() !=None and mesh == None:
+        pass
+    
+    ## we wish to scale the axis accordign to geometry
+    extents = get_domain_bounding_box(mesh=mesh, cell_cent=cell_cent)
     dim = len(cell_cent[0])
+    x_min = extents[0][0]; x_max = extents[1][0]
+    y_min = extents[0][1]; y_max = extents[1][1]
+
+    if y_min/x_min <0.8:
+        fact = 0.3
+    if y_min/x_min <0.5:
+        fact = 2
+    if y_min/x_min <0.4:
+        fact = 3
     x=None; y=None; z=None
     fig = plt.figure()
     if dim == 3:
+        z_min = corners[0][2]; z_max = corners[1][2]
         x,y,z = cell_cent.T
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(x,y,z, s=70, marker='o', color='b', alpha=1.0, edgecolors='face')
@@ -56,12 +80,15 @@ def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
         ax = fig.add_subplot(111)
         x,y = cell_cent.T
         plt.scatter(x,y, s=300, color='c', marker='o', alpha=0.8)
+        plt.xlim(x_min -0.1*x_min, x_max + 0.1*x_max)
+        plt.ylim(y_min -0.1*y_min, y_max+0.1*y_max)
+        plt.xlim(x_min  + 0.3*x_min, x_max + 0.3*x_max)
+        plt.ylim(y_min  + fact*y_min, y_max + fact*y_max)
         plt.axis=('off')
 
     if annotate==True:
         for idx, cc in enumerate(cell_cent):
             plt.text(cc[0], cc[1],  str(idx), color='k', verticalalignment='bottom', horizontalalignment='right', fontsize='medium')
-
 
     ax.set_aspect('equal')
     plt.title("peridynamics mesh")
@@ -380,7 +407,7 @@ def get_cell_volumes(mesh):
     
     return div_fact*cell_volume
 
-def get_domain_bounding_box(mesh):
+def get_domain_bounding_box(mesh=None, cell_cent=None):
     """
     given a fenics mesh, this function returns the bounding_box that fits around the domain
 
@@ -393,17 +420,26 @@ def get_domain_bounding_box(mesh):
         corner_max: np.ndim array of corenr having maxima in sapce
 
     """
-    coords = mesh.coordinates()
-    dim = len(coords[0])
+    def local_bbox_method(coords):
+        dim = len(coords[0])
 
-    corner_min = np.zeros(dim ,float)
-    corner_max = np.zeros(dim, float)
+        corner_min = np.zeros(dim ,float)
+        corner_max = np.zeros(dim, float)
 
-    for d in range(dim):
-        corner_min[d] = min(coords[:,d])
-        corner_max[d] = max(coords[:,d])
+        for d in range(dim):
+            corner_min[d] = min(coords[:,d])
+            corner_max[d] = max(coords[:,d])
+        return np.vstack((corner_min, corner_max))
+
+    if  mesh==None and cell_cent == None:
+        raise AssertionError("provide either fenics mesh or cell centroid of PD particles")
+    if mesh != None and cell_cent ==None:
+        coords = mesh.coordinates()
+        return local_bbox_method(coords)        
+    if cell_cent.all() and not mesh:
+        coords = cell_cent
+        return local_bbox_method(coords)
     
-    return np.vstack((corner_min, corner_max))
 
 def get_deformed_mesh_domain_bbox(cell_cent, dim):
 

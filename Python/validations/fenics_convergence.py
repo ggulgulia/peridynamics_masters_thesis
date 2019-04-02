@@ -62,6 +62,29 @@ def generate_mesh_list(corner1=Point(0,0), corner2=Point(3,1), numptsX=30, numpt
     
     return mesh_lst
 
+def generate_refined_mesh_(corner1=Point(0,0), corner2=Point(3,1), numptsX=30, numptsY=10, delta=10):
+    """
+    generates mesh array for convergence tests
+    inputs:
+    -------
+        corner1: Point minima of the Rectangle Mesh 
+        corner2: Point maxima of the Rectangle Mesh 
+        numptsX: int, base number of points in X dir
+        numptsY: int base number of points in Y dir
+        delta  : increments in number of points  
+        num_meshes : number of mesh in the list with incremental refinements 
+
+    output:
+    -------
+        mesh_lst : lst of fenics mesh of lenth num_meshes
+    """
+
+
+    #nxpts = numptsX + i*delta
+    #nypts = numptsY + int((i*delta)/3) 
+    mm = RectangleMesh(corner1, corner2, nxpts, nypts)
+    
+    return mm
 
 def generate_mesh_list_for_pd_tests():
     """
@@ -110,6 +133,12 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
     """
     if(tol == None):
         tol = 1e-5
+    
+    #assign function reference for cell centroids
+    if struct_grd:
+        cell_centroid_function = structured_cell_centroids
+    else: 
+        cell_centroid_function = get_cell_centroids
 
     mesh_lst = generate_mesh_list(num_meshes=20, numptsX=numptsX, numptsY=numptsY)
     num = len(mesh_lst)
@@ -117,65 +146,87 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
     fine_mesh = mesh_lst[-1]
     mesh_lst.pop(len(mesh_lst)-1)
     dim = fine_mesh.topology().dim()
-    if(struct_grd):
-        cell_cent_fine = structured_cell_centroids(fine_mesh)
-    else:
-        cell_cent_fine = get_cell_centroids(fine_mesh)
-
-#################################################################################
-#################################################################################
-        ## compute a benchmark solution with a very fine grid
-    top_els = np.ravel((np.argwhere(cell_cent_fine[:,1] == np.max(cell_cent_fine[:,1]))))
-    cell_cent_top_fine = cell_cent_fine[top_els]
-    print("Solving for a fine grid with %i cells\n"%fine_mesh.num_cells())
-    u_fe = solve_fenic_bar(fine_mesh, cell_cent_fine, plot_=False)
-    u_disp_top_fine = np.zeros((len(cell_cent_top_fine), dim), dtype=float)
-    for i, cc in enumerate(cell_cent_top_fine):
-        u_disp_top_fine[i] = u_fe(cc)
-
-#################################################################################
-#################################################################################
+    cell_cent_fine = cell_centroid_function(fine_mesh)
 
     u_disp_top_lst = []
+    cell_cent_top_lst = []
     error_lst = []
     err = 1
-    idx = 0
-    err = np.ones(len(u_disp_top_fine), dtype=float)
-    new_mesh_lst = None 
     u_fe_conv = None 
-    while(idx<len(mesh_lst)):
-        print("%i. solving for FE convergence"%idx)
-        u_disp_top_coar = np.zeros((len(cell_cent_top_fine), dim), dtype=float)
-        mm = mesh_lst[idx]
-        cell_cent = get_cell_centroids(mm)
-        u_fe = solve_fenic_bar(mm, cell_cent, plot_=False)
 
-        for i, cc in enumerate(cell_cent_top_fine):
-            u_disp_top_coar[i] = u_fe(cc)
+    ##### Initial Mesh
+    delta = 10; corner1 = Point(0,0); corner2 = Point(3,1);
+    i = 0; 
+    nxpts_i = numptsX + i*delta
+    nypts_i = numptsY + int((i*delta)/3) 
+    mm_i = RectangleMesh(corner1, corner2, nxpts_i, nypts_i) # coarse mesh
+
+    ##solve the coarse solution
+    print("solving bending problem for coarse grid with %i elements "%mm_i.num_cells())
+    
+    cell_cent_i = cell_centroid_function(mm_i)
+    u_fe_i = solve_fenic_bar(mm_i, cell_cent_i, plot_=False)
+
+    mesh_lst = []
+    ############ Generate a coarse mesh and a fine mesh on the next level ########
+    while(True):
+        j = i+1;
+         
+        mesh_lst.append(mm_i)
+        print(" Level %i. solving for FE convergence"%i)
+
+        ##### get cell cetntroids in coarse and fine mesh ####
+        nxpts_j = numptsX + j*delta
+        nypts_j = numptsY + int((j*delta)/3) 
+        mm_j = RectangleMesh(corner1, corner2, nxpts_j, nypts_j) # fine mesh
+        cell_cent_j = cell_centroid_function(mm_j)
+
+        #### get the topmost cell centroids of the beam in fine mesh #######
+        top_els_i= np.ravel((np.argwhere(cell_cent_i[:,1] == np.max(cell_cent_i[:,1]))))
+        cell_cent_top_i = cell_cent_i[top_els_i]
+
+        #solve the two solutions
+        print("solving bending problem for fine grid with %i elements "%mm_j.num_cells())
+        u_fe_j = solve_fenic_bar(mm_j, cell_cent_j, plot_=False)
         
-        u_disp_top_lst.append(u_disp_top_coar)
-        err = la.norm(u_disp_top_fine-u_disp_top_coar, 2, axis=1)
+        #declare empty array to store  displacement soulution of cell centroids 
+        u_disp_top_i = np.zeros((len(cell_cent_top_i), dim), dtype=float)
+        u_disp_top_j = np.zeros((len(cell_cent_top_i), dim), dtype=float)
+
+        for idx, cc in enumerate(cell_cent_top_i):
+            u_disp_top_i[idx] = u_fe_i(cc)
+            u_disp_top_j[idx] = u_fe_j(cc)
+        
+        err = la.norm(u_disp_top_j-u_disp_top_i, 2, axis=1)
         error_lst.append(err)
         if((err<=tol).all()):
-            u_fe_conv = u_fe
-            new_mesh_lst = mesh_lst[0:idx+1]
+            u_fe_conv = u_fe_i
+            #new_mesh_lst = mesh_lst[0:idx+1]
             print("error converged within tolerance of %.3e at iteration %i"%(tol, idx))
             break
-        idx += 1
+
+        else:
+            u_disp_top_lst.append(u_disp_top_i)
+            cell_cent_top_lst.append(cell_cent_top_i)
+
+            #swap assign fine to coarse solutions
+            mm_i = mm_j;  i = j; u_fe_i = u_fe_j
+            cell_cent_i = cell_cent_j
+            
+
 
     plt.figure()
     colors = get_colors(len(u_disp_top_lst)+1)
-    xx = cell_cent_top_fine[:,0]
     ii = 0
     for i,_ in enumerate(u_disp_top_lst):
+        xx = cell_cent_top_lst[i][:,0]
         yy = u_disp_top_lst[i][:,1]
         plt.plot(xx, yy, color=colors[i], linewidth=2, label='num cells:'+str(mesh_lst[i].num_cells()))
         ii += 1
 
-    plt.plot(xx, u_disp_top_fine[:,1], color=colors[ii], linewidth=2,  label='num cells:'+str(fine_mesh.num_cells()))
     plt.title('mesh convergence for FE soln, bar of size 3x1, load=-5e-8, tol=%.3e'%tol)
     plt.legend()
     plt.show(block=False)
 
     #u_disp_top_lst.append(u_disp_top_fine)
-    return u_disp_top_lst, cell_cent_top_fine, new_mesh_lst, u_fe_conv 
+    return u_disp_top_lst, cell_cent_top_lst, mesh_lst, u_fe_conv 

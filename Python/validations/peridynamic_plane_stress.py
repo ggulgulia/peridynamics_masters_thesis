@@ -60,6 +60,6 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, mate
     cell_cent_orig, u_disp_orig, _ = recover_original_peridynamic_mesh(cell_cent, u_disp, bc_type, ghost_lyr_node_ids, struct_grd)
     #disp_cent = u_disp + cell_cent
     
-    disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=plot_, zoom=40)
+    disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=plot_, zoom=10)
     
     return K, K_bound, disp_cent, u_disp_orig

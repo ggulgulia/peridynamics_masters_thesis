@@ -7,7 +7,8 @@ from peridynamic_solvers import direct_solver
 from peridynamic_materials import *
 import mshr
 import timeit as tm
-from peridynamic_infl_fun import *
+#from peridynamic_infl_fun import *
+from peridynamic_damage import *
 
 
 def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, material='steel', omega_fun=None, plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
@@ -16,6 +17,7 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, mate
 
     """
 
+    dmg_flag=False
     print('horizon value: %4.3f\n'%horizon)
 
     
@@ -41,9 +43,15 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, mate
         tree = QuadTree()
         tree.put(extents, horizon)
         nbr_lst, nbr_beta_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon, vol_corr, struct_grd)
-        
+    
+    ## Initialize simulation
+    G0 = 1000000/2
+    s0 = compute_critical_stretch(G0, bulk, horizon)
+    u_disp = np.zeros((len(cell_cent), dim), dtype=float)
+    bnd_dmg_lst = compute_bond_damage(s0, cell_cent, nbr_lst, u_disp, dmg_flag)
+
     mw = peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst, nbr_beta_lst, horizon, omega_fun) 
-    K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun)   
+    K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)   
     #apply bc
     K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, node_ids_frc, struct_grd)
     #solve

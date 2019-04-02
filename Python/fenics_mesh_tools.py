@@ -48,15 +48,16 @@ def plot_peridym_mesh(mesh=None, cell_cent=None, disp_cent=None, annotate=False)
 
     """
 
-    if mesh == None and (cell_cent==None).any():
+    if mesh == None and len(np.shape(cell_cent)) == 0 and len(np.shape(disp_cent)) == 0:
         raise AssertionError("provide either fenics mesh or cell centroid of PD particles")
-    if mesh != None and (cell_cent==None).any():
+    if mesh != None and (len(np.shape(cell_cent)) == 0 and len(np.shape(disp_cent)) == 0):
         cell_cent = get_cell_centroids(mesh)
-    if cell_cent.any() !=None and mesh == None:
-        pass
     
     ## we wish to scale the axis accordign to geometry
-    extents = get_domain_bounding_box(mesh=mesh, cell_cent=cell_cent)
+    if(len(np.shape(disp_cent))==0):
+        extents = get_domain_bounding_box(mesh=mesh, cell_cent=cell_cent)
+    else:
+        extents = get_domain_bounding_box(mesh=mesh, cell_cent=disp_cent)
     dim = len(cell_cent[0])
     x_min = extents[0][0]; x_max = extents[1][0]
     y_min = extents[0][1]; y_max = extents[1][1]
@@ -80,8 +81,6 @@ def plot_peridym_mesh(mesh=None, cell_cent=None, disp_cent=None, annotate=False)
         ax = fig.add_subplot(111)
         x,y = cell_cent.T
         plt.scatter(x,y, s=300, color='c', marker='o', alpha=0.8)
-        plt.xlim(x_min -0.1*x_min, x_max + 0.1*x_max)
-        plt.ylim(y_min -0.1*y_min, y_max+0.1*y_max)
         plt.xlim(x_min  + 0.3*x_min, x_max + 0.3*x_max)
         plt.ylim(y_min  + fact*y_min, y_max + fact*y_max)
         plt.axis=('off')
@@ -113,8 +112,7 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=Fal
 
     """
     disp_cent = cell_cent + u_disp
-    
-    dpi = 3
+    dpi = 2
     legend_size = {'size': str(6*dpi)}
     fig = plt.figure()
     if dim == 2:
@@ -122,12 +120,13 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=Fal
         x, y = cell_cent.T
         #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
         x,y = (cell_cent + zoom*u_disp).T 
-        plt.scatter(x,y, s=150, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+str(horizon))
+        plt.scatter(x,y, s=150, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+ format(horizon, '4.5g'))
         plt.legend(prop=legend_size)
-        plt.ylim(-0.5, 1.5)
-        plt.xlim(-0.5, 2.5)
+        #plt.xlim(x_min - fact*x_min, x_max + fact*x_max)
+        #plt.ylim(y_min - fact*y_min, y_max + fact*y_max)
 
     if dim == 3:
+        #z_min = corners[0][2]; z_max = corners[1][2]
         from mpl_toolkits.mplot3d import Axes3D 
         x, y, z = cell_cent.T
         fig = plt.figure() 
@@ -418,20 +417,21 @@ def get_domain_bounding_box(mesh=None, cell_cent=None):
     ------
         corner_min: np.ndim array of corner having minima in space
         corner_max: np.ndim array of corenr having maxima in sapce
-
     """
+
     def local_bbox_method(coords):
-        dim = len(coords[0])
+       dim = len(coords[0])
+       
+       corner_min = np.zeros(dim ,float)
+       corner_max = np.zeros(dim, float)
+       
+       for d in range(dim):
+           corner_min[d] = min(coords[:,d])
+           corner_max[d] = max(coords[:,d])
+       return np.vstack((corner_min, corner_max))
 
-        corner_min = np.zeros(dim ,float)
-        corner_max = np.zeros(dim, float)
-
-        for d in range(dim):
-            corner_min[d] = min(coords[:,d])
-            corner_max[d] = max(coords[:,d])
-        return np.vstack((corner_min, corner_max))
-
-    if  mesh==None and cell_cent == None:
+    
+    if  mesh==None and len(np.shape(cell_cent)) == 0:
         raise AssertionError("provide either fenics mesh or cell centroid of PD particles")
     if mesh != None and cell_cent ==None:
         coords = mesh.coordinates()

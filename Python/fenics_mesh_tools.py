@@ -420,23 +420,26 @@ def get_domain_bounding_box(mesh=None, cell_cent=None):
         corner_max: np.ndim array of corenr having maxima in sapce
 
     """
-    if  mesh==None and (cell_cent == None).any():
+    def local_bbox_method(coords):
+        dim = len(coords[0])
+
+        corner_min = np.zeros(dim ,float)
+        corner_max = np.zeros(dim, float)
+
+        for d in range(dim):
+            corner_min[d] = min(coords[:,d])
+            corner_max[d] = max(coords[:,d])
+        return np.vstack((corner_min, corner_max))
+
+    if  mesh==None and cell_cent == None:
         raise AssertionError("provide either fenics mesh or cell centroid of PD particles")
-    if  (cell_cent == None).any():
+    if mesh != None and cell_cent ==None:
         coords = mesh.coordinates()
+        return local_bbox_method(coords)        
     if cell_cent.all() and not mesh:
         coords = cell_cent
+        return local_bbox_method(coords)
     
-    dim = len(coords[0])
-
-    corner_min = np.zeros(dim ,float)
-    corner_max = np.zeros(dim, float)
-
-    for d in range(dim):
-        corner_min[d] = min(coords[:,d])
-        corner_max[d] = max(coords[:,d])
-    
-    return np.vstack((corner_min, corner_max))
 
 def get_deformed_mesh_domain_bbox(cell_cent, dim):
 

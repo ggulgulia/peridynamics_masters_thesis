@@ -26,13 +26,13 @@ def run_fracture_test():
     save_fig   = True
     pplot      = False
     
-    f0 = -1e8
-    delta_t = 0.0005
-    ft = -5e9
+    f0 = 10e8
+    delta_t = 0.00025
+    ft = 50e9
     t  = 0.0
     
-    bc_type = {'dirichlet':0,'forceY':1}
-    bc_vals = {'dirichlet':0,'forceY':0}
+    bc_type = {'dirichlet':0,'forceX':1}
+    bc_vals = {'dirichlet':0,'forceX':0}
     bc_loc = [0,1]
     num_lyrs = 2 #num of additional layers on boundary
     cell_cent, cell_vol = add_ghost_cells(m, bc_loc, num_lyrs, struct_grd) 
@@ -40,7 +40,7 @@ def run_fracture_test():
     el = get_peridym_edge_length(cell_cent, struct_grd)
    
     # dirichlet bc on ghost layers
-    node_ids_dir = get_boundary_layers(cell_cent, el, num_lyrs, bc_loc, struct_grd)
+    node_ids_dir = get_boundary_layers(cell_cent, el, 3, bc_loc, struct_grd)
     node_ids_frc = get_boundary_layers(cell_cent, el, 2*num_lyrs, bc_loc, struct_grd)
     ghost_lyr_node_ids = node_ids_dir
 
@@ -58,7 +58,7 @@ def run_fracture_test():
     if save_fig:
         pwd = getcwd()
         today = dttm.now().strftime("%Y%m%d%%H%M%S")
-        data_dir_top = path.join(pwd, 'fractue_test_'+today)
+        data_dir_top = path.join(pwd, 'fractue_test_tensile')
         mkdir(data_dir_top)
     else:
         data_dir_top = None
@@ -73,7 +73,7 @@ def run_fracture_test():
         force = f0 + ft*i*delta_t + 0.10*ft*t**2
         print("appyling external body force: %.4g" %force)
 
-        bc_vals['forceY'] = force
+        bc_vals['forceX'] = force
         extents = compute_modified_extents(cell_cent, el, struct_grd)
         
         tree = QuadTree()

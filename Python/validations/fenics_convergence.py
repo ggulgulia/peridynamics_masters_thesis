@@ -1,4 +1,5 @@
 import colorsys 
+import matplotlib.ticker as mtick
 from fenics_plane_stress import *
 import sys
 
@@ -168,6 +169,7 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
     u_fe_i = solve_fenic_bar(mm_i, cell_cent_i, plot_=False)
 
     mesh_lst = []
+    err_norm_lst = []
     ############ Generate a coarse mesh and a fine mesh on the next level ########
     while(True):
         j = i+1;
@@ -199,6 +201,9 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
         
         err = la.norm(u_disp_top_j-u_disp_top_i, 2, axis=1)
         error_lst.append(err)
+        err_norm_lst.append(np.max(err))
+        u_disp_top_lst.append(u_disp_top_i)
+        cell_cent_top_lst.append(cell_cent_top_i)
         if((err<=tol).all()):
             u_fe_conv = u_fe_i
             #new_mesh_lst = mesh_lst[0:idx+1]
@@ -206,15 +211,10 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
             break
 
         else:
-            u_disp_top_lst.append(u_disp_top_i)
-            cell_cent_top_lst.append(cell_cent_top_i)
-
             #swap assign fine to coarse solutions
             mm_i = mm_j;  i = j; u_fe_i = u_fe_j
             cell_cent_i = cell_cent_j
-            
-
-
+    err_norm_lst = np.array(err_norm_lst)
     plt.figure()
     colors = get_colors(len(u_disp_top_lst)+1)
     ii = 0
@@ -224,9 +224,33 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
         plt.plot(xx, yy, color=colors[i], linewidth=2, label='num cells:'+str(mesh_lst[i].num_cells()))
         ii += 1
 
-    plt.title('mesh convergence for FE soln, bar of size 3x1, load=-5e-8, tol=%.3e'%tol)
-    plt.legend()
+    #plt.title('mesh convergence for FE soln, bar of size 3x1, load=-5e-8, tol=%.3e'%tol, fontsize=20)
+    plt.legend(loc='center left', fontsize=14)
+    plt.xlabel('top element centroids along x-axis [m]', fontsize=20)
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.2E'))
+    plt.ylabel('y-displacement of centroids [m]', fontsize=20)
+    plt.xticks(np.arange(0, 3.5, 0.5), fontsize=14)
+    plt.yticks(np.arange(-0.025, 0.005, 0.005),fontsize=14)
+    plt.xlim((0, 3.1)); plt.ylim((-0.026, 0.001));
+    
+    plt.show(block=False)
+    
+    #L2 norm of error
+
+    x_axis = np.arange(1, len(err_norm_lst)+1, 1)
+    ax = plt.figure()
+    #plt.title('L2 norm of error for 3x1 steel bar under traction load' ,fontsize=20)
+    plt.plot(x_axis, err_norm_lst, marker='^', markersize=14, linewidth=2, color='k')
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    plt.yticks(fontsize=14)
+    plt.xticks(np.arange(0, len(err_norm_lst)+1, 1), fontsize=14)
+    plt.xlabel('Refinement level', fontsize=18)
+    plt.ylabel('L2 norm of error', fontsize=18)
+    #for xval, yval in zip(x_axis, err_norm_lst):
+    #    plt.annotate(format(yval, '.3E'),xy=(xval, yval), xytext=(xval+0.05, yval+0.00003), fontsize=12)
     plt.show(block=False)
 
+
     #u_disp_top_lst.append(u_disp_top_fine)
-    return u_disp_top_lst, cell_cent_top_lst, mesh_lst, u_fe_conv 
+    #return u_disp_top_lst, cell_cent_top_lst, mesh_lst, u_fe_conv 
+    return err_norm_lst

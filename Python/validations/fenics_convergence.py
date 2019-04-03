@@ -87,12 +87,14 @@ def generate_refined_mesh_(corner1=Point(0,0), corner2=Point(3,1), numptsX=30, n
     
     return mm
 
-def generate_mesh_list_for_pd_tests():
+def generate_struct_mesh_list_for_pd_tests():
     """
     generates 2 separate lists of fenics mesh
     ensuring consistent particle sizes
     in non-uniform and uniform mesh distribution
 
+    this generates a structured mesh for peridynamics
+    with particle counts 648, 968, 1352, 1800, 
     input: None
     ------
 
@@ -107,17 +109,20 @@ def generate_mesh_list_for_pd_tests():
     struct_msh_lst  = []
 
     delta = 10;
-    particle_count = np.array([600, 1200, 1800, 2400], dtype=float)
-    minNumptsX = 30;
+    minNumptsX = 36;
+    minNumptsY = 18;
     
-    for i, particles in enumerate(particle_count):
-        numptsX = int(minNumptsX + i*delta)
-        numptsY = int(particles/numptsX)
-        m = RectangleMesh(Point(0,0), Point(3,1), numptsX, numptsY)
+    ratio = minNumptsX/minNumptsY
+    delta = 4
+    num_meshes = 5
+    for i in range(num_meshes):
+        numptsX = int(minNumptsX + i*delta*ratio)
+        numptsY = int(minNumptsY + i*delta)
+        m = RectangleMesh(Point(0,0), Point(2,1), numptsX, numptsY)
         struct_msh_lst.append(m)
 
         numptsY = int(numptsY*0.5)
-        m = RectangleMesh(Point(0,0), Point(3,1), numptsX, numptsY)
+        m = RectangleMesh(Point(0,0), Point(2,1), numptsX, numptsY)
         unstrct_msh_lst.append(m)
 
     return unstrct_msh_lst, struct_msh_lst
@@ -156,10 +161,10 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
     u_fe_conv = None 
 
     ##### Initial Mesh
-    delta = 10; corner1 = Point(0,0); corner2 = Point(3,1);
+    delta = 10; corner1 = Point(0,0); corner2 = Point(2,1);
     i = 0; 
     nxpts_i = numptsX + i*delta
-    nypts_i = numptsY + int((i*delta)/3) 
+    nypts_i = numptsY + int((i*delta)/2) 
     mm_i = RectangleMesh(corner1, corner2, nxpts_i, nypts_i) # coarse mesh
 
     ##solve the coarse solution
@@ -215,42 +220,41 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
             mm_i = mm_j;  i = j; u_fe_i = u_fe_j
             cell_cent_i = cell_cent_j
     err_norm_lst = np.array(err_norm_lst)
-    plt.figure()
-    colors = get_colors(len(u_disp_top_lst)+1)
-    ii = 0
-    for i,_ in enumerate(u_disp_top_lst):
-        xx = cell_cent_top_lst[i][:,0]
-        yy = u_disp_top_lst[i][:,1]
-        plt.plot(xx, yy, color=colors[i], linewidth=2, label='num cells:'+str(mesh_lst[i].num_cells()))
-        ii += 1
+    #plt.figure()
+    #colors = get_colors(len(u_disp_top_lst)+1)
+    #ii = 0
+    #for i,_ in enumerate(u_disp_top_lst):
+    #    xx = cell_cent_top_lst[i][:,0]
+    #    yy = u_disp_top_lst[i][:,1]
+    #    plt.plot(xx, yy, color=colors[i], linewidth=2, label='num cells:'+str(mesh_lst[i].num_cells()))
+    #    ii += 1
 
-    #plt.title('mesh convergence for FE soln, bar of size 3x1, load=-5e-8, tol=%.3e'%tol, fontsize=20)
-    plt.legend(loc='center left', fontsize=14)
-    plt.xlabel('top element centroids along x-axis [m]', fontsize=20)
-    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.2E'))
-    plt.ylabel('y-displacement of centroids [m]', fontsize=20)
-    plt.xticks(np.arange(0, 3.5, 0.5), fontsize=14)
-    plt.yticks(np.arange(-0.025, 0.005, 0.005),fontsize=14)
-    plt.xlim((0, 3.1)); plt.ylim((-0.026, 0.001));
-    
-    plt.show(block=False)
-    
-    #L2 norm of error
+    ##plt.title('mesh convergence for FE soln, bar of size 3x1, load=-5e-8, tol=%.3e'%tol, fontsize=20)
+    #plt.legend(loc='center left', fontsize=14)
+    #plt.xlabel('top element centroids along x-axis [m]', fontsize=20)
+    #plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    #plt.yticks(fontsize=14)
+    #plt.ylabel('y-displacement of centroids [m]', fontsize=20)
+    #plt.xticks(np.arange(0, 3.5, 0.5), fontsize=14)
+    #plt.xlim((0, 2.1)); 
+    #
+    #plt.show(block=False)
+    #
+    ##L2 norm of error
 
-    x_axis = np.arange(1, len(err_norm_lst)+1, 1)
-    ax = plt.figure()
-    #plt.title('L2 norm of error for 3x1 steel bar under traction load' ,fontsize=20)
-    plt.plot(x_axis, err_norm_lst, marker='^', markersize=14, linewidth=2, color='k')
-    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-    plt.yticks(fontsize=14)
-    plt.xticks(np.arange(0, len(err_norm_lst)+1, 1), fontsize=14)
-    plt.xlabel('Refinement level', fontsize=18)
-    plt.ylabel('L2 norm of error', fontsize=18)
-    #for xval, yval in zip(x_axis, err_norm_lst):
-    #    plt.annotate(format(yval, '.3E'),xy=(xval, yval), xytext=(xval+0.05, yval+0.00003), fontsize=12)
-    plt.show(block=False)
+    #x_axis = np.arange(1, len(err_norm_lst)+1, 1)
+    #ax = plt.figure()
+    ##plt.title('L2 norm of error for 3x1 steel bar under traction load' ,fontsize=20)
+    #plt.plot(x_axis, err_norm_lst, marker='^', markersize=14, linewidth=2, color='k')
+    #plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    #plt.yticks(np.arange(0, 8e-4, 1e-4),fontsize=14)
+    #plt.xticks(np.arange(0, len(err_norm_lst)+2, 1), fontsize=14)
+    #plt.xlabel('Refinement level', fontsize=18)
+    #plt.ylabel('L2 norm of error', fontsize=18)
+    ##for xval, yval in zip(x_axis, err_norm_lst):
+    ##    plt.annotate(format(yval, '.3E'),xy=(xval, yval), xytext=(xval+0.05, yval+0.00003), fontsize=12)
+    #plt.show(block=False)
 
 
-    #u_disp_top_lst.append(u_disp_top_fine)
-    #return u_disp_top_lst, cell_cent_top_lst, mesh_lst, u_fe_conv 
-    return err_norm_lst
+    ##u_disp_top_lst.append(u_disp_top_fine)
+    return u_disp_top_lst, cell_cent_top_lst, mesh_lst, u_fe_conv 

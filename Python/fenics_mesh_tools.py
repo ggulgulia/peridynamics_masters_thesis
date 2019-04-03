@@ -29,7 +29,7 @@ def plot_fenics_mesh(mesh, new_fig=True):
 
     pass
 
-def plot_peridym_mesh(mesh=None, cell_cent=None, disp_cent=None, annotate=False):
+def plot_peridym_mesh(mesh=None, struct_grd=True, cell_cent=None, disp_cent=None, annotate=False):
     """
     plots the mesh/centroids of mesh as is expected in peridynamics
     
@@ -47,27 +47,27 @@ def plot_peridym_mesh(mesh=None, cell_cent=None, disp_cent=None, annotate=False)
         plots the centroids of tri/tets in FEniCS mesh
 
     """
+    if struct_grd:
+        cell_centroid_function = structured_cell_centroids
+    else:
+        cell_centroid_function = get_cell_centroids
 
     if mesh == None and len(np.shape(cell_cent)) == 0 and len(np.shape(disp_cent)) == 0:
         raise AssertionError("provide either fenics mesh or cell centroid of PD particles")
-    if mesh != None and (len(np.shape(cell_cent)) == 0 and len(np.shape(disp_cent)) == 0):
-        cell_cent = get_cell_centroids(mesh)
-    
+    if len(np.shape(cell_cent)) != 0 and len(np.shape(disp_cent))==0:
+        extents = get_domain_bounding_box(cell_cent=cell_cent)
+
+    if len(np.shape(cell_cent)) == 0 and len(np.shape(disp_cent))!=0:
+        extents = get_domain_bounding_box(cell_cent=disp_cent)
+    if mesh != None and (len(np.shape(cell_cent)) == 0 and len(np.shape(disp_cent)) == 0): 
+        extents = get_domain_bounding_box(mesh=mesh)
+        cell_cent = cell_centroid_function(mesh)
     ## we wish to scale the axis accordign to geometry
-    if(len(np.shape(disp_cent))==0):
-        extents = get_domain_bounding_box(mesh=mesh, cell_cent=cell_cent)
-    else:
-        extents = get_domain_bounding_box(mesh=mesh, cell_cent=disp_cent)
+
     dim = len(cell_cent[0])
     x_min = extents[0][0]; x_max = extents[1][0]
     y_min = extents[0][1]; y_max = extents[1][1]
-
-    if y_min/x_min <0.8:
-        fact = 0.3
-    if y_min/x_min <0.5:
-        fact = 2
-    if y_min/x_min <0.4:
-        fact = 3
+    
     x=None; y=None; z=None
     fig = plt.figure()
     if dim == 3:
@@ -81,8 +81,6 @@ def plot_peridym_mesh(mesh=None, cell_cent=None, disp_cent=None, annotate=False)
         ax = fig.add_subplot(111)
         x,y = cell_cent.T
         plt.scatter(x,y, s=300, color='c', marker='o', alpha=0.8)
-        plt.xlim(x_min  + 0.3*x_min, x_max + 0.3*x_max)
-        plt.ylim(y_min  + fact*y_min, y_max + fact*y_max)
         plt.axis=('off')
 
     if annotate==True:
@@ -433,7 +431,7 @@ def get_domain_bounding_box(mesh=None, cell_cent=None):
     
     if  mesh==None and len(np.shape(cell_cent)) == 0:
         raise AssertionError("provide either fenics mesh or cell centroid of PD particles")
-    if mesh != None and cell_cent ==None:
+    if mesh != None and len(np.shape(cell_cent)) == 0:
         coords = mesh.coordinates()
         return local_bbox_method(coords)        
     if cell_cent.all() and not mesh:

@@ -198,3 +198,22 @@ def plot_1D_influence_functions():
     plt.show(block=False)
 
     pass
+
+
+def get_influence_function_symbol():
+    """
+    returns latex like math symbol for influence function
+    refer Perdiynamic literature for symbol convention
+    :returns: TODO
+
+    """
+
+    omega1 = r'$\omega_1\langle\xi\rangle$'
+    omega2 = r'$\omega_2\langle\xi\rangle$'
+    omega3 = r'$\omega_3\langle\xi\rangle$'
+    omega4 = r'$\omega_4\langle\xi\rangle$'
+    omega5 = r'$\omega_5\langle\xi\rangle$'
+    omega6 = r'$\omega_6\langle\xi\rangle$'
+    infl_fun_symbols = {'omega1':omega1, 'omega2':omega2, 'omega3':omega3, 'omega4':omega4, 'omega5':omega5, 'omega6':omega6}
+    return infl_fun_symbols
+

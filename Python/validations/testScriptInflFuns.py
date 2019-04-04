@@ -145,14 +145,13 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
         error = abs_error_end_particle_lst[k]
         plt.plot(x_ax, error, linewidth=2, marker = markers[i], color='k', markersize=8, label='N = '+str(k))
     err_min, err_max = np.min(abs_error_end_particle), np.max(abs_error_end_particle)
-    plt.ylim(err_min - 0.2*err_min,err_max + 0.2*err_max)
     plt.xlim(0, len(infl_fun_lst)+1)
     plt.xlabel('influence function'+r'$\omega_i\langle\xi\ranglei$',fontsize=16)
     plt.ylabel('abs difference', fontsize=16)
+    ax.set_xticks(x_ax)
     ax.set_xticklabels(xtick_labels, fontsize=14)
     plt.yticks(fontsize=14)
     plt.legend(loc='center right', fontsize=14)
-    plt.title('abs difference b/w PD and FE vs'+r' $\omega_i\langle\xi\rangle$'+' num particles %i'%numParticles, fontsize=18 )
     
     
     ### PLOTTING REL ERROR ###
@@ -162,10 +161,10 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     for i, k in enumerate(kk):
         rel_error = rel_error_end_particle_lst[k]
         plt.plot(x_ax, rel_error, linewidth=2, marker = markers[i], color='k', markersize=8, label='N = '+str(k))
-    plt.ylim(np.min(rel_error_end_particle)-5, np.max(rel_error_end_particle)+5)
     plt.xlim(0, len(infl_fun_lst)+1)
     plt.xlabel(r'$\omega\langle\xi\rangle', fontsize=16)
     plt.ylabel('rel difference [%]', fontsize=16)
+    ax.set_xticks(x_ax)
     ax.set_xticklabels(xtick_labels, fontsize=14)
     plt.yticks(fontsize=14)
     plt.legend(loc='center right', fontsize=14)

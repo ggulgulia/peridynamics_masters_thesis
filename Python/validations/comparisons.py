@@ -37,7 +37,7 @@ def run_comparisons():
 #    sqr_msh_lst = managable_mesh_list(mesh_lst, struct_grd=False)
     #sqr_msh_lst = mesh_lst 
     ##square mesh, horizon studies
-    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=False,  struct_grd=True)
+    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=False,  struct_grd=True)
 
     #cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=True, struct_grd=True)
     

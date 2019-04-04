@@ -110,40 +110,41 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=Fal
 
     """
     disp_cent = cell_cent + u_disp
-    dpi = 2
-    legend_size = {'size': str(6*dpi)}
-    fig = plt.figure()
-    if dim == 2:
-        ax = fig.add_subplot(111)
-        x, y = cell_cent.T
-        #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
-        x,y = (cell_cent + zoom*u_disp).T 
-        plt.scatter(x,y, s=150, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+ format(horizon, '4.5g'))
-        plt.legend(prop=legend_size)
-        #plt.xlim(x_min - fact*x_min, x_max + fact*x_max)
-        #plt.ylim(y_min - fact*y_min, y_max + fact*y_max)
+    if plot_ or save_fig:
+        dpi = 2
+        legend_size = {'size': str(6*dpi)}
+        fig = plt.figure()
+        if dim == 2:
+            ax = fig.add_subplot(111)
+            x, y = cell_cent.T
+            #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
+            x,y = (cell_cent + zoom*u_disp).T 
+            plt.scatter(x,y, s=150, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+ format(horizon, '4.5g'))
+            plt.legend(prop=legend_size)
+            #plt.xlim(x_min - fact*x_min, x_max + fact*x_max)
+            #plt.ylim(y_min - fact*y_min, y_max + fact*y_max)
 
-    if dim == 3:
-        #z_min = corners[0][2]; z_max = corners[1][2]
-        from mpl_toolkits.mplot3d import Axes3D 
-        x, y, z = cell_cent.T
-        fig = plt.figure() 
-        ax = fig.add_subplot(111, projection='3d') 
-        ax.scatter(x,y,z, s=150, color='r', marker='o', alpha=0.1, label='original config')
-        x,y,z = (cell_cent + zoom*u_disp)
+        if dim == 3:
+            #z_min = corners[0][2]; z_max = corners[1][2]
+            from mpl_toolkits.mplot3d import Axes3D 
+            x, y, z = cell_cent.T
+            fig = plt.figure() 
+            ax = fig.add_subplot(111, projection='3d') 
+            ax.scatter(x,y,z, s=150, color='r', marker='o', alpha=0.1, label='original config')
+            x,y,z = (cell_cent + zoom*u_disp)
 
-        ax.scatter(x,y,z,s=150, color='g', marker='o', alpha=1.0, label='deformed config')
-        ax.axis('off')
-        plt.legend()
+            ax.scatter(x,y,z,s=150, color='g', marker='o', alpha=1.0, label='deformed config')
+            ax.axis('off')
+            plt.legend()
 
-    ax.set_aspect('equal')
+        ax.set_aspect('equal')
 
-    if plot_:
-        plt.show(block=False)
+        if plot_:
+            plt.show(block=False)
 
-    if save_fig:
-        plt.savefig(data_dir)
-        plt.close(fig)
+        if save_fig:
+            plt.savefig(data_dir)
+            plt.close(fig)
 
     return disp_cent
 

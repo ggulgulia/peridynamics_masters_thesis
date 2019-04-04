@@ -29,7 +29,7 @@ def get_markers(num_markers):
         markers : list of distinct plotting markers
 
     """
-    markers = ['1','2','3','4','s','p','*','h','+','x','o','^','x','d', 'v','<', '>', ',','|']
+    markers = ['^','o','P','X','*', 'd','<', '>', ',','|', '1','2','3','4','s','p','*','h','+']
     if(num_markers>18):
         sys.exit("cannot create more than 18 markers, refactor your code; force exiting")
 

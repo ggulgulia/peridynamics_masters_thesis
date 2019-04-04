@@ -114,6 +114,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
         str_struct_grd = str(bool(struct_grd))
         str_vol_corr   = str(bool(vol_corr))
         plt.title('Num Cells = %i'%numParticles, fontsize=20)
+        plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
         plt.ylim( -0.012, 0.002)
         plt.ylabel('y-displacement [m]', fontsize=16)
         plt.xlabel('x-coordinates of particles [m]', fontsize=16)
@@ -145,6 +146,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
         error = abs_error_end_particle_lst[k]
         plt.plot(x_ax, error, linewidth=2, marker = markers[i], color='k', markersize=8, label='N = '+str(k))
     err_min, err_max = np.min(abs_error_end_particle), np.max(abs_error_end_particle)
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
     plt.xlim(0, len(infl_fun_lst)+1)
     plt.xlabel('influence function'+r'$\omega_i\langle\xi\ranglei$',fontsize=16)
     plt.ylabel('abs difference', fontsize=16)
@@ -162,6 +164,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
         rel_error = rel_error_end_particle_lst[k]
         plt.plot(x_ax, rel_error, linewidth=2, marker = markers[i], color='k', markersize=8, label='N = '+str(k))
     plt.xlim(0, len(infl_fun_lst)+1)
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
     plt.xlabel(r'$\omega\langle\xi\rangle', fontsize=16)
     plt.ylabel('rel difference [%]', fontsize=16)
     ax.set_xticks(x_ax)

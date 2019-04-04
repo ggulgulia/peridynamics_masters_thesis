@@ -34,7 +34,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     infl_fun_name = {'omega1':'STANDARD GAUSSIAN', 'omega2': 'NARROW GAUSSIAN', 'omega3': 'STANDARD PARABOLA', 'omega4': 'PERIDIGM PARABOLA'}
     infl_fun_symbols = get_influence_function_symbol()
 
-    horizon = 0.06
+    horizon = 0.1
     dim = mesh_lst[0].topology().dim()
     ## Empty global lists to store data for each mesh in mesh_lst
     cell_cent_top_lst =      [] #top cell centroids of each mesh
@@ -128,7 +128,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     ### Some work to make pretty plots ###
     #### Plot diff (error) b/w PD and FE soln ####
     kk = abs_error_end_particle_lst.keys()
-    matplotlib.rc('text', usetex = True)
+    plt.rc('text', usetex = True)
     markers  = get_markers(len(infl_fun_lst)+1)
     #collecting latex symbols to plot on x-axis
     xtick_labels = []

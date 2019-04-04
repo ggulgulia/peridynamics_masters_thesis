@@ -128,6 +128,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     ### Some work to make pretty plots ###
     #### Plot diff (error) b/w PD and FE soln ####
     kk = abs_error_end_particle_lst.keys()
+    matplotlib.rc('text', usetex = True)
     markers  = get_markers(len(infl_fun_lst)+1)
     #collecting latex symbols to plot on x-axis
     xtick_labels = []

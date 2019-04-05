@@ -8,7 +8,7 @@ def run_comparisons():
     print("*********************************************************")
     print('solving using Finite Elements:')
     tol = 1e-5 #tolerance for convergence of FE solution
-    _, _, mesh_lst, u_fe_conv = fenics_mesh_convergence(tol=tol, plot_=False)
+    _, _, mesh_lst, u_fe_conv, err_norm_lst = fenics_mesh_convergence(tol=tol, plot_=False)
     print("Number of cells in FEniCS mesh on which the FE solution converged %i" %mesh_lst[-1].num_cells())
     print("*********************************************************")
     print("*********************************************************")

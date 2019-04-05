@@ -44,7 +44,7 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
         # need to select horizon approporiately : min horizon is 2.0001 times max edge length
         #expected particle count in uniform[square/triangle] grid: 648, 900, 1300, 1800
         horizons = np.array([0.11111667555600001, 0.166672235556, 0.22222779555599997, 0.277783355556], dtype=float)
-        #horizons = np.array([0.11111667555600001, 0.166672235556])
+        #horizons = np.array([0.0611111667555600001])
         #declare empty storage for each horizon in 'horizons' array and curr_mesh  
         infl_fun = gaussian_infl_fun2
         disp_cent_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
@@ -70,7 +70,8 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
         numParticles = len(cell_cent)
         ###### PLOT PD and FE solns #####
         colors = get_colors(len(horizons)+1)
-        plt.figure()
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
         plt.plot(cell_cent_top[:,0], u_top_fe[:,1], color=colors[0], linewidth=2, label='FE')
         end_cell_y_disp_fe = u_top_fe[-1][1]
 

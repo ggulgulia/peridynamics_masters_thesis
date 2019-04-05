@@ -95,7 +95,7 @@ def generate_struct_mesh_list_for_pd_tests():
 
     return unstrct_msh_lst, struct_msh_lst
 
-def interpolate_fe_soln_at_boundary(u_fe, cell_cent, boundaryName='top'):
+def interpolate_fe_soln_at_boundary(u_fe, cell_cent, bName='top'):
     """
     depending on the problem we are solving, we might want to obtain the
     fe solution interpolated at the (boundary)particle location of 
@@ -107,7 +107,7 @@ def interpolate_fe_soln_at_boundary(u_fe, cell_cent, boundaryName='top'):
     my masters for thesis
 
     :u_fe: FE solution at nodal locations(from FENICS)
-    :boundaryName: name of the boundary where solution is desired
+    :bName: name of the boundary where solution is desired
     :cell_cent: peridynamic discretization of domain 
     :returns: u_fe_atBoundary
 
@@ -116,11 +116,11 @@ def interpolate_fe_soln_at_boundary(u_fe, cell_cent, boundaryName='top'):
     ## for left/right we look along x-dim(index 0)
     ## for top/bottom we look along y-dim(index 1)
     searchDimDict = {'top':1,'bottom':1, 'left':0, 'right':0}
-    sd = searchDimDict[boundaryName]
+    sd = searchDimDict[bName]
 
-    if boundaryName == 'top' or boundaryName == 'right':
+    if bName == 'top' or bName == 'right':
         boundEls= np.ravel((np.argwhere(cell_cent[:,sd] == np.max(cell_cent[:,sd]))))
-    if boundaryName == 'bottom' or boundaryName == 'left':
+    if bName == 'bottom' or bName == 'left':
         boundEls= np.ravel((np.argwhere(cell_cent[:,sd] == np.min(cell_cent[:,sd]))))
 
     cell_cent_bound = cell_cent[boundEls]
@@ -152,7 +152,7 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, problem='tr
     bName    = boundLocationDict[problem]
 
     if(tol == None):
-        tol = 1e-5
+        tol = 1e-3
     
     #assign function reference for cell centroids
     if struct_grd:
@@ -199,8 +199,8 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, problem='tr
         print("solving bending problem for fine grid with %i elements "%mm_j.num_cells())
         u_fe_j = solve_fenic_bar(mm_j, cell_cent_j, plot_=False)
         
-        u_disp_top_j, _ = interpolate_fe_soln_at_boundary(u_fe_j, cell_cent_j, boundaryName=bName)
-        u_disp_top_i, cell_cent_top_j= interpolate_fe_soln_at_boundary(u_fe_i, cell_cent_j, boundaryName=bName)
+        u_disp_top_j, _ = interpolate_fe_soln_at_boundary(u_fe_j, cell_cent_j, bName=bName)
+        u_disp_top_i, cell_cent_top_j= interpolate_fe_soln_at_boundary(u_fe_i, cell_cent_j, bName=bName)
 
         err = la.norm(u_disp_top_j-u_disp_top_i, 2, axis=1)
 
@@ -219,41 +219,47 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, problem='tr
             mm_i = mm_j;  i = j; u_fe_i = u_fe_j
             cell_cent_i = cell_cent_j
     err_norm_lst = np.array(err_norm_lst)
-    #plt.figure()
-    #colors = get_colors(len(u_disp_top_lst)+1)
-    #ii = 0
-    #for i,_ in enumerate(u_disp_top_lst):
-    #    xx = cell_cent_top_lst[i][:,0]
-    #    yy = u_disp_top_lst[i][:,1]
-    #    plt.plot(xx, yy, color=colors[i], linewidth=2, label='num cells:'+str(mesh_lst[i].num_cells()))
-    #    ii += 1
+    plt.figure()
+    colors = get_colors(len(u_disp_top_lst)+1)
+    ii = 0
+    for i,_ in enumerate(u_disp_top_lst):
+        if bName == 'top' or bName =='bottom':
+            xx = cell_cent_top_lst[i][:,0]
+            yy = u_disp_top_lst[i][:,1]
+            plt.plot(xx, yy, color=colors[i], linewidth=2, label='num cells:'+str(mesh_lst[i].num_cells()))
+            ii += 1
+        if bName == 'left' or bName == 'right':
+            xx = cell_cent_top_lst[i][:,1]
+            yy = u_disp_top_lst[i][:,0]
+            plt.plot(xx, yy, color=colors[i], linewidth=2, label='num cells:'+str(mesh_lst[i].num_cells()))
+            ii += 1
 
-    ##plt.title('mesh convergence for FE soln, bar of size 3x1, load=-5e-8, tol=%.3e'%tol, fontsize=20)
-    #plt.legend(loc='center left', fontsize=14)
-    #plt.xlabel('top element centroids along x-axis [m]', fontsize=20)
-    #plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-    #plt.yticks(fontsize=14)
-    #plt.ylabel('y-displacement of centroids [m]', fontsize=20)
-    #plt.xticks(np.arange(0, 3.5, 0.5), fontsize=14)
-    #plt.xlim((0, 2.1)); 
-    #
-    #plt.show(block=False)
-    #
-    ##L2 norm of error
+    #plt.title('mesh convergence for FE soln, bar of size 3x1, load=-5e-8, tol=%.3e'%tol, fontsize=20)
+    plt.legend(loc='center left', fontsize=14)
+    plt.xlabel('top element centroids along x-axis [m]', fontsize=20)
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    plt.yticks(fontsize=14)
+    plt.ylabel('y-displacement of centroids [m]', fontsize=20)
+    plt.xticks(np.arange(0, 3.5, 0.5), fontsize=14)
+    plt.xlim((0, 2.1)); 
+    
+    plt.show(block=False)
+    
+    #L2 norm of error
 
-    #x_axis = np.arange(1, len(err_norm_lst)+1, 1)
-    #ax = plt.figure()
-    ##plt.title('L2 norm of error for 3x1 steel bar under traction load' ,fontsize=20)
-    #plt.plot(x_axis, err_norm_lst, marker='^', markersize=14, linewidth=2, color='k')
-    #plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-    #plt.yticks(np.arange(0, 8e-4, 1e-4),fontsize=14)
-    #plt.xticks(np.arange(0, len(err_norm_lst)+2, 1), fontsize=14)
-    #plt.xlabel('Refinement level', fontsize=18)
-    #plt.ylabel('L2 norm of error', fontsize=18)
-    ##for xval, yval in zip(x_axis, err_norm_lst):
-    ##    plt.annotate(format(yval, '.3E'),xy=(xval, yval), xytext=(xval+0.05, yval+0.00003), fontsize=12)
-    #plt.show(block=False)
+    x_axis = np.arange(1, len(err_norm_lst)+1, 1)
+    ax = plt.figure()
+    #plt.title('L2 norm of error for 3x1 steel bar under traction load' ,fontsize=20)
+    plt.plot(x_axis, err_norm_lst, marker='^', markersize=14, linewidth=2, color='k')
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    plt.yticks(np.arange(0, 8e-4, 1e-4),fontsize=14)
+    plt.xticks(np.arange(0, len(err_norm_lst)+2, 1), fontsize=14)
+    plt.xlabel('Refinement level', fontsize=18)
+    plt.ylabel('L2 norm of error', fontsize=18)
+    #for xval, yval in zip(x_axis, err_norm_lst):
+    #    plt.annotate(format(yval, '.3E'),xy=(xval, yval), xytext=(xval+0.05, yval+0.00003), fontsize=12)
+    plt.show(block=False)
 
 
-    ##u_disp_top_lst.append(u_disp_top_fine)
-    return u_disp_top_lst, cell_cent_top_lst, mesh_lst, u_fe_conv 
+    #u_disp_top_lst.append(u_disp_top_fine)
+    return u_disp_top_lst, cell_cent_top_lst, mesh_lst, u_fe_conv, err_norm_lst 

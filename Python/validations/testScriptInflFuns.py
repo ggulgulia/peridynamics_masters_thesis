@@ -29,14 +29,14 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     infl_fun_ordered_lst = ['omega1', 'omega2', 'omega3', 'omega4']
     infl_fun_lst = {'omega1':gaussian_infl_fun2, 'omega2':gaussian_infl_fun1, 'omega3': parabolic_infl_fun2, 'omega4':parabolic_infl_fun1, }
 
-    #infl_fun_ordered_lst = ['omega1', 'omega2']
-    #infl_fun_lst = {'omega2':gaussian_infl_fun1, 'omega1':gaussian_infl_fun2}
+    infl_fun_ordered_lst = ['omega1']
+    infl_fun_lst = {'omega1':gaussian_infl_fun2}
 
     infl_fun_keys = infl_fun_lst.keys()
     infl_fun_name = {'omega1':'STANDARD GAUSSIAN', 'omega2': 'NARROW GAUSSIAN', 'omega3': 'STANDARD PARABOLA', 'omega4': 'PERIDIGM PARABOLA'}
     infl_fun_symbols = get_influence_function_symbol()
 
-    horizon = 0.166672235556
+    horizon = 0.14
     dim = mesh_lst[0].topology().dim()
     ## Empty global lists to store data for each mesh in mesh_lst
     cell_cent_top_lst =      [] #top cell centroids of each mesh

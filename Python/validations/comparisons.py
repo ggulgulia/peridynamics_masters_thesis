@@ -42,7 +42,7 @@ def run_comparisons():
     #cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=True, struct_grd=True)
     
     ##square mesh, influence function studies
-#    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_infl_funs_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=omga, plot_=False, vol_corr=False,  struct_grd=True)
+#    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_infl_funs_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=omga, plot_=False, vol_corr=False,  struct_grd=True)
 #
 #    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_infl_funs_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=omga, plot_=False, vol_corr=True, struct_grd=True)
 #

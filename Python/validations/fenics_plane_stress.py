@@ -58,21 +58,21 @@ def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e
     
     class LeftEdge(SubDomain):
         def inside(self, x, on_boundary):
-            return (on_boundary and abs(x[0] - L_min) < FENICS_EPS*1e3)
+            return (on_boundary and abs(x[0] - L_min) < DOLFIN_EPS*1e3)
     
     class RightEdge(SubDomain):
         def inside(self, x, on_boundary):
             tol = 1e-6
-            return on_boundary and abs(x[0] - L_max) < FENICS_EPS*1e3
+            return on_boundary and abs(x[0] - L_max) < DOLFIN_EPS*1e3
     
     class BottomEdge(SubDomain):
         def inside(self, x, on_boundary):
-            return on_boundary and abs(x[1] - H_min) < FENICS_EPS*1e3
+            return on_boundary and abs(x[1] - H_min) < DOLFIN_EPS*1e3
     
     class TopEdge(SubDomain):
         def inside(self, x, on_boundary):
             tol = 1e-6
-            return on_boundary and abs(x[1] - H_max) < FENICS_EPS*1e3
+            return on_boundary and abs(x[1] - H_max) < DOLFIN_EPS*1e3
     
     ## separate edges
     left_edge   = LeftEdge()

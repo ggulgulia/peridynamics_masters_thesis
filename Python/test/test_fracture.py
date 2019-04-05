@@ -58,7 +58,7 @@ def run_fracture_test():
     if save_fig:
         pwd = getcwd()
         today = dttm.now().strftime("%Y%m%d%%H%M%S")
-        data_dir_top = path.join(pwd, 'fractue_test_tensile')
+        data_dir_top = path.join(pwd, today)
         mkdir(data_dir_top)
     else:
         data_dir_top = None

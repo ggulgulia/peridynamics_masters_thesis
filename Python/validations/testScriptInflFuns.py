@@ -26,15 +26,17 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
         3. omega3 : standard parabola
         4. omega4 : peridigm like parabola
     """
-    #infl_fun_lst = {'omega1':gaussian_infl_fun2, 'omega2':gaussian_infl_fun1, 'omega3': parabolic_infl_fun2, 'omega4':parabolic_infl_fun1, }
+    infl_fun_ordered_lst = ['omega1', 'omega2', 'omega3', 'omega4']
+    infl_fun_lst = {'omega1':gaussian_infl_fun2, 'omega2':gaussian_infl_fun1, 'omega3': parabolic_infl_fun2, 'omega4':parabolic_infl_fun1, }
 
-    infl_fun_lst = {'omega2':gaussian_infl_fun1, 'omega1':gaussian_infl_fun2}
+    #infl_fun_ordered_lst = ['omega1', 'omega2']
+    #infl_fun_lst = {'omega2':gaussian_infl_fun1, 'omega1':gaussian_infl_fun2}
 
     infl_fun_keys = infl_fun_lst.keys()
     infl_fun_name = {'omega1':'STANDARD GAUSSIAN', 'omega2': 'NARROW GAUSSIAN', 'omega3': 'STANDARD PARABOLA', 'omega4': 'PERIDIGM PARABOLA'}
     infl_fun_symbols = get_influence_function_symbol()
 
-    horizon = 0.1
+    horizon = 0.166672235556
     dim = mesh_lst[0].topology().dim()
     ## Empty global lists to store data for each mesh in mesh_lst
     cell_cent_top_lst =      [] #top cell centroids of each mesh
@@ -68,7 +70,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
         print("*********************************************************")
         print("*********************************************************")
         print('solving using Peridynamics:')
-        for i, key in enumerate(infl_fun_keys):
+        for i, key in enumerate(infl_fun_ordered_lst):
             infl_fun = infl_fun_lst[key]
             print("RUNNING TEST WITH INFLUENCE FUNCTION: %s "%(infl_fun_name[key]))
             print("*********************************************************\n")
@@ -97,7 +99,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
         plt.plot(cell_cent_top[:,0], u_top_fe[:,1], linewidth=2.0, color=colors[0], label='FE')
         end_cell_y_disp_fe = u_top_fe[-1][1]
         colors.pop(0)
-        for i, key in enumerate(infl_fun_keys):
+        for i, key in enumerate(infl_fun_ordered_lst):
             kk = infl_fun_name[key]
             u_disp_pd_top = u_disp_PD_array[i][top_els]
             end_cell_y_disp_pd = u_disp_pd_top[-1][1]
@@ -133,7 +135,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     markers  = get_markers(len(infl_fun_lst)+1)
     #collecting latex symbols to plot on x-axis
     xtick_labels = []
-    for key in infl_fun_keys:
+    for key in infl_fun_ordered_lst:
         xtick_labels.append(infl_fun_symbols[key])
     xtick_labels = np.array(xtick_labels)
     x_ax = np.arange(1, len(infl_fun_lst)+1, 1, dtype=float)
@@ -145,15 +147,15 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     for i, k in enumerate(kk):
         error = abs_error_end_particle_lst[k]
         plt.plot(x_ax, error, linewidth=2, marker = markers[i], color='k', markersize=8, label='N = '+str(k))
-    err_min, err_max = np.min(abs_error_end_particle), np.max(abs_error_end_particle)
+    err_min, err_max = np.min(error), np.max(error)
     plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
     plt.xlim(0, len(infl_fun_lst)+1)
-    plt.xlabel('influence function'+r'$\omega_i\langle\xi\ranglei$',fontsize=16)
+    plt.xlabel('influence function'+r'$\omega_i\langle\xi\rangle$',fontsize=16)
     plt.ylabel('abs difference', fontsize=16)
     ax.set_xticks(x_ax)
     ax.set_xticklabels(xtick_labels, fontsize=14)
     plt.yticks(fontsize=14)
-    plt.legend(loc='center right', fontsize=14)
+    plt.legend(loc='center right', fontsize=16)
     
     
     ### PLOTTING REL ERROR ###
@@ -165,12 +167,12 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
         plt.plot(x_ax, rel_error, linewidth=2, marker = markers[i], color='k', markersize=8, label='N = '+str(k))
     plt.xlim(0, len(infl_fun_lst)+1)
     plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-    plt.xlabel(r'$\omega\langle\xi\rangle', fontsize=16)
+    plt.xlabel(r'$\omega_i\langle\xi\rangle$', fontsize=16)
     plt.ylabel('rel difference [%]', fontsize=16)
     ax.set_xticks(x_ax)
     ax.set_xticklabels(xtick_labels, fontsize=14)
     plt.yticks(fontsize=14)
-    plt.legend(loc='center right', fontsize=14)
+    plt.legend(loc='center right', fontsize=16)
     fig_path = generate_figure_path(data_path, fig_cnt.err_fig_num, len(cell_cent), 'err', 'infl_fun', struct_grd, vol_corr)
     plt.show(block=False)
     fig_cnt.err_fig_num += 1

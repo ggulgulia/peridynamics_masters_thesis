@@ -805,3 +805,38 @@ def write_to_vtk2D(cents, displacement, file_name):
                     "dispX":dispX, "dispY":dispY})
 
     pass
+    
+def get_colors(num_colors):
+    """
+    creates n distint colors for plts, where n = num_colors
+    source: https://stackoverflow.com/questions/470690/how-to-automatically-generate-n-distinct-colors/4382138#4382138
+    """
+    import colorsys
+    colors = []
+    for i in np.arange(0., 360., 360. / num_colors):
+         hue = i/360.
+         lightness = (50 + np.random.rand() * 10)/100.
+         saturation = (90 + np.random.rand() * 10)/100.
+         colors.append(colorsys.hls_to_rgb(hue, lightness, saturation))
+    return colors
+
+def get_markers(num_markers):
+    """
+    returns list of markers to be used for plt 
+    functions; max markers allowed = 18
+
+    input:
+    ------
+        num_markers: int, number of markers needed
+    output:
+    -------
+        markers : list of distinct plotting markers
+
+    """
+    markers = ['^','o','P','X','*', 'd','<', '>', ',','|', '1','2','3','4','s','p','*','h','+']
+    if(num_markers>18):
+        sys.exit("cannot create more than 18 markers, refactor your code; force exiting")
+
+    return markers[0:num_markers]
+
+

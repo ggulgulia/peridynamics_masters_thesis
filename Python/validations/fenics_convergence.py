@@ -1,39 +1,6 @@
-import colorsys 
 import matplotlib.ticker as mtick
 from fenics_plane_stress import *
 import sys
-
-def get_colors(num_colors):
-    """
-    creates n distint colors for plts, where n = num_colors
-    source: https://stackoverflow.com/questions/470690/how-to-automatically-generate-n-distinct-colors/4382138#4382138
-    """
-    colors = []
-    for i in np.arange(0., 360., 360. / num_colors):
-         hue = i/360.
-         lightness = (50 + np.random.rand() * 10)/100.
-         saturation = (90 + np.random.rand() * 10)/100.
-         colors.append(colorsys.hls_to_rgb(hue, lightness, saturation))
-    return colors
-
-def get_markers(num_markers):
-    """
-    returns list of markers to be used for plt 
-    functions; max markers allowed = 18
-
-    input:
-    ------
-        num_markers: int, number of markers needed
-    output:
-    -------
-        markers : list of distinct plotting markers
-
-    """
-    markers = ['^','o','P','X','*', 'd','<', '>', ',','|', '1','2','3','4','s','p','*','h','+']
-    if(num_markers>18):
-        sys.exit("cannot create more than 18 markers, refactor your code; force exiting")
-
-    return markers[0:num_markers]
 
 
 def generate_mesh_list(corner1=Point(0,0), corner2=Point(3,1), numptsX=30, numptsY=10, delta=10, num_meshes=3):

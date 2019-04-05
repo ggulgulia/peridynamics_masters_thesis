@@ -1,5 +1,6 @@
 import matplotlib.ticker as mtick
 from fenics_plane_stress import *
+from fenics_patch_test import solve_patch_test
 import sys
 
 
@@ -94,7 +95,44 @@ def generate_struct_mesh_list_for_pd_tests():
 
     return unstrct_msh_lst, struct_msh_lst
 
-def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, plot_=True):
+def interpolate_fe_soln_at_boundary(u_fe, cell_cent, boundaryName='top'):
+    """
+    depending on the problem we are solving, we might want to obtain the
+    fe solution interpolated at the (boundary)particle location of 
+    corresponding peridynamic discretization. For this purpose the method
+    does the interpolation correctly and returns the solution
+
+    NOTE: the method works only for 2d  rectangular geometry 
+    and is done to make my life easier while doing tests 
+    my masters for thesis
+
+    :u_fe: FE solution at nodal locations(from FENICS)
+    :boundaryName: name of the boundary where solution is desired
+    :cell_cent: peridynamic discretization of domain 
+    :returns: u_fe_atBoundary
+
+    """
+    #cardinal search dimension for boundary locations
+    ## for left/right we look along x-dim(index 0)
+    ## for top/bottom we look along y-dim(index 1)
+    searchDimDict = {'top':1,'bottom':1, 'left':0, 'right':0}
+    sd = searchDimDict[boundaryName]
+
+    if boundaryName == 'top' or boundaryName == 'right':
+        boundEls= np.ravel((np.argwhere(cell_cent[:,sd] == np.max(cell_cent[:,sd]))))
+    if boundaryName == 'bottom' or boundaryName == 'left':
+        boundEls= np.ravel((np.argwhere(cell_cent[:,sd] == np.min(cell_cent[:,sd]))))
+
+    cell_cent_bound = cell_cent[boundEls]
+   
+    #place holder for interpolated fe solution at boundary of 
+    # corresponding peridynamic mesh
+    u_fe_bnd_cent = np.zeros((len(cell_cent_bound), 2), dtype=float)
+    for idx, cc in enumerate(cell_cent_bound):
+        u_fe_bnd_cent[idx] = u_fe(cc)
+    return u_fe_bnd_cent, cell_cent_bound
+
+def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, problem='transverseTraction',tol=None, plot_=True):
     """
     checks the convergence of fenics for a 
     2D displacement 
@@ -104,6 +142,15 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
         mesh_lst : list of mesh with different dicretizations
         plot_    : boolean, whether we want to plot FE solns
     """
+
+    ##initialize solution paramters for the specific problem
+    fe_solution_method = {'patchTest': solve_patch_test, 'transverseTraction': solve_fenic_bar}
+    boundLocationDict = {'transverseTraction': 'top', 'patchTest':'right'}
+    
+    #set the reference to correct function
+    solve_fe = fe_solution_method[problem]
+    bName    = boundLocationDict[problem]
+
     if(tol == None):
         tol = 1e-5
     
@@ -112,14 +159,6 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
         cell_centroid_function = structured_cell_centroids
     else: 
         cell_centroid_function = get_cell_centroids
-
-    mesh_lst = generate_mesh_list(num_meshes=20, numptsX=numptsX, numptsY=numptsY)
-    num = len(mesh_lst)
-    dim = len(mesh_lst[0].coordinates()[0])
-    fine_mesh = mesh_lst[-1]
-    mesh_lst.pop(len(mesh_lst)-1)
-    dim = fine_mesh.topology().dim()
-    cell_cent_fine = cell_centroid_function(fine_mesh)
 
     u_disp_top_lst = []
     cell_cent_top_lst = []
@@ -134,11 +173,12 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
     nypts_i = numptsY + int((i*delta)/2) 
     mm_i = RectangleMesh(corner1, corner2, nxpts_i, nypts_i) # coarse mesh
 
+    dim = mm_i.topology().dim()
     ##solve the coarse solution
     print("solving bending problem for coarse grid with %i elements "%mm_i.num_cells())
     
     cell_cent_i = cell_centroid_function(mm_i)
-    u_fe_i = solve_fenic_bar(mm_i, cell_cent_i, plot_=False)
+    u_fe_i = solve_fe(mm_i, cell_cent_i, plot_=False)
 
     mesh_lst = []
     err_norm_lst = []
@@ -155,31 +195,23 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, p
         mm_j = RectangleMesh(corner1, corner2, nxpts_j, nypts_j) # fine mesh
         cell_cent_j = cell_centroid_function(mm_j)
 
-        #### get the topmost cell centroids of the beam in fine mesh #######
-        top_els_i= np.ravel((np.argwhere(cell_cent_i[:,1] == np.max(cell_cent_i[:,1]))))
-        cell_cent_top_i = cell_cent_i[top_els_i]
-
         #solve the two solutions
         print("solving bending problem for fine grid with %i elements "%mm_j.num_cells())
         u_fe_j = solve_fenic_bar(mm_j, cell_cent_j, plot_=False)
         
-        #declare empty array to store  displacement soulution of cell centroids 
-        u_disp_top_i = np.zeros((len(cell_cent_top_i), dim), dtype=float)
-        u_disp_top_j = np.zeros((len(cell_cent_top_i), dim), dtype=float)
+        u_disp_top_j, _ = interpolate_fe_soln_at_boundary(u_fe_j, cell_cent_j, boundaryName=bName)
+        u_disp_top_i, cell_cent_top_j= interpolate_fe_soln_at_boundary(u_fe_i, cell_cent_j, boundaryName=bName)
 
-        for idx, cc in enumerate(cell_cent_top_i):
-            u_disp_top_i[idx] = u_fe_i(cc)
-            u_disp_top_j[idx] = u_fe_j(cc)
-        
         err = la.norm(u_disp_top_j-u_disp_top_i, 2, axis=1)
+
         error_lst.append(err)
         err_norm_lst.append(np.max(err))
         u_disp_top_lst.append(u_disp_top_i)
-        cell_cent_top_lst.append(cell_cent_top_i)
+        cell_cent_top_lst.append(cell_cent_top_j)
         if((err<=tol).all()):
-            u_fe_conv = u_fe_i
+            u_fe_conv = u_fe_j
             #new_mesh_lst = mesh_lst[0:idx+1]
-            print("error converged within tolerance of %.3e at iteration %i"%(tol, idx))
+            print("error converged within tolerance of %.3e at iteration %i"%(tol, i))
             break
 
         else:

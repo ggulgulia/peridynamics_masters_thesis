@@ -46,6 +46,9 @@ def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=10e9
         disp_cent : centroids of elements after FE solution
         u_disp    : displacement of each centroid
     """
+    print('************************************')
+    print('************************************')
+    print('******SOLVING THE PATCH TEST********')
     mesh_ext = get_domain_bounding_box(mesh)
 
     L_min = mesh_ext[0][0]; H_min = mesh_ext[0][1]
@@ -59,21 +62,21 @@ def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=10e9
     
     class LeftEdge(SubDomain):
         def inside(self, x, on_boundary):
-            return (on_boundary and abs(x[0]-L_min) < FENICS_EPS*1e3)
+            return (on_boundary and abs(x[0]-L_min) < DOLFIN_EPS*1e3)
     
     class RightEdge(SubDomain):
         def inside(self, x, on_boundary):
             tol = 1e-6
-            return on_boundary and abs(x[0] - L_max) < FENICS_EPS*1e3
+            return on_boundary and abs(x[0] - L_max) < DOLFIN_EPS*1e3
     
     class BottomEdge(SubDomain):
         def inside(self, x, on_boundary):
-            return on_boundary and abs(x[1]-H_min) < FENICS_EPS*1e3
+            return on_boundary and abs(x[1]-H_min) < DOLFIN_EPS*1e3
     
     class TopEdge(SubDomain):
         def inside(self, x, on_boundary):
             tol = 1e-6
-            return on_boundary and abs(x[1] - H_max) < FENICS_EPS*1e3
+            return on_boundary and abs(x[1] - H_max) < DOLFIN_EPS*1e3
     
     ## separate edges
     left_edge   = LeftEdge()
@@ -128,5 +131,9 @@ def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=10e9
         plt.xlim(L_min-0.5,L_max+0.5)
         plt.ylim(H_min-0.5,H_max+0.5)
         plt.show(block=False)
+
+    print('************************************')
+    print('************************************')
+    print('*********END OF PATCH TEST**********')
 
     return u_fe

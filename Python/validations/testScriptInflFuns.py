@@ -150,7 +150,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     err_min, err_max = np.min(error), np.max(error)
     plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
     plt.xlim(0, len(infl_fun_lst)+1)
-    plt.xlabel('influence function'+r'$\omega_i\langle\xi\rangle$',fontsize=16)
+    plt.xlabel('influence function '+r'$\omega_i\langle\xi\rangle$',fontsize=15)
     plt.ylabel('abs difference', fontsize=16)
     ax.set_xticks(x_ax)
     ax.set_xticklabels(xtick_labels, fontsize=14)

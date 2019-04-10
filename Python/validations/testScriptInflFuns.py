@@ -29,14 +29,14 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     infl_fun_ordered_lst = ['omega1', 'omega2', 'omega3', 'omega4']
     infl_fun_lst = {'omega1':gaussian_infl_fun2, 'omega2':gaussian_infl_fun1, 'omega3': parabolic_infl_fun2, 'omega4':parabolic_infl_fun1, }
 
-    infl_fun_ordered_lst = ['omega1']
-    infl_fun_lst = {'omega1':gaussian_infl_fun2}
+   # infl_fun_ordered_lst = ['omega1']
+   # infl_fun_lst = {'omega1':gaussian_infl_fun2}
 
     infl_fun_keys = infl_fun_lst.keys()
     infl_fun_name = {'omega1':'STANDARD GAUSSIAN', 'omega2': 'NARROW GAUSSIAN', 'omega3': 'STANDARD PARABOLA', 'omega4': 'PERIDIGM PARABOLA'}
     infl_fun_symbols = get_influence_function_symbol()
 
-    horizon = 0.14
+    horizon = 0.166672235556
     dim = mesh_lst[0].topology().dim()
     ## Empty global lists to store data for each mesh in mesh_lst
     cell_cent_top_lst =      [] #top cell centroids of each mesh
@@ -115,7 +115,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
 
         str_struct_grd = str(bool(struct_grd))
         str_vol_corr   = str(bool(vol_corr))
-        plt.title('Num Cells = %i'%numParticles, fontsize=20)
+        plt.title('Omega tests, Num Cells = %i, vol_corr= %s'%(numParticles,str_vol_corr), fontsize=20)
         plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
         plt.ylim( -0.012, 0.002)
         plt.ylabel('y-displacement [m]', fontsize=16)
@@ -155,6 +155,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     ax.set_xticks(x_ax)
     ax.set_xticklabels(xtick_labels, fontsize=14)
     plt.yticks(fontsize=14)
+    plt.title("omega tests, absloute error, vol corr= %s"%str_vol_corr)
     plt.legend(loc='center right', fontsize=16)
     
     
@@ -174,6 +175,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     plt.yticks(fontsize=14)
     plt.legend(loc='center right', fontsize=16)
     fig_path = generate_figure_path(data_path, fig_cnt.err_fig_num, len(cell_cent), 'err', 'infl_fun', struct_grd, vol_corr)
+    plt.title("omega tests, relerror, vol corr= %s"%str_vol_corr)
     plt.show(block=False)
     fig_cnt.err_fig_num += 1
     

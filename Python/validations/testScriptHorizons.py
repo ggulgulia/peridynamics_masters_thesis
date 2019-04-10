@@ -73,6 +73,7 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
         fig = plt.figure()
         ax = fig.add_subplot(111)
         plt.plot(cell_cent_top[:,0], u_top_fe[:,1], color=colors[0], linewidth=2, label='FE')
+        plt.title("vol correction = True, horizon studies", fontsize=14)
         end_cell_y_disp_fe = u_top_fe[-1][1]
 
         colors.pop(0)

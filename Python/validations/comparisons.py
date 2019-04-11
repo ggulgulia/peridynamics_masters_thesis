@@ -1,5 +1,6 @@
 from testScriptInflFuns import *
 from testScriptHorizons import *
+from testScriptMaterials import *
 #from testScriptMaterials import *
 
 def run_comparisons():
@@ -34,6 +35,9 @@ def run_comparisons():
 #
 #    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_infl_funs_with_FE(unstr_msh_lst, u_fe_conv, fig_cnt, data_path=omga, plot_=False, vol_corr=True, struct_grd=False)
 #
+        
+    ######## the method in the script calls correspondence constitutive response model by default ##########################
+    cell_cent_top_lst_csp, u_top_fe_conv_lst_csp, disp_cent_PD_array_lst_csp, u_disp_PD_array_lst_csp, abs_error_end_particle_lst_csp, rel_error_end_particle_lst_csp = compare_PD_material_models(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=True)
 #    sqr_msh_lst = managable_mesh_list(mesh_lst, struct_grd=False)
     #sqr_msh_lst = mesh_lst 
     ##square mesh, horizon studies

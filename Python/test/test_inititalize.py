@@ -1,9 +1,9 @@
 from peridynamic_neighbor_data import *
 from peridynamic_quad_tree import *
 from peridynamic_linear_quad_tree import *
-from peridynamic_stiffness import*
+from peridynamic_stiffness import computeK
 from peridynamic_solvers import direct_solver
-#from peridynamic_correspondence import *
+from peridynamic_correspondence import computeKCorrespondance
 from peridynamic_boundary_conditions import *
 from peridynamic_infl_fun import *
 from peridynamic_materials import *
@@ -38,7 +38,7 @@ node_cents_force = get_bound_cell_cents(node_ids_force, cell_cent)
 omega_fun = gaussian_infl_fun2
 E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
-horizon = 2.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
+horizon = 5.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
 #horizon = 0.3001
 tree = QuadTree()
 tree.put(extents, horizon)
@@ -54,6 +54,7 @@ u_disp = np.zeros((len(cell_cent), dim), dtype=float)
 bnd_dmg_lst = compute_bond_damage(s0, cell_cent, nbr_lst, u_disp)
 
 K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)
+#K = computeKCorrespondance(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)
 K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dirichlet, node_ids_force, struct_grd)
 
 u_disp = direct_solver(K_bound, fb, dim, reshape=True)

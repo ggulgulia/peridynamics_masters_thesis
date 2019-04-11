@@ -1,5 +1,6 @@
 import matplotlib.ticker as mtick
 from fenics_plane_stress import *
+from fenics_axial_load import solve_fenic_bar_axial
 from fenics_patch_test import solve_patch_test
 import sys
 
@@ -144,15 +145,15 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, problem='tr
     """
 
     ##initialize solution paramters for the specific problem
-    fe_solution_method = {'patchTest': solve_patch_test, 'transverseTraction': solve_fenic_bar}
-    boundLocationDict = {'transverseTraction': 'top', 'patchTest':'right'}
+    fe_solution_method = {'patchTest': solve_patch_test, 'transverseTraction': solve_fenic_bar, 'axialLoad':solve_fenic_bar_axial}
+    boundLocationDict = {'transverseTraction': 'top', 'patchTest':'right', 'axialLoad':'center'}
     
     #set the reference to correct function
     solve_fe = fe_solution_method[problem]
     bName    = boundLocationDict[problem]
 
     if(tol == None):
-        tol = 1e-3
+        tol = 1e-5
     
     #assign function reference for cell centroids
     if struct_grd:
@@ -197,7 +198,7 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, problem='tr
 
         #solve the two solutions
         print("solving bending problem for fine grid with %i elements "%mm_j.num_cells())
-        u_fe_j = solve_fenic_bar(mm_j, cell_cent_j, plot_=False)
+        u_fe_j = solve_fe(mm_j, cell_cent_j, plot_=False)
         
         u_disp_top_j, _ = interpolate_fe_soln_at_boundary(u_fe_j, cell_cent_j, bName=bName)
         u_disp_top_i, cell_cent_top_j= interpolate_fe_soln_at_boundary(u_fe_i, cell_cent_j, bName=bName)
@@ -206,7 +207,7 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, problem='tr
 
         error_lst.append(err)
         err_norm_lst.append(np.max(err))
-        u_disp_top_lst.append(u_disp_top_i)
+        u_disp_top_lst.append(u_disp_top_j)
         cell_cent_top_lst.append(cell_cent_top_j)
         if((err<=tol).all()):
             u_fe_conv = u_fe_j
@@ -226,7 +227,7 @@ def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, problem='tr
         if bName == 'top' or bName =='bottom':
             xx = cell_cent_top_lst[i][:,0]
             yy = u_disp_top_lst[i][:,1]
-            plt.plot(xx, yy, color=colors[i], linewidth=2, label='num cells:'+str(mesh_lst[i].num_cells()))
+            plt.plot(xx, yy, color=colors[i], linewidth=2, label=str(i+1)+'. num cells:'+str(mesh_lst[i].num_cells()))
             ii += 1
         if bName == 'left' or bName == 'right':
             xx = cell_cent_top_lst[i][:,1]

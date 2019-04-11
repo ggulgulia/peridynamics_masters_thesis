@@ -1,21 +1,27 @@
 from peridynamic_neighbor_data import *
 from peridynamic_quad_tree import *
 from peridynamic_linear_quad_tree import *
-from peridynamic_stiffness import*
+from peridynamic_stiffness import computeK
+from peridynamic_correspondence import computeKCorrespondance
 from peridynamic_boundary_conditions import *
 from peridynamic_solvers import direct_solver
 from peridynamic_materials import *
 import mshr
 import timeit as tm
-#from peridynamic_infl_fun import *
+
 from peridynamic_damage import *
 
 
-def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, material='steel', omega_fun=None, plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
+def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, material='steel', omega_fun=None, plot_=False, force=-5e8, vol_corr=True, struct_grd=False, response='LPS'):
     """
     solves the peridynamic bar with a specified load
 
     """
+    if response == 'LPS':
+        computeK = computeK
+    if response == 'correspondance':
+        computeK = computeKCorrespondance
+    
 
     dmg_flag=False
     print('horizon value: %4.3f\n'%horizon)
@@ -29,7 +35,7 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, mate
     el = get_peridym_edge_length(cell_cent, struct_grd) 
     extents = compute_modified_extents(cell_cent, el, struct_grd)
     dim = m.topology().dim() 
-    
+     
     
     #boudary conditions management
     node_ids_dir = get_boundary_layers(cell_cent, el, num_lyrs, bc_loc, struct_grd)

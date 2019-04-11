@@ -218,7 +218,7 @@ def computeInternalForce_naive(curr_cell ,u, horizon, nbr_lst, nbr_beta_lst, bnd
 
     return f_global
 
-def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, shearMod, bulkMod, gamma, omega_fun, u_disp):
+def computeKCorrespondance(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, shearMod, bulkMod, gamma, omega_fun, u_disp):
     
     """
     computes the tangent stiffness matrix based on central difference method
@@ -265,8 +265,9 @@ def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cen
 
     if correct_zero_energy_modes:
         computeInternalForce = computeInternalForce_correct_zero_energy_mode
-        G = 9.0 #positive constant of order 1, from paper mailed by Dr Silling
-        gamma_corr = 18*G*bulkMod/(math.pi*quad(integrand2, 0, horizon)[0]) #alpha is still missing
+        G = 0.1 #positive constant of order 1, from paper mailed by Dr Silling
+        gamma_corr = 18*G*bulkMod/(math.pi*quad(integrand2, 0, horizon)[0]*horizon**5) #alpha is still missing
+        #gamma_corr = 18*G*bulkMod/(math.pi*horizon**5) #alpha is still missing
     else:
         computeInternalForce = computeInternalForce_naive
         gamma_corr=None

@@ -80,7 +80,7 @@ def plot_peridym_mesh(mesh=None, struct_grd=True, cell_cent=None, disp_cent=None
     if dim == 2 : 
         ax = fig.add_subplot(111)
         x,y = cell_cent.T
-        plt.scatter(x,y, s=300, color='c', marker='o', alpha=0.8)
+        plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6)
         plt.axis=('off')
 
     if annotate==True:

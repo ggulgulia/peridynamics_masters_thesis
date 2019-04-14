@@ -110,3 +110,76 @@ def generate_figure_path(fig_path, fig_counter, mesh_size, metric1='err', metric
     new_fig_path = metric1 + '_' + str(fig_counter).zfill(3) + '_'+ metric2 + '_msh'+ str(mesh_size) + strct_grd_str + vol_corr_str 
     new_fig_path = path.join(fig_path, new_fig_path)
     return new_fig_path
+    
+    
+def get_obs_extent(el, curr_mesh):
+    """
+    retruns the rectangular zone around the centrline 
+    having two layers of cells , at 5 deltaX away from 
+    left and right edges of the 2D plate for obsrvation of 
+    solution
+    """
+    dim = 2
+    extents = get_domain_bounding_box(curr_mesh)
+    obs_extents = cpy.deepcopy(extents)
+    domain_cent = np.zeros(dim, dtype=float)
+    for d in range(dim):
+        domain_cent[d] = 0.5*np.sum(extents[:,d])
+
+    #obs_extents[0][0] = extents[0][0] + 5.000*el[0];
+    #obs_extents[1][0] = extents[1][0] - 5.000*el[0];
+    obs_extents[0][0] = 0.35; obs_extents[1][0]=1.65;
+    obs_extents[0][1] = domain_cent[1] - 1.000*el[0];
+    obs_extents[1][1] = domain_cent[1] + 1.000*el[0];
+    
+    
+    
+    return obs_extents
+
+def get_centerline_cells_and_idx(cell_cent, obs_extents):
+    """TODO: Docstring for get_centerline_cells.
+
+    :cell_cent: TODO
+    :obs_extents: TODO
+    :returns: TODO
+        
+        centerline_y_axis
+    """
+    cc1 = cell_cent[np.where(cell_cent[:,0] > obs_extents[0][0])]
+    cc2 = cc1[np.where(cc1[:,0] < obs_extents[1][0])]
+    cc3 = cc2[np.where(cc2[:,1] > obs_extents[0][1])]
+    cc4 = cc3[np.where(cc3[:,1] < obs_extents[1][1])]
+
+    idx = np.where((cell_cent==cc4[:,None]).all(-1))[1]
+    cc4max = cc4[np.where(cc4[:,1] == np.max(cc4[:,1]))]
+    cc4min = cc4[np.where(cc4[:,1] == np.min(cc4[:,1]))]
+    cent_X_axis = 0.5*(cc4min[:,0]  + cc4max[:,0])    
+    cent_Y_axis = 0.5*(cc4min[:,1]  + cc4max[:,1])    
+
+    y_axes = np.unique(cc4[:,1])
+    return cc4, idx, cent_X_axis, cent_Y_axis
+
+def separate_centrline_lyers_by_y_coordinates(cell_cent, centerline_cells):
+    """
+    assuming centerline cells have two layers,
+    this method returns the arrays of each layers 
+    and their global id corresponding to cell_cent
+
+    :cell_cent: TODO
+    :centerline_cells: TODO
+    :returns: TODO
+
+    """
+    cc4 = centerline_cells
+    y_uniq_coord = np.unique(cc4[:,1])
+
+    idx_lst = []
+    cent_Y_lyrs = []
+    for yy in y_uniq_coord:
+        cent_Y_lyrs_temp = centerline_cells[np.where(cc4[:,1] == yy)]
+        idx = np.where((cell_cent==cent_Y_lyrs_temp[:,None]).all(-1))[1]
+
+        cent_Y_lyrs.append(cent_Y_lyrs_temp)
+        idx_lst.append(idx)
+
+    return cent_Y_lyrs, idx_lst 

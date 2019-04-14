@@ -84,7 +84,6 @@ def computeInternalForce(curr_cell,u,horizon, nbr_lst, nbr_beta_lst, bnd_dmg_lst
     return f
 
             
-#@jit(nopython=True, parallel=True)
 def computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp):
     
     """

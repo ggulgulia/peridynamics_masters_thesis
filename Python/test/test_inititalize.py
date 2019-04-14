@@ -14,7 +14,7 @@ import mshr
 #m = box_mesh_with_hole(numpts=20)
 #domain = mshr.Rectangle(Point(0,0), Point(3,1))
 #m = mshr.generate_mesh(domain, 30)
-m = RectangleMesh(Point(0,0), Point(2,1), 20, 10)
+m = RectangleMesh(Point(0,0), Point(2,1), 3, 15)
 #m = rectangle_mesh(numptsX=20, numptsY=10)
 #m = rectangle_mesh_with_hole(npts=25)
 
@@ -38,7 +38,7 @@ node_cents_force = get_bound_cell_cents(node_ids_force, cell_cent)
 omega_fun = gaussian_infl_fun2
 E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
-horizon = 5.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
+horizon = 3.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
 #horizon = 0.3001
 tree = QuadTree()
 tree.put(extents, horizon)
@@ -53,8 +53,8 @@ mw = peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst, nbr_beta_lst,
 u_disp = np.zeros((len(cell_cent), dim), dtype=float)
 bnd_dmg_lst = compute_bond_damage(s0, cell_cent, nbr_lst, u_disp)
 
-K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)
-#K = computeKCorrespondance(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)
+#K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)
+K = computeKCorrespondance(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)
 K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dirichlet, node_ids_force, struct_grd)
 
 u_disp = direct_solver(K_bound, fb, dim, reshape=True)

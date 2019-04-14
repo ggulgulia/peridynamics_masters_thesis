@@ -261,7 +261,7 @@ def computeKCorrespondance(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst
     hence we do 'inplace computation' of the final gamma_corr
     """
      
-    correct_zero_energy_modes = True
+    correct_zero_energy_modes = False
 
     if correct_zero_energy_modes:
         computeInternalForce = computeInternalForce_correct_zero_energy_mode

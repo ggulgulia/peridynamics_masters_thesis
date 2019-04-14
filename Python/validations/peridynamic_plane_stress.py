@@ -18,9 +18,9 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, mate
 
     """
     if response == 'LPS':
-        computeK = computeK
+        computeStiffness = computeK
     if response == 'correspondance':
-        computeK = computeKCorrespondance
+        computeStiffness = computeKCorrespondance
     
 
     dmg_flag=False
@@ -30,9 +30,9 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, mate
     bc_type = {'dirichlet':0, 'forceY':1}
     bc_vals = {'dirichlet': 0, 'forceY': force}
     bc_loc = [0,1]
-    num_lyrs = 2
+    num_lyrs = 3 #three times discretization width
     cell_cent, cell_vol = add_ghost_cells(m, bc_loc, num_lyrs, struct_grd) 
-    el = get_peridym_edge_length(cell_cent, struct_grd) 
+    el = get_peridym_edge_length(cell_cent, struct_grd)
     extents = compute_modified_extents(cell_cent, el, struct_grd)
     dim = m.topology().dim() 
      
@@ -57,7 +57,7 @@ def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, mate
     bnd_dmg_lst = compute_bond_damage(s0, cell_cent, nbr_lst, u_disp, dmg_flag)
 
     mw = peridym_compute_weighted_volume(cell_cent, cell_vol, nbr_lst, nbr_beta_lst, horizon, omega_fun) 
-    K = computeK(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)   
+    K = computeStiffness(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst, mw, cell_cent, E, nu, mu, bulk, gamma, omega_fun, u_disp)   
     #apply bc
     K_bound, fb = peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, node_ids_frc, struct_grd)
     #solve

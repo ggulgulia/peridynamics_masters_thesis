@@ -1,74 +1,5 @@
 from testHelper import*
 
-#def get_obs_extent(el, curr_mesh):
-#    """
-#    retruns the rectangular zone around the centrline 
-#    having two layers of cells , at 5 deltaX away from 
-#    left and right edges of the 2D plate for obsrvation of 
-#    solution
-#    """
-#    dim = 2
-#    extents = get_domain_bounding_box(curr_mesh)
-#    obs_extents = cpy.deepcopy(extents)
-#    domain_cent = np.zeros(dim, dtype=float)
-#    for d in range(dim):
-#        domain_cent[d] = 0.5*np.sum(extents[:,d])
-#
-#    obs_extents[0][0] = extents[0][0] + 5.000*el[0];
-#    obs_extents[1][0] = extents[1][0] - 5.000*el[0];
-#    obs_extents[0][1] = domain_cent[1] - 1.000*el[0];
-#    obs_extents[1][1] = domain_cent[1] + 1.000*el[0];
-#
-#    return obs_extents
-#
-#def get_centerline_cells_and_idx(cell_cent, obs_extents):
-#    """TODO: Docstring for get_centerline_cells.
-#
-#    :cell_cent: TODO
-#    :obs_extents: TODO
-#    :returns: TODO
-#        
-#        centerline_y_axis
-#    """
-#    cc1 = cell_cent[np.where(cell_cent[:,0] > obs_extents[0][0])]
-#    cc2 = cc1[np.where(cc1[:,0] < obs_extents[1][0])]
-#    cc3 = cc2[np.where(cc2[:,1] > obs_extents[0][1])]
-#    cc4 = cc3[np.where(cc3[:,1] < obs_extents[1][1])]
-#
-#    idx = np.where((cell_cent==cc4[:,None]).all(-1))[1]
-#    cc4max = cc4[np.where(cc4[:,1] == np.max(cc4[:,1]))]
-#    cc4min = cc4[np.where(cc4[:,1] == np.min(cc4[:,1]))]
-#    cent_X_axis = 0.5*(cc4min[:,0]  + cc4max[:,0])    
-#    cent_Y_axis = 0.5*(cc4min[:,1]  + cc4max[:,1])    
-#
-#    y_axes = np.unique(cc4[:,1])
-#    return cc4, idx, cent_X_axis, cent_Y_axis
-#
-#def separate_centrline_lyers_by_y_coordinates(cell_cent, centerline_cells):
-#    """
-#    assuming centerline cells have two layers,
-#    this method returns the arrays of each layers 
-#    and their global id corresponding to cell_cent
-#
-#    :cell_cent: TODO
-#    :centerline_cells: TODO
-#    :returns: TODO
-#
-#    """
-#    cc4 = centerline_cells
-#    y_uniq_coord = np.unique(cc4[:,1])
-#
-#    idx_lst = []
-#    cent_Y_lyrs = []
-#    for yy in y_uniq_coord:
-#        cent_Y_lyrs_temp = centerline_cells[np.where(cc4[:,1] == yy)]
-#        idx = np.where((cell_cent==cent_Y_lyrs_temp[:,None]).all(-1))[1]
-#
-#        cent_Y_lyrs.append(cent_Y_lyrs_temp)
-#        idx_lst.append(idx)
-#
-#    return cent_Y_lyrs, idx_lst 
-
 def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
     """
     compares the FE and PD solution with varying horizon 
@@ -86,14 +17,12 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
 
     dim = mesh_lst[0].topology().dim()
     ## Empty global lists to store data for each mesh in mesh_lst
-    centerline_cells_lst =   [] #top cell centroids of each mesh
-    u_cntline_fe_conv_lst =  [] #solution on the finest mesh interpolated at top cell centroids of each mesh
-    u_disp_PD_array_lst =    {} #displaced cell centroids for each mesh from peridynamic theory
+    cell_cent_top_lst =      [] #top cell centroids of each mesh
+    u_top_fe_conv_lst =      [] #solution on the finest mesh interpolated at top cell centroids of each mesh
+    u_disp_PD_array_lst =    [] #displaced cell centroids for each mesh from peridynamic theory
     disp_cent_PD_array_lst = [] #cell centroids after adding displacements to cell centroids in original config
     abs_error_end_particle_lst = {}
     rel_error_end_particle_lst = {}
-    abs_error_avg_cntlineY_lst = {}
-    rel_error_avg_cntlineY_lst = {}
     
     #solve for each mesh in mesh_lst  
     print("*********************************************************")
@@ -109,17 +38,18 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
             #horizons = np.arange(0.8, 1.6, 0.2)*5.001*curr_mesh.hmax()
             print("(UNSTRUCTURED) grid size of equivalent Peridynamic grid: %i" %len(cell_cent))
 
+        el = get_peridym_edge_length(cell_cent, struct_grd)
+
         #edge lengths are currently [0.05555556, 0.04545455, 0.03846154, 0.03333333, 0.02941176]
         # need to select horizon approporiately : min horizon is 2.0001 times max edge length
         #expected particle count in uniform[square/triangle] grid: 648, 900, 1300, 1800
         horizons = np.array([0.11111667555600001, 0.166672235556, 0.22222779555599997, 0.277783355556], dtype=float)
-        horizons = np.array([0.20611111667555600001, 0.3001])
+        #horizons = np.array([0.0611111667555600001])
         #declare empty storage for each horizon in 'horizons' array and curr_mesh  
         infl_fun = gaussian_infl_fun2
         disp_cent_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
         u_disp_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
 
-        numParticles = len(cell_cent)
 
         for i in range(len(horizons)):
             _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizons[i], curr_mesh, material=material, omega_fun=infl_fun, plot_=False, force=force, vol_corr=vol_corr, struct_grd=struct_grd)
@@ -128,105 +58,98 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
             u_disp_PD_array[i]    = u_disp_i 
             print("*********************************************************")
             print("*********************************************************")
-        u_disp_PD_array_lst[numParticles] = u_disp_PD_array
         
-
-         ###### POST PROCESSING #######
-        ### computation to get domain range where we want to monitor results ###
-        el = get_peridym_edge_length(cell_cent, struct_grd)
-        obs_extents = get_obs_extent(el, curr_mesh)
-        centerline_cells, idx, cent_X_axis, cent_Y_axis = get_centerline_cells_and_idx(cell_cent, obs_extents)
-        cent_Y_lyrs, idx_lst = separate_centrline_lyers_by_y_coordinates(cell_cent, centerline_cells)
-
-        num_cnt_lyrs = len(cent_Y_lyrs)
-        u_cntline_fe = np.zeros((len(cent_Y_lyrs[0]), dim), dtype=float) #assume the particles in each layers are equal
-        u_cntline_PD = np.zeros((len(cent_Y_lyrs[0]), dim), dtype=float) #assume the particles in each layers are equal
-        for i in range(num_cnt_lyrs):
-            for j, cc in enumerate(cent_Y_lyrs[i]):
-                 u_cntline_fe[j] += u_fe_conv(cc)
-        u_cntline_fe = u_cntline_fe/num_cnt_lyrs
-
-        ###### PLOT PD and FE solns along centerline #####
+        #interpolate FE solution from the finest mesh to topmost cell centroids
+        # in the curr_mesh
+        top_els = np.ravel(np.argwhere(cell_cent[:,1] == np.max(cell_cent[:,1])))
+        cell_cent_top = cell_cent[top_els]
+        u_top_fe = np.zeros((len(cell_cent_top),dim), dtype=float)
+        for i, cc in enumerate(cell_cent_top):
+            u_top_fe[i] = u_fe_conv(cc)
+       
+        numParticles = len(cell_cent)
+        ###### PLOT PD and FE solns #####
         colors = get_colors(len(horizons)+1)
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        plt.plot(cent_X_axis, u_cntline_fe[:,1], color=colors[0], linewidth=2, label='FE')
-        plt.title("N=%i,vol correction=%s, horizon studies"%(numParticles,str(vol_corr)), fontsize=14)
-        #compute difference b/w PD and FE at centereline
-        abs_error_avg_cntlineY = np.zeros(len(horizons), dtype=float)
-        rel_error_avg_cntlineY = np.zeros(len(horizons), dtype=float)
+        plt.plot(cell_cent_top[:,0], u_top_fe[:,1], color=colors[0], linewidth=2, label='FE')
+        plt.title("vol correction = True, horizon studies", fontsize=14)
+        end_cell_y_disp_fe = u_top_fe[-1][1]
 
         colors.pop(0)
+
+        ### collect end cell errors
+        abs_error_end_particle = np.zeros(len(horizons), dtype=float)
+        rel_error_end_particle = np.zeros(len(horizons), dtype=float)
         for i in range(len(horizons)):
-            u_disp_PD_i =  u_disp_PD_array[i]
-            for lyr_idx in idx_lst:
-                u_cntline_PD += u_disp_PD_i[lyr_idx]
+            u_disp_pd_top = u_disp_PD_array[i][top_els]
+            end_cell_y_disp_pd = u_disp_pd_top[-1][1]
+            abs_error_end_particle[i] = abs(end_cell_y_disp_pd - end_cell_y_disp_fe)
+            rel_error_end_particle[i] = abs_error_end_particle[i]/abs(end_cell_y_disp_fe)*100.0
+            plt.plot(cell_cent_top[:,0], u_disp_pd_top[:,1], color=colors[i], linewidth=2, label='$\delta:$'+format(horizons[i], '.2E'))
 
-            u_cntline_PD = u_cntline_PD/num_cnt_lyrs
-            #compute avg y displacement
-            avg_Y_cntline_dispPD = np.average(u_cntline_PD[:,1])
-            avg_Y_cntline_dispFE = np.average(u_cntline_fe[:,1])
-            abs_error_avg_cntlineY[i] = abs(avg_Y_cntline_dispPD - avg_Y_cntline_dispFE)
-            rel_error_avg_cntlineY[i] = abs_error_avg_cntlineY[i]/abs(avg_Y_cntline_dispFE)*100.0
-            plt.plot(cent_X_axis, u_cntline_PD[:,1], color=colors[i], linewidth=2, label='$\delta:$'+format(horizons[i], '.2E'))
-        abs_error_avg_cntlineY_lst[numParticles] = abs_error_avg_cntlineY
-        rel_error_avg_cntlineY_lst[numParticles] = rel_error_avg_cntlineY
 
-        plt.xlabel('x-coordinates of particles [m]', fontsize=16)
-        plt.ylabel('y-displacement [m]', fontsize=16)
+        ## append data to global list
+        abs_error_end_particle_lst[numParticles] = abs_error_end_particle
+        rel_error_end_particle_lst[numParticles] = rel_error_end_particle
+
+        plt.legend(loc='center left', fontsize=14)
+        str_struct_grd = str(bool(struct_grd))
+        str_vol_corr   = str(bool(vol_corr))
+        plt.title("Num Cells = %i"%numParticles)
         plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-        plt.gca().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-        plt.xticks(fontsize=12); plt.yticks(fontsize=12)
-        plt.legend(loc='lower left', fontsize=12)
+        plt.ylim( -0.012, 0.002)
+        plt.xlim(-0.001, 2.001)
+        plt.xlabel('x coordinates of centroids [m]', fontsize=18)
+        plt.ylabel('y-displacement [m]', fontsize=18 )
+        plt.xticks(fontsize=14); plt.yticks(fontsize=14)
+        fig_path = generate_figure_path(data_path, fig_cnt.disp_fig_num, len(cell_cent), 'disp', 'horizon', struct_grd, vol_corr)
+        #plt.savefig(fig_path, dpi=dpi)
+        plt.show(block=False)
+        fig_cnt.disp_fig_num += 1
 
+        ###### PLOT diff b/w PD and FE solns #####
+        #plt.suptitle('displacement of top centroids mesh size: %i, el: %4.3f, struc_grd: %s, vol_corr: %s'%(len(cell_cent), el[0], str_struct_grd, str_vol_corr), **title_font)
+        #plt.subplot(1,2,1)
 
-    kk = abs_error_avg_cntlineY_lst.keys()
-    markers= get_markers(len(horizons)+1)
+    kk = abs_error_end_particle_lst.keys()
+
+    markers = get_markers(len(horizons)+1)
+    colors = get_colors(len(horizons)+1)
+
     ############## Plot ABS and REL ERRORS #########
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
+    plt.figure()
     for i, k in enumerate(kk):
-        error = abs_error_avg_cntlineY_lst[k]
+        error = abs_error_end_particle_lst[k]
         plt.plot(horizons, error, linewidth=2, marker=markers[i], color='k', markersize=8, label='N = '+str(k))
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    plt.xlim(horizons[0]-horizons[0]/5, horizons[-1] + horizons[-1]/5)
     plt.xlabel('Horizon, $\delta$ [m]', fontsize=16)
     plt.ylabel('abs difference in displacement', fontsize=16)
-    ax.set_xticks(horizons)
-    ax.set_xticklabels(horizons, fontsize=12)
-    plt.xticks(fontsize=12); plt.yticks(fontsize=12)
-    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-    plt.gca().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-    plt.legend(loc='upper left',fancybox=True, framealpha=0.0, fontsize=12)
+    plt.xticks(fontsize=14); plt.yticks(fontsize=14)
+    plt.legend(loc='center right', fontsize=14)
     plt.title('abs error b/w PD and FE vs Horizon size',  fontsize=18)
 
-    plt.show(block=False)
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
+    plt.figure()
     for i, k in enumerate(kk):
-        rel_error = rel_error_avg_cntlineY_lst[k]
+        rel_error = rel_error_end_particle_lst[k]
         plt.plot(horizons, rel_error, linewidth=2, marker=markers[i], color='k', markersize=8, label='N = '+str(k))
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    plt.xlim(horizons[0]-horizons[0]/5, horizons[-1] + horizons[-1]/5)
+    plt.xlabel('Horizon $\delta$ [m]', fontsize= 16)
+    plt.ylabel('rel difference in displacement [%]', fontsize=16)
+    plt.xticks(fontsize=14); plt.yticks(fontsize=14)
+    plt.legend(loc='center right', fontsize=14)
+    plt.title('rel error b/w PD and FE vs Horizon size', fontsize=18)
+    fig_path = generate_figure_path(data_path, fig_cnt.err_fig_num, len(cell_cent), 'err', 'horizon', struct_grd, vol_corr)
+    #plt.savefig(fig_path, dpi=dpi)
+    plt.show(block=False)
     fig_cnt.err_fig_num +=1
-    plt.xlabel('Horizon, $\delta$ [m]', fontsize=16)
-    plt.ylabel('rel difference in displacement', fontsize=16)
-    ax.set_xticks(horizons)
-    ax.set_xticklabels(horizons, fontsize=12)
-    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.0E'))
-    plt.gca().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-    plt.xticks(fontsize=12); plt.yticks(fontsize=12)
-    plt.legend(loc='upper left',fancybox=True, framealpha=0.0, fontsize=12)
-    plt.title('rel error b/w PD and FE vs Horizon size',  fontsize=18)
 
     # save the data for the curr_mesh to global lists
+    cell_cent_top_lst.append(cell_cent_top) 
+    u_top_fe_conv_lst.append(u_top_fe)
+    u_disp_PD_array_lst.append(u_disp_PD_array)
+    disp_cent_PD_array_lst.append(disp_cent_PD_array)
 
-    return u_disp_PD_array_lst, abs_error_avg_cntlineY_lst, rel_error_avg_cntlineY_lst 
-
-
-
-
-    ### to get additional legends
-    #h = [plt.plot([],[], color=colors[i], marker=markers[i], ms=8, ls="")[0] for i in range(5)]
-    #leg1 = plt.legend(handles=h, labels=[648, 968, 1352, 1800, 2312],loc='upper right', title="Particle Count", fontsize=10)
-    #ax.add_artist(leg1)
-
-    #h2 = [plt.plot([],[], color='k', linewidth=1.5, ms=8, ls=ls[i])[0] for i in range(2)]
-    #plt.legend(handles=h2, labels=['w/i Volume Correction', 'w/o Volume Correction'],loc='lower center', fontsize=10)
-    #ax.add_artist(leg2)
+    return cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst 

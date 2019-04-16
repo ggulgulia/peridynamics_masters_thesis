@@ -1,6 +1,8 @@
 from testScriptInflFuns import *
 from testScriptHorizons import *
 from testScriptMaterials import *
+from testScriptInflFunStrctGrd import compare_PD_infl_funs_with_FE_StrctGrd
+from testScriptHorizonStrctGrd import compare_PD_horizons_with_FE_StrctGrd
 #from testScriptMaterials import *
 
 def run_comparisons():
@@ -50,5 +52,10 @@ def run_comparisons():
 #
 #    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_infl_funs_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=omga, plot_=False, vol_corr=True, struct_grd=True)
 #
+    #### Influence function studies with new scripts ####
+    u_disp_PD_array_lst, abs_error_avg_cntlineY_lst, rel_error_avg_cntlineY_lst = compare_PD_infl_funs_with_FE_StrctGrd(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=True)
+
+    ##### Horizon studies with new scripts ########
+    u_disp_PD_array_lst, abs_error_avg_cntlineY_lst, rel_error_avg_cntlineY_lst = compare_PD_horizons_with_FE_StrctGrd(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=True)
     print("SUCCESSFULLY FINISHED THE STUDIES\nGOODLUCK ANALYZING ERRORS FROM THE TON OF FILES THAT HAVE BEEN WRITTEN\n")
     return 

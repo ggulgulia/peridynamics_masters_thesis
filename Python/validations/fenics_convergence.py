@@ -178,7 +178,7 @@ def err_mthd_axialLoad(u_fe_coarse, u_fe_fine, cell_cent_bnd):
     return la.norm(u_fe_fine_avg-u_fe_coarse_avg, 2, axis=0)
     
 
-def fenics_mesh_convergence(struct_grd=False, numptsX=10, numptsY=5, tol=None, plot_=True, force=-5e8, problem='transveseTraction'):
+def fenics_mesh_convergence(struct_grd=True, numptsX=10, numptsY=5, tol=None, plot_=True, force=-5e8, problem='transverseTraction'):
     """
     checks the convergence of fenics for a 
     2D displacement 

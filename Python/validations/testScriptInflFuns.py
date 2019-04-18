@@ -1,8 +1,45 @@
 from testHelper import*
+from peridynamics_global_test_script import solve_peridynamic_bar_problem
 
+def interpolate_fe_pd_soln_at_boundary(u_fe, cell_cent, bName='top'):
+    """
+    depending on the problem we are solving, we might want to obtain the
+    PD solution at the  boundary particle location of 
+    a given peridynamic discretization. for this purpose the
+    method finds the appropriate boudnary
 
+    NOTE: the method works only for 2d  rectangular geometry 
+    and is done to make my life easier while doing tests 
+    my masters for thesis
 
-def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
+    :u_disp_pd: PD solution at nodal locations(from FENICS)
+    :bName: name of the boundary where solution is desired
+    :cell_cent: peridynamic discretization of domain 
+    :returns: u_fe_atBoundary
+
+    """
+    #cardinal search dimension for boundary locations
+    ## for left/right we look along x-dim(index 0)
+    ## for top/bottom we look along y-dim(index 1)
+    searchDimDict = {'top':1,'bottom':1, 'left':0, 'right':0}
+    sd = searchDimDict[bName]
+
+    if bName == 'top' or bName == 'right':
+        boundElIds= np.ravel((np.argwhere(cell_cent[:,sd] == np.max(cell_cent[:,sd]))))
+    if bName == 'bottom' or bName == 'left':
+        boundElIds= np.ravel((np.argwhere(cell_cent[:,sd] == np.min(cell_cent[:,sd]))))
+
+    cell_cent_bound = cell_cent[boundElIds]
+   
+    #place holder for interpolated fe solution at boundary of 
+    # corresponding peridynamic mesh
+    u_fe_bnd_cent = np.zeros((len(cell_cent_bound), 2), dtype=float)
+    for idx, cc in enumerate(cell_cent_bound):
+        u_fe_bnd_cent[idx] = u_fe(cc)
+        
+    return u_fe_bnd_cent, cell_cent_bound, boundElIds
+
+def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=False, problem='transverseTraction'):
     """
     compares the FE and PD solution for a simple 2D case 
     
@@ -15,7 +52,10 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     returns  : TODO
 
     """
+    _, _, _, u_fe_conv, _ = fenics_mesh_convergence(struct_grd=struct_grd, problem=problem, tol=1e-5, plot_=plot_, force=force)
 
+    boundLocationDict = {'transverseTraction': 'top', 'patchTest':'right', 'axialLoad':'right'}
+    bName    =           boundLocationDict[problem]
 
     #infl_fun_lst = [gaussian_infl_fun1, gaussian_infl_fun2,parabolic_infl_fun1,parabolic_infl_fun2]
 
@@ -29,14 +69,14 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     infl_fun_ordered_lst = ['omega1', 'omega2', 'omega3', 'omega4']
     infl_fun_lst = {'omega1':gaussian_infl_fun2, 'omega2':gaussian_infl_fun1, 'omega3': parabolic_infl_fun2, 'omega4':parabolic_infl_fun1, }
 
-   # infl_fun_ordered_lst = ['omega1']
-   # infl_fun_lst = {'omega1':gaussian_infl_fun2}
+    #infl_fun_ordered_lst = ['omega1']
+    #infl_fun_lst = {'omega1':gaussian_infl_fun2}
 
     infl_fun_keys = infl_fun_lst.keys()
     infl_fun_name = {'omega1':'STANDARD GAUSSIAN', 'omega2': 'NARROW GAUSSIAN', 'omega3': 'STANDARD PARABOLA', 'omega4': 'PERIDIGM PARABOLA'}
     infl_fun_symbols = get_influence_function_symbol()
 
-    horizon = 0.166672235556
+    horizon = 0.2222278
     dim = mesh_lst[0].topology().dim()
     ## Empty global lists to store data for each mesh in mesh_lst
     cell_cent_top_lst =      [] #top cell centroids of each mesh
@@ -74,7 +114,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
             infl_fun = infl_fun_lst[key]
             print("RUNNING TEST WITH INFLUENCE FUNCTION: %s "%(infl_fun_name[key]))
             print("*********************************************************\n")
-            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar_transverse(horizon, curr_mesh, material=material,omega_fun=infl_fun, plot_=plot_, force=force, vol_corr=vol_corr,struct_grd=struct_grd)
+            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar_problem(horizon, curr_mesh, material=material,omega_fun=infl_fun, plot_=plot_, force=force, vol_corr=vol_corr,struct_grd=struct_grd, problem=problem)
 
             disp_cent_PD_array[i] = disp_cent_i
             u_disp_PD_array[i]    = u_disp_i 
@@ -115,13 +155,14 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
 
         str_struct_grd = str(bool(struct_grd))
         str_vol_corr   = str(bool(vol_corr))
-        plt.title('Omega tests, Num Cells = %i, vol_corr= %s'%(numParticles,str_vol_corr), fontsize=20)
+        #plt.title("Omega tests, Num Cells = %i, vol_corr= %s"%(int(numParticles),str_vol_corr), fontsize=16)
         plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
         plt.ylim( -0.012, 0.002)
-        plt.ylabel('y-displacement [m]', fontsize=16)
-        plt.xlabel('x-coordinates of particles [m]', fontsize=16)
-        plt.xticks(fontsize=14); plt.yticks(fontsize=14)
-        plt.legend(loc='center left', fontsize=14)
+        plt.ylabel('y-displacement', fontsize=14)
+        plt.xlabel('x-coordinates of particles', fontsize=14)
+        plt.xticks(fontsize=12); plt.yticks(fontsize=12)
+        ax.legend(fancybox=True, framealpha=0.0)
+        plt.legend(loc='lower left', title='N = '+str(numParticles), fontsize=16)
         fig_path = generate_figure_path(data_path, fig_cnt.err_fig_num, len(cell_cent), 'disp', 'infl_fun', struct_grd, vol_corr)
         #plt.savefig(fig_path, dpi=dpi)
         plt.show(block=False)
@@ -169,7 +210,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     plt.xlim(0, len(infl_fun_lst)+1)
     plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
     plt.xlabel(r'$\omega_i\langle\xi\rangle$', fontsize=16)
-    plt.ylabel('rel difference [%]', fontsize=16)
+    plt.ylabel('rel difference', fontsize=16)
     ax.set_xticks(x_ax)
     ax.set_xticklabels(xtick_labels, fontsize=14)
     plt.yticks(fontsize=14)

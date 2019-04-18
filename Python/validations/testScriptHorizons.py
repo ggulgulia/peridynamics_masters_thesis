@@ -6,7 +6,8 @@ def plot_for_transverse_load(horizons, abs_error_end_particle_lst, rel_error_end
     ############## Plot ABS and REL ERRORS #########
     kk = abs_error_end_particle_lst.keys()
     markers = get_markers(len(horizons)+1)
-    plt.figure()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
     for i, k in enumerate(kk):
         error = abs_error_end_particle_lst[k]
         plt.plot(horizons, error, linewidth=2, marker=markers[i], color='k', markersize=8, label='N = '+str(k))
@@ -15,20 +16,28 @@ def plot_for_transverse_load(horizons, abs_error_end_particle_lst, rel_error_end
     plt.xlabel('Horizon, $\delta$ [m]', fontsize=14)
     plt.ylabel('abs difference in displacement', fontsize=14)
     plt.xticks(fontsize=12); plt.yticks(fontsize=12)
-    plt.legend(loc='center right', fontsize=14)
+    ax.set_xticks(horizons)
+    ax.set_xticklabels(horizons, fontsize=12)
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    plt.gca().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    plt.legend(loc='upper right', fontsize=12)
     plt.title('abs error b/w PD and FE vs Horizon size',  fontsize=16)
 
-    plt.figure()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
     for i, k in enumerate(kk):
         rel_error = rel_error_end_particle_lst[k]
         plt.plot(horizons, rel_error, linewidth=2, marker=markers[i], color='k', markersize=8, label='N = '+str(k))
     plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-    plt.xlim(horizons[0]-horizons[0]/5, horizons[-1] + horizons[-1]/5)
-    plt.xlabel('Horizon $\delta$ [m]', fontsize= 16)
-    plt.ylabel('rel difference in displacement [%]', fontsize=16)
-    plt.xticks(fontsize=14); plt.yticks(fontsize=14)
-    plt.legend(loc='center right', fontsize=14)
-    plt.title('rel error b/w PD and FE vs Horizon size', fontsize=18)
+    plt.xlabel('Horizon $\delta$ [m]', fontsize= 14)
+    plt.ylabel('rel difference in displacement [%]', fontsize=14)
+    plt.xticks(fontsize=12); plt.yticks(fontsize=12)
+    ax.set_xticks(horizons)
+    ax.set_xticklabels(horizons, fontsize=12)
+    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    plt.gca().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
+    plt.legend(loc='upper right', fontsize=12)
+    plt.title('rel error b/w PD and FE vs Horizon size', fontsize=16)
     plt.show(block=False)
 
 def interpolate_fe_pd_soln_at_boundary(u_fe, cell_cent, bName='top'):
@@ -118,8 +127,8 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
         #edge lengths are currently [0.05555556, 0.04545455, 0.03846154, 0.03333333, 0.02941176]
         # need to select horizon approporiately : min horizon is 2.0001 times max edge length
         #expected particle count in uniform[square/triangle] grid: 648, 900, 1300, 1800
-        horizons = np.array([0.11111668, 0.16667224, 0.2222278 , 0.27778336, 0.33333892], dtype=float)
-        #horizons = np.array([0.251111667555600001])
+        #horizons = np.array([0.11111668, 0.16667224, 0.2222278 , 0.27778336, 0.33333892], dtype=float)
+        horizons = np.array([0.166667, 0.251111667555600001])
         #declare empty storage for each horizon in 'horizons' array and curr_mesh  
         infl_fun = gaussian_infl_fun2
         disp_cent_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
@@ -183,7 +192,7 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
         abs_error_end_particle_lst[numParticles] = abs_error_end_particle
         rel_error_end_particle_lst[numParticles] = rel_error_end_particle
 
-        plt.legend(loc='center left', fontsize=14)
+        plt.legend(loc='lower left', fontsize=12)
         str_struct_grd = str(bool(struct_grd))
         str_vol_corr   = str(bool(vol_corr))
         plt.title("Num Cells = %i"%numParticles)

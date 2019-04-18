@@ -83,7 +83,7 @@ def generate_struct_mesh_list_for_pd_tests():
     
     ratio = minNumptsX/minNumptsY
     delta = 4
-    num_meshes = 6
+    num_meshes = 5
     for i in range(num_meshes):
         numptsX = int(minNumptsX + i*delta*ratio)
         numptsY = int(minNumptsY + i*delta)
@@ -271,28 +271,29 @@ def fenics_mesh_convergence(struct_grd=True, numptsX=10, numptsY=5, tol=None, pl
     
     err_norm_lst = np.array(err_norm_lst)
     plt.figure()
-    colors = get_colors(len(u_disp_bnd_lst)+1)
     ii = 0
     for i,_ in enumerate(u_disp_bnd_lst):
         if bName == 'top' or bName =='bottom':
+            colors = get_colors(len(u_disp_bnd_lst)+1)
             xx = cell_cent_bnd_lst[i][:,0]
             yy = u_disp_bnd_lst[i][:,1]
             plt.plot(xx, yy, color=colors[i], linewidth=2, label=str(i+1)+'. num cells:'+str(mesh_lst[i].num_cells()))
+            plt.ylabel('y-displacement of centroids [m]', fontsize=20)
+            plt.xlabel('top element centroids along x-axis [m]', fontsize=20)
+            plt.xlim((0, 2.1)); 
             ii += 1
         if bName == 'left' or bName == 'right':
-            xx = cell_cent_bnd_lst[i][:,1]
-            yy = u_disp_bnd_lst[i][:,0]
-            plt.plot(xx, yy, color=colors[i], linewidth=2, label='num cells:'+str(mesh_lst[i].num_cells()))
+            markers = get_markers(len(u_disp_bnd_lst)+1)
+            xx = i
+            yy = np.average(u_disp_bnd_lst[i][:,-1])
+            plt.plot(xx, yy, color='k', marker=markers[i], ms=8, label='num cells:'+str(mesh_lst[i].num_cells()))
             ii += 1
 
     #plt.title('mesh convergence for FE soln, bar of size 3x1, load=-5e-8, tol=%.3e'%tol, fontsize=20)
-    plt.legend(loc='center left', fontsize=14)
-    plt.xlabel('top element centroids along x-axis [m]', fontsize=20)
+    plt.legend(loc='lower left', fontsize=10)
     plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
     plt.yticks(fontsize=14)
-    plt.ylabel('y-displacement of centroids [m]', fontsize=20)
     plt.xticks(np.arange(0, 3.5, 0.5), fontsize=14)
-    plt.xlim((0, 2.1)); 
     
     plt.show(block=False)
     

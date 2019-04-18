@@ -30,7 +30,7 @@ def get_displaced_cell_centroids(m, u_fe, cell_cent):
     return disp_cent, u_disp
 
 
-def solve_fenic_bar_axial(mesh, cell_cent,  material='steel', plot_ = False, force=50e8):
+def solve_fenic_bar_axial(mesh, cell_cent,  material='steel', plot_ = False, force=25e9):
     """
     solves the case for a 2D steel plate loaded statically under various loads
 
@@ -49,6 +49,7 @@ def solve_fenic_bar_axial(mesh, cell_cent,  material='steel', plot_ = False, for
     mesh_ext = get_domain_bounding_box(mesh)
     L_min = mesh_ext[0][0]; H_min = mesh_ext[0][1]
     L_max = mesh_ext[1][0]; H_max = mesh_ext[1][1] 
+    force_axial = force
     
     def eps(v):
         return sym(grad(v))
@@ -106,9 +107,9 @@ def solve_fenic_bar_axial(mesh, cell_cent,  material='steel', plot_ = False, for
     a = inner(sigma(u), eps(v))*dx
     #l = inner(f, v)*dx  
     
-    #Neumann Boundary condition for axial load
-    g = inner(Constant((force,0)),v) #
-    l = g*ds(5) #5 denotes the right edge
+    #Neumann Boundary condition for traction force
+    g = inner(Constant((force_axial,0)),v) #
+    l = g*ds(5)
         
     #Applying bc and solving
     #bc = DirichletBC(V.sub(0), Constant(0.), left_edge)
@@ -120,14 +121,12 @@ def solve_fenic_bar_axial(mesh, cell_cent,  material='steel', plot_ = False, for
     
     if plot_ is True:
         fig = plt.figure()
-        ax = fig.add_subplot(111)
         #plt.subplot(1,2,1)
-        plot(mesh, color='k', linewidth=1.0, alpha=0.25)
+        plot(mesh, color='k', linewidth=1.5, alpha=0.5)
         #plt.subplot(1,2,2)
-        plot(75*u_fe, mode="displacement")
-        #plt.xlim(L_min-0.1,L_max+0.4)
-        #ax.axis('off')  #removes the axis
-        plt.ylim(H_min-0.1,H_max+0.1)
+        plot(u_fe, mode="displacement")
+        plt.xlim(L_min-0.5,L_max+0.5)
+        plt.ylim(H_min-0.5,L_max+0.5)
         plt.show(block=False)
 
     return u_fe

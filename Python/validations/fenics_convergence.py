@@ -83,7 +83,7 @@ def generate_struct_mesh_list_for_pd_tests():
     
     ratio = minNumptsX/minNumptsY
     delta = 4
-    num_meshes = 5
+    num_meshes = 6
     for i in range(num_meshes):
         numptsX = int(minNumptsX + i*delta*ratio)
         numptsY = int(minNumptsY + i*delta)

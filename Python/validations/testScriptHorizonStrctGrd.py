@@ -1,75 +1,7 @@
 from testHelper import*
 
-#def get_obs_extent(el, curr_mesh):
-#    """
-#    retruns the rectangular zone around the centrline 
-#    having two layers of cells , at 5 deltaX away from 
-#    left and right edges of the 2D plate for obsrvation of 
-#    solution
-#    """
-#    dim = 2
-#    extents = get_domain_bounding_box(curr_mesh)
-#    obs_extents = cpy.deepcopy(extents)
-#    domain_cent = np.zeros(dim, dtype=float)
-#    for d in range(dim):
-#        domain_cent[d] = 0.5*np.sum(extents[:,d])
-#
-#    obs_extents[0][0] = extents[0][0] + 5.000*el[0];
-#    obs_extents[1][0] = extents[1][0] - 5.000*el[0];
-#    obs_extents[0][1] = domain_cent[1] - 1.000*el[0];
-#    obs_extents[1][1] = domain_cent[1] + 1.000*el[0];
-#
-#    return obs_extents
-#
-#def get_centerline_cells_and_idx(cell_cent, obs_extents):
-#    """TODO: Docstring for get_centerline_cells.
-#
-#    :cell_cent: TODO
-#    :obs_extents: TODO
-#    :returns: TODO
-#        
-#        centerline_y_axis
-#    """
-#    cc1 = cell_cent[np.where(cell_cent[:,0] > obs_extents[0][0])]
-#    cc2 = cc1[np.where(cc1[:,0] < obs_extents[1][0])]
-#    cc3 = cc2[np.where(cc2[:,1] > obs_extents[0][1])]
-#    cc4 = cc3[np.where(cc3[:,1] < obs_extents[1][1])]
-#
-#    idx = np.where((cell_cent==cc4[:,None]).all(-1))[1]
-#    cc4max = cc4[np.where(cc4[:,1] == np.max(cc4[:,1]))]
-#    cc4min = cc4[np.where(cc4[:,1] == np.min(cc4[:,1]))]
-#    cent_X_axis = 0.5*(cc4min[:,0]  + cc4max[:,0])    
-#    cent_Y_axis = 0.5*(cc4min[:,1]  + cc4max[:,1])    
-#
-#    y_axes = np.unique(cc4[:,1])
-#    return cc4, idx, cent_X_axis, cent_Y_axis
-#
-#def separate_centrline_lyers_by_y_coordinates(cell_cent, centerline_cells):
-#    """
-#    assuming centerline cells have two layers,
-#    this method returns the arrays of each layers 
-#    and their global id corresponding to cell_cent
-#
-#    :cell_cent: TODO
-#    :centerline_cells: TODO
-#    :returns: TODO
-#
-#    """
-#    cc4 = centerline_cells
-#    y_uniq_coord = np.unique(cc4[:,1])
-#
-#    idx_lst = []
-#    cent_Y_lyrs = []
-#    for yy in y_uniq_coord:
-#        cent_Y_lyrs_temp = centerline_cells[np.where(cc4[:,1] == yy)]
-#        idx = np.where((cell_cent==cent_Y_lyrs_temp[:,None]).all(-1))[1]
-#
-#        cent_Y_lyrs.append(cent_Y_lyrs_temp)
-#        idx_lst.append(idx)
-#
-#    return cent_Y_lyrs, idx_lst 
 
-def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
+def compare_PD_horizons_with_FE_StrctGrd(mesh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
     """
     compares the FE and PD solution with varying horizon 
     for a simple 2D case 
@@ -113,7 +45,7 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
         # need to select horizon approporiately : min horizon is 2.0001 times max edge length
         #expected particle count in uniform[square/triangle] grid: 648, 900, 1300, 1800
         horizons = np.array([0.11111667555600001, 0.166672235556, 0.22222779555599997, 0.277783355556], dtype=float)
-        horizons = np.array([0.20611111667555600001, 0.3001])
+        #horizons = np.array([0.20611111667555600001, 0.3001])
         #declare empty storage for each horizon in 'horizons' array and curr_mesh  
         infl_fun = gaussian_infl_fun2
         disp_cent_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
@@ -176,7 +108,7 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
         plt.ylabel('y-displacement [m]', fontsize=16)
         plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
         plt.gca().xaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
-        plt.xticks(fontsize=12); plt.yticks(fontsize=12)
+        plt.xticks(fontsize=10); plt.yticks(fontsize=10)
         plt.legend(loc='lower left', fontsize=12)
 
 

@@ -296,6 +296,7 @@ def peridym_apply_bc(K, bc_type, bc_vals, cell_cent, cell_vol, node_ids_dir, nod
                     rhs     = np.delete(rhs, (nk-i)*dim)                   #deletes the row on rhs
         
         #if bcn is 'dirichletX' or 'dirichletY' or 'dirichletZ'
+        # i.e fix  only individual d.o.f's on the boudnary
         if len(bcn)==10  and bc_vals[bcn] is 0:
             print("applying %s bc on node set %s"%(bcn,node_loc_dict[bound_location]) )
             for i, nk in enumerate(node_ids):

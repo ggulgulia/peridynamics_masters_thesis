@@ -120,7 +120,7 @@ def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=Fal
             #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
             x,y = (cell_cent + zoom*u_disp).T 
             plt.scatter(x,y, s=150, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+ format(horizon, '4.5g'))
-            plt.legend(prop=legend_size)
+           # plt.legend(prop=legend_size)
             #plt.xlim(x_min - fact*x_min, x_max + fact*x_max)
             #plt.ylim(y_min - fact*y_min, y_max + fact*y_max)
 

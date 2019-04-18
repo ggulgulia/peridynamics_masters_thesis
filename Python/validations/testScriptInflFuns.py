@@ -74,7 +74,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
             infl_fun = infl_fun_lst[key]
             print("RUNNING TEST WITH INFLUENCE FUNCTION: %s "%(infl_fun_name[key]))
             print("*********************************************************\n")
-            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizon, curr_mesh, material=material,omega_fun=infl_fun, plot_=plot_, force=force, vol_corr=vol_corr,struct_grd=struct_grd)
+            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar_transverse(horizon, curr_mesh, material=material,omega_fun=infl_fun, plot_=plot_, force=force, vol_corr=vol_corr,struct_grd=struct_grd)
 
             disp_cent_PD_array[i] = disp_cent_i
             u_disp_PD_array[i]    = u_disp_i 

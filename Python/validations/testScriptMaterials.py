@@ -1,4 +1,6 @@
 from testHelper import*
+from peridynamics_global_test_script import solve_peridynamic_bar_problem
+
 
 def compare_PD_material_models(mesh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=False):
     """
@@ -54,7 +56,7 @@ def compare_PD_material_models(mesh_lst, u_fe_conv, fig_cnt, data_path=None, mat
         u_disp_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
 
         for i in range(len(horizons)):
-            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizons[i], curr_mesh, material=material, omega_fun=infl_fun, plot_=False, force=force, vol_corr=vol_corr, struct_grd=struct_grd, response='correspondance')
+            _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar_problem(horizons[i], curr_mesh, material=material, omega_fun=infl_fun, plot_=False, force=force, vol_corr=vol_corr, struct_grd=struct_grd, response='correspondance', problem='transverseTraction')
 
             disp_cent_PD_array[i] = disp_cent_i
             u_disp_PD_array[i]    = u_disp_i 

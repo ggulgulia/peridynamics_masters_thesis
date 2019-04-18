@@ -5,6 +5,7 @@ from peridynamic_neighbor_data import *
 from peridynamic_materials import *
 import matplotlib.pyplot as plt
 
+
 def get_displaced_cell_centroids(m, u_fe, cell_cent):
     """
     returns the displaced cell centroid of the mesh
@@ -30,7 +31,7 @@ def get_displaced_cell_centroids(m, u_fe, cell_cent):
     return disp_cent, u_disp
 
 
-def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=10e9):
+def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=25e9):
     """
     solves the case for a 2D steel plate loaded statically under various loads
 
@@ -48,7 +49,7 @@ def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=10e9
     """
     print('************************************')
     print('************************************')
-    print('******SOLVING THE PATCH TEST********')
+    print('******SOLVING THE PATCH TEST IN FINITE ELEMENTS********')
     mesh_ext = get_domain_bounding_box(mesh)
 
     L_min = mesh_ext[0][0]; H_min = mesh_ext[0][1]
@@ -77,12 +78,18 @@ def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=10e9
         def inside(self, x, on_boundary):
             tol = 1e-6
             return on_boundary and abs(x[1] - H_max) < DOLFIN_EPS*1e3
+   
+    class CornerPoint(SubDomain):
+        def inside(self, x, on_boundary):
+            
+            return near(x[0], 0., DOLFIN_EPS*1e3) and near(x[1], 0., DOLFIN_EPS*1e3)
     
     ## separate edges
     left_edge   = LeftEdge()
     right_edge  = RightEdge()
     bottom_edge = BottomEdge()
     top_edge    = TopEdge()
+    corner_point = CornerPoint()
     
     sub_domains = MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
     sub_domains.set_all(0)
@@ -91,6 +98,7 @@ def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=10e9
     left_edge.mark(sub_domains, 2)
     bottom_edge.mark(sub_domains, 3)
     top_edge.mark(sub_domains, 4)
+    corner_point.mark(sub_domains, 6)
     
     ds = Measure("ds")(subdomain_data=sub_domains)
         
@@ -116,10 +124,16 @@ def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=10e9
         
     #Applying bc and solving
     #bc = DirichletBC(V.sub(0), Constant(0.), left_edge)
-    bc = DirichletBC(V.sub(0), Constant(0.), left_edge)
+    bc1 = DirichletBC(V.sub(0), Constant(0.), left_edge)
+    bc2 = DirichletBC(V, Constant((0.0, 0.0)), corner_point, method='pointwise')
+    bcs = [bc1, bc2]
+    A = assemble(a)
+    b = assemble(l)
+    for bc in bcs: bc.apply(A,b)
+ 
     u_fe = Function(V, name="Displacement")
-    solve(a == l, u_fe, bc)
-    
+    #solve(a == l, u_fe, bc)
+    solve(A, u_fe.vector(), b)
     disp_cent, u_disp = get_displaced_cell_centroids(mesh, u_fe, cell_cent) 
     
     if plot_ is True:
@@ -127,7 +141,7 @@ def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=10e9
         #plt.subplot(1,2,1)
         plot(mesh, color='k', linewidth=1.5, alpha=0.5)
         #plt.subplot(1,2,2)
-        plot(10*u_fe, mode="displacement")
+        plot(u_fe, mode="displacement")
         plt.xlim(L_min-0.5,L_max+0.5)
         plt.ylim(H_min-0.5,H_max+0.5)
         plt.show(block=False)

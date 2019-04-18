@@ -8,15 +8,15 @@ from peridynamic_solvers import direct_solver
 from peridynamic_materials import *
 import mshr
 import timeit as tm
-
 from peridynamic_damage import *
 
 
-def solve_peridynamic_bar(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, material='steel', omega_fun=None, plot_=False, force=-5e8, vol_corr=True, struct_grd=False, response='LPS'):
+def solve_peridynamic_bar_transverse(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, material='steel', omega_fun=None, plot_=False, force=-5e8, vol_corr=True, struct_grd=False, response='LPS'):
     """
     solves the peridynamic bar with a specified load
 
     """
+    print('********** SOLVING PERIDYNAMIC TRANSVERSE TRACTION LOAD PROBLEM ***********')
     if response == 'LPS':
         computeStiffness = computeK
     if response == 'correspondance':

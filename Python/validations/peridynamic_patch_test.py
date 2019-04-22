@@ -11,7 +11,7 @@ import timeit as tm
 from peridynamic_damage import *
 
 
-def solve_peridynamic_patch_test(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None, material='steel', omega_fun=None, plot_=True, force=25e9, vol_corr=True, struct_grd=True, response='LPS'):
+def solve_peridynamic_patch_test(horizon, u_fe_conv= None, m=mesh, nbr_lst=None, nbr_beta_lst=None, material='steel', omega_fun=None, plot_=True, force=75e9, vol_corr=True, struct_grd=True, response='LPS'):
     """
     solves the peridynamic bar with a specified load
 
@@ -74,5 +74,45 @@ def solve_peridynamic_patch_test(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=Non
     #disp_cent = u_disp + cell_cent
     
     disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=plot_, zoom=20)
-    
-    return K, K_bound, disp_cent, u_disp_orig
+    if u_fe_conv == None: 
+        return K, K_bound, disp_cent, u_disp_orig
+    else:
+        #get right end cells
+        boundElIds= np.ravel((np.argwhere(cell_cent_orig[:,0] == np.max(cell_cent_orig[:,0]))))
+        cell_cent_right = cell_cent_orig[boundElIds]
+        u_fe_conv_right_end = np.zeros((len(boundElIds), 2), dtype=float)
+
+        for i, cc in enumerate(cell_cent_right):
+            u_fe_conv_right_end[i] = u_fe_conv(cc)
+
+        u_x_disp_PD_right = u_disp_orig[boundElIds][:,0]
+        u_x_disp_FE_right = u_fe_conv_right_end[:,0]
+
+        avg_x_disp_PD = np.average(u_x_disp_PD_right)
+        avg_x_disp_FE = np.average(u_x_disp_FE_right)
+
+        abs_err_avg_x_disp = abs(avg_x_disp_PD - avg_x_disp_FE)
+        rel_err_avg_x_disp = abs_err_avg_x_disp/avg_x_disp_FE*100.0
+
+        bndL = np.ravel((np.argwhere(cell_cent_orig[:,0] == np.min(cell_cent_orig[:,0]))))
+        bndB = np.ravel((np.argwhere(cell_cent_orig[:,1] == np.min(cell_cent_orig[:,1]))))
+        bndT = np.ravel((np.argwhere(cell_cent_orig[:,1] == np.max(cell_cent_orig[:,1]))))
+        x_r, y_r = cell_cent_right.T
+        x_l, y_l = cell_cent_orig[bndL].T
+        x_b, y_b = cell_cent_orig[bndB].T
+        x_t, y_t = cell_cent_orig[bndT].T
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        X,Y = disp_cent.T
+        plt.scatter(X,Y,marker='o', s=100, color='b', alpha=0.5)
+        plt.scatter(x_r,y_r, marker='o', s=100, color='g', alpha=0.7)
+        plt.scatter(x_l,y_l, marker='o', s=100, color='g', alpha=0.7)
+        plt.scatter(x_b,y_b, marker='o', s=100, color='g', alpha=0.7)
+        plt.scatter(x_t,y_t, marker='o', s=100, color='g', alpha=0.7)
+        import matplotlib.patches as patches
+        ax.add_patch(patches.Rectangle((0, 0), 2, 1, fill=False, color='k', linewidth=2.0, alpha=1))
+        ax.set_aspect('equal')
+        plt.show(block=False)
+        return disp_cent, u_x_disp_PD_right, u_x_disp_FE_right,avg_x_disp_PD, avg_x_disp_FE, abs_err_avg_x_disp,rel_err_avg_x_disp
+

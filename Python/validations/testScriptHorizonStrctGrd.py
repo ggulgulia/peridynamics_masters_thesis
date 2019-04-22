@@ -155,6 +155,7 @@ def compare_PD_horizons_with_FE_StrctGrd(mesh_lst, u_fe_conv, fig_cnt, data_path
 
 
     ### to get additional legends
+    #ax.legend(fancybox=True, framealpha=0.5)
     #h = [plt.plot([],[], color=colors[i], marker=markers[i], ms=8, ls="")[0] for i in range(5)]
     #leg1 = plt.legend(handles=h, labels=[648, 968, 1352, 1800, 2312],loc='upper right', title="Particle Count", fontsize=10)
     #ax.add_artist(leg1)

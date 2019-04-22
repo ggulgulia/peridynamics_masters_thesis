@@ -209,7 +209,7 @@ def fenics_mesh_convergence(struct_grd=True, numptsX=10, numptsY=5, tol=None, pl
 
     u_disp_bnd_lst = []
     cell_cent_bnd_lst = []
-    error_lst = []
+    error_lst = [0.0]*1 #error cannot be recored on initial mesh
     err = 1
     u_fe_conv = None 
 
@@ -233,7 +233,6 @@ def fenics_mesh_convergence(struct_grd=True, numptsX=10, numptsY=5, tol=None, pl
     while(True):
         j = i+1;
          
-        mesh_lst.append(mm_i)
         print(" Level %i. solving for FE convergence"%i)
 
         ##### get cell cetntroids in coarse and fine mesh ####
@@ -257,6 +256,7 @@ def fenics_mesh_convergence(struct_grd=True, numptsX=10, numptsY=5, tol=None, pl
         err_norm_lst.append(np.max(err))
         u_disp_bnd_lst.append(u_disp_bnd_j)
         cell_cent_bnd_lst.append(cell_cent_bnd_j)
+        mesh_lst.append(mm_j)
         if((err<=tol).all()):
             u_fe_conv = u_fe_j
             #new_mesh_lst = mesh_lst[0:idx+1]
@@ -277,23 +277,23 @@ def fenics_mesh_convergence(struct_grd=True, numptsX=10, numptsY=5, tol=None, pl
             colors = get_colors(len(u_disp_bnd_lst)+1)
             xx = cell_cent_bnd_lst[i][:,0]
             yy = u_disp_bnd_lst[i][:,1]
-            plt.plot(xx, yy, color=colors[i], linewidth=2, label=str(i+1)+'. num cells:'+str(mesh_lst[i].num_cells()))
+            plt.plot(xx, yy, color=colors[i], linewidth=2, label=str(i+1)+'. N = '+str(mesh_lst[i].num_cells()))
             plt.ylabel('y-displacement of centroids [m]', fontsize=20)
             plt.xlabel('top element centroids along x-axis [m]', fontsize=20)
+            plt.xticks(np.arange(0, 3.5, 0.5), fontsize=14)
             plt.xlim((0, 2.1)); 
             ii += 1
         if bName == 'left' or bName == 'right':
             markers = get_markers(len(u_disp_bnd_lst)+1)
             xx = i
-            yy = np.average(u_disp_bnd_lst[i][:,-1])
-            plt.plot(xx, yy, color='k', marker=markers[i], ms=8, label='num cells:'+str(mesh_lst[i].num_cells()))
+            yy = np.average(u_disp_bnd_lst[i][:,0])
+            plt.plot(i+1, yy, color='k', marker=markers[i], ms=8, label='num cells:'+str(mesh_lst[i].num_cells()))
             ii += 1
 
     #plt.title('mesh convergence for FE soln, bar of size 3x1, load=-5e-8, tol=%.3e'%tol, fontsize=20)
     plt.legend(loc='lower left', fontsize=10)
     plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
     plt.yticks(fontsize=14)
-    plt.xticks(np.arange(0, 3.5, 0.5), fontsize=14)
     
     plt.show(block=False)
     

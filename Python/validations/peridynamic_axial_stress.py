@@ -65,6 +65,30 @@ def solve_peridynamic_bar_axial(horizon, m=mesh, nbr_lst=None, nbr_beta_lst=None
     cell_cent_orig, u_disp_orig, _ = recover_original_peridynamic_mesh(cell_cent, u_disp, bc_type, ghost_lyr_node_ids, struct_grd)
     #disp_cent = u_disp + cell_cent
     
-    disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=plot_, zoom=10)
+    disp_cent = get_displaced_soln(cell_cent_orig, u_disp_orig, horizon, dim, plot_=False, zoom=10)
+    
+    if plot_:
+        import matplotlib.patches as patches
+        bndR = np.ravel((np.argwhere(cell_cent_orig[:,0] == np.max(cell_cent_orig[:,0]))))
+        bndL = np.ravel((np.argwhere(cell_cent_orig[:,0] == np.min(cell_cent_orig[:,0]))))
+        bndB = np.ravel((np.argwhere(cell_cent_orig[:,1] == np.min(cell_cent_orig[:,1]))))
+        bndT = np.ravel((np.argwhere(cell_cent_orig[:,1] == np.max(cell_cent_orig[:,1]))))
+        x_r, y_r = cell_cent_orig[bndR].T
+        x_l, y_l = cell_cent_orig[bndL].T
+        x_b, y_b = cell_cent_orig[bndB].T
+        x_t, y_t = cell_cent_orig[bndT].T
+        
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        X,Y = disp_cent.T
+        plt.scatter(X,Y,marker='o', s=100, color='b', alpha=0.5)
+        #plt.scatter(x_r,y_r, marker='o', s=100, color='k', alpha=0.25)
+        #plt.scatter(x_l,y_l, marker='o', s=100, color='k', alpha=0.25)
+        #plt.scatter(x_b,y_b, marker='o', s=100, color='k', alpha=0.25)
+        #plt.scatter(x_t,y_t, marker='o', s=100, color='k', alpha=0.25)
+        #plt.title('axial load, force = %4.2g, vol corr= %s'%(force, str(vol_corr)))
+        ax.add_patch(patches.Rectangle((0, 0), 2, 1, fill=False, color='k', linewidth=2.0, alpha=1))
+        ax.set_aspect('equal')
+        plt.show(block=False)
     
     return K, K_bound, disp_cent, u_disp_orig

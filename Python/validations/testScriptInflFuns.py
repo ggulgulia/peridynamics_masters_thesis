@@ -159,7 +159,7 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
         plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
         plt.ylim( -0.012, 0.002)
         plt.ylabel('y-displacement', fontsize=14)
-        plt.xlabel('x-coordinates of particles', fontsize=14)
+        plt.xlabel('x-coordinates of particles strct grd:'+str(struct_grd), fontsize=14)
         plt.xticks(fontsize=12); plt.yticks(fontsize=12)
         ax.legend(fancybox=True, framealpha=0.0)
         plt.legend(loc='lower left', title='N = '+str(numParticles), fontsize=16)
@@ -214,9 +214,8 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     ax.set_xticks(x_ax)
     ax.set_xticklabels(xtick_labels, fontsize=14)
     plt.yticks(fontsize=14)
-    plt.legend(loc='center right', fontsize=16)
-    fig_path = generate_figure_path(data_path, fig_cnt.err_fig_num, len(cell_cent), 'err', 'infl_fun', struct_grd, vol_corr)
     plt.title("omega tests, relerror, vol corr= %s"%str_vol_corr)
+    plt.legend(loc='center right', fontsize=16)
     plt.show(block=False)
     fig_cnt.err_fig_num += 1
     

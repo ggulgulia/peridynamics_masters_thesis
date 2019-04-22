@@ -28,7 +28,6 @@ def plot_for_transverse_load(horizons, abs_error_end_particle_lst, rel_error_end
     for i, k in enumerate(kk):
         rel_error = rel_error_end_particle_lst[k]
         plt.plot(horizons, rel_error, linewidth=2, marker=markers[i], color='k', markersize=8, label='N = '+str(k))
-    plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
     plt.xlabel('Horizon $\delta$ [m]', fontsize= 14)
     plt.ylabel('rel difference in displacement [%]', fontsize=14)
     plt.xticks(fontsize=12); plt.yticks(fontsize=12)
@@ -113,22 +112,30 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
     print("*********************************************************")
     print('solving using Peridynamics:')
 
+    if struct_grd: 
+        cell_centroid_function = structured_cell_centroids
+        print_message = '(STRUCTURED) grid size of eqivalent Peridynamics grid: '
+    else:
+        cell_centroid_function = get_cell_centroids
+        print_message = '(UNSTRUCTURED) grid size of equivalent Peridynamic grid: '
+
     for curr_mesh in mesh_lst:
-        if(struct_grd):
-            cell_cent = structured_cell_centroids(curr_mesh)
-            print("(STRUCTURED) grid size of eqivalent Peridynamics grid: %i" %len(cell_cent))
-        else:
-            cell_cent = get_cell_centroids(curr_mesh)
-            #horizons = np.arange(0.8, 1.6, 0.2)*5.001*curr_mesh.hmax()
-            print("(UNSTRUCTURED) grid size of equivalent Peridynamic grid: %i" %len(cell_cent))
+
+        cell_cent = cell_centroid_function(curr_mesh)
+        print(print_message+'%i'%len(cell_cent))
 
         el = get_peridym_edge_length(cell_cent, struct_grd)
 
         #edge lengths are currently [0.05555556, 0.04545455, 0.03846154, 0.03333333, 0.02941176]
         # need to select horizon approporiately : min horizon is 2.0001 times max edge length
         #expected particle count in uniform[square/triangle] grid: 648, 900, 1300, 1800
-        #horizons = np.array([0.11111668, 0.16667224, 0.2222278 , 0.27778336, 0.33333892], dtype=float)
-        horizons = np.array([0.166667, 0.251111667555600001])
+        horizons = np.array([0.11111668, 0.16667224, 0.2222278 , 0.27778336], dtype=float)
+        horizons = np.array([0.11111668, 0.16667224, 0.2222278], dtype=float)
+        
+        ########### delta as fixed ratio of discretization widht #######
+        horizons = np.arange(2,6,1)*el[0]
+                                                                             
+        #horizons = np.array([0.166667, 0.251111667555600001])
         #declare empty storage for each horizon in 'horizons' array and curr_mesh  
         infl_fun = gaussian_infl_fun2
         disp_cent_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
@@ -136,6 +143,7 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
 
 
         for i in range(len(horizons)):
+            print('starting test for horizon %i of %i, with delta to edge length ratio of %4.4f'%(i+1, len(horizons), horizons[i]/el[0]))
             _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar_problem(horizons[i], curr_mesh, material=material, omega_fun=infl_fun, plot_=plot_, force=force, vol_corr=vol_corr, struct_grd=struct_grd, problem=problem)
 
             disp_cent_PD_array[i] = disp_cent_i
@@ -206,7 +214,9 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
         fig_cnt.disp_fig_num += 1
 
     ###### PLOT diff b/w PD and FE solns FOR CORRECT LOADING CONDITIONS #####
-    plot_for_transverse_load(horizons, abs_error_end_particle_lst, rel_error_end_particle_lst)
+    
+    
+    #plot_for_transverse_load(horizons, abs_error_end_particle_lst, rel_error_end_particle_lst)
 
     # save the data for the curr_mesh to global lists
     cell_cent_bound_lst.append(cell_cent_bound) 

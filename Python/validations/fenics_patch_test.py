@@ -139,7 +139,7 @@ def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=25e9
     if plot_ is True:
         fig = plt.figure()
         #plt.subplot(1,2,1)
-        plot(mesh, color='k', linewidth=1.5, alpha=0.5)
+        plot(mesh, color='k', linewidth=0.5, alpha=0.5)
         #plt.subplot(1,2,2)
         plot(u_fe, mode="displacement")
         plt.xlim(L_min-0.5,L_max+0.5)

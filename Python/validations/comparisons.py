@@ -33,14 +33,14 @@ def run_comparisons():
     #############################################################################
 
     ##################### PATCH TEST : MATERIAL TEST: STRUCT GRID: W/I VOL CORR ##########################
-    cell_cent_top_lst_csp, u_top_fe_conv_lst_csp, disp_cent_PD_array_lst_csp, u_disp_PD_array_lst_csp, abs_error_end_particle_lst_csp, rel_error_end_particle_lst_csp = compare_PD_material_models(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=25e9, vol_corr=True, struct_grd=True, problem='patchTest')
+    cell_cent_top_lst_csp, u_top_fe_conv_lst_csp, disp_cent_PD_array_lst_csp, u_disp_PD_array_lst_csp, abs_error_end_particle_lst_csp, rel_error_end_particle_lst_csp = compare_PD_material_models(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=1e11, vol_corr=True, struct_grd=True, problem='patchTest')
 
 
     #####  PATCH TEST : HORIZON STUDIES : STRUCT GRID: W/I VOL CORR ########### 
-    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, material='steel', plot_=False, force=25e9, vol_corr=False, struct_grd=True, problem='patchTest')
+    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, material='steel', plot_=False, force=1e11, vol_corr=False, struct_grd=True, problem='patchTest')
 
     #####  PATCH TEST : HORIZON STUDIES : STRUCT GRID: W/O VOL CORR ########### 
-    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, material='steel', plot_=False, force=25e9, vol_corr=True, struct_grd=False, problem='patchTest')
+    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, material='steel', plot_=False, force=1e11, vol_corr=True, struct_grd=False, problem='patchTest')
     #cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=True, struct_grd=True)
     
      #####  PATCH TEST : INFLFUN STUDIES : STRUCT GRID: W/I VOL CORR ########### 
@@ -67,7 +67,7 @@ def run_comparisons():
     cell_cent_top_lst_csp, u_top_fe_conv_lst_csp, disp_cent_PD_array_lst_csp, u_disp_PD_array_lst_csp, abs_error_end_particle_lst_csp, rel_error_end_particle_lst_csp = compare_PD_material_models(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=True)
 
     #####  square mesh, horizon studies 
-    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=False,  struct_grd=True)
+    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=False,  struct_grd=True, problem='transverseTraction')
 
     #cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=True, struct_grd=True)
     

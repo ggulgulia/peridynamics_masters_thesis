@@ -7,6 +7,7 @@ import timeit as tm
 import numpy.linalg as la
 from math import factorial as fact
 from evtk.hl import pointsToVTK
+import copy as cpy
 
 def plot_fenics_mesh(mesh, new_fig=True):
     """
@@ -28,41 +29,124 @@ def plot_fenics_mesh(mesh, new_fig=True):
 
     pass
 
-def plot_peridym_mesh(mesh, disp_cent=None, annotate=False):
+def plot_peridym_mesh(mesh=None, struct_grd=True, cell_cent=None, disp_cent=None, annotate=False):
     """
     plots the mesh/centroids of mesh as is expected in peridynamics
-
+    
+    either mesh or cell_cent is to be provided by user
+    neither provinding mesh nor providing cell_cent is 
+    wrong
     input:
     ------
         mesh: 2D-tri/3D-tet mesh from FEniCS
+        cell_cent: particle positions in euclidean space
+        disp_cent: displaced centroids after some load condition
+        annotate: wether we wish to annotate the particle positions
     output:
     -------
         plots the centroids of tri/tets in FEniCS mesh
 
     """
+    if struct_grd:
+        cell_centroid_function = structured_cell_centroids
+    else:
+        cell_centroid_function = get_cell_centroids
 
-    cell_cent = get_cell_centroids(mesh)
+    if mesh == None and len(np.shape(cell_cent)) == 0 and len(np.shape(disp_cent)) == 0:
+        raise AssertionError("provide either fenics mesh or cell centroid of PD particles")
+    if len(np.shape(cell_cent)) != 0 and len(np.shape(disp_cent))==0:
+        extents = get_domain_bounding_box(cell_cent=cell_cent)
+
+    if len(np.shape(cell_cent)) == 0 and len(np.shape(disp_cent))!=0:
+        extents = get_domain_bounding_box(cell_cent=disp_cent)
+    if mesh != None and (len(np.shape(cell_cent)) == 0 and len(np.shape(disp_cent)) == 0): 
+        extents = get_domain_bounding_box(mesh=mesh)
+        cell_cent = cell_centroid_function(mesh)
+    ## we wish to scale the axis accordign to geometry
+
     dim = len(cell_cent[0])
+    x_min = extents[0][0]; x_max = extents[1][0]
+    y_min = extents[0][1]; y_max = extents[1][1]
+    
     x=None; y=None; z=None
     fig = plt.figure()
     if dim == 3:
+        z_min = corners[0][2]; z_max = corners[1][2]
         x,y,z = cell_cent.T
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(x,y,z, s=70, marker='o', color='b', alpha=1.0, edgecolors='face')
         ax.axis('off')
     
     if dim == 2 : 
+        ax = fig.add_subplot(111)
         x,y = cell_cent.T
-        plt.scatter(x,y, s=300, color='c', marker='o', alpha=0.8)
+        plt.scatter(x,y, s=300, color='b', marker='o', alpha=0.6)
         plt.axis=('off')
 
     if annotate==True:
         for idx, cc in enumerate(cell_cent):
             plt.text(cc[0], cc[1],  str(idx), color='k', verticalalignment='bottom', horizontalalignment='right', fontsize='medium')
 
-
+    ax.set_aspect('equal')
     plt.title("peridynamics mesh")
     plt.show(block=False)
+
+def get_displaced_soln(cell_cent, u_disp, horizon, dim, data_dir=None, plot_=False, save_fig=False, zoom=40):
+    """
+    plots the displaced cell centroids after a solution 
+    step. Additionally retrns the final cell centroid
+    after additon of displacement field in the orginal
+    configuration
+
+    input:
+    ------
+    cell_cent: np.array of cell centroids 
+    u_disp   : np.array of displacement field 
+    zoom     : magnification desired in plot 
+    
+    output:
+    --------
+    disp_cent : final configuration after displacement
+
+    """
+    disp_cent = cell_cent + u_disp
+    if plot_ or save_fig:
+        dpi = 2
+        legend_size = {'size': str(6*dpi)}
+        fig = plt.figure()
+        if dim == 2:
+            ax = fig.add_subplot(111)
+            x, y = cell_cent.T
+            #plt.scatter(x,y, s=300, color='r', marker='o', alpha=0.1, label='original config')
+            x,y = (cell_cent + zoom*u_disp).T 
+            plt.scatter(x,y, s=150, color='b', marker='o', alpha=0.6, label=r'$\delta$ = '+ format(horizon, '4.5g'))
+           # plt.legend(prop=legend_size)
+            #plt.xlim(x_min - fact*x_min, x_max + fact*x_max)
+            #plt.ylim(y_min - fact*y_min, y_max + fact*y_max)
+
+        if dim == 3:
+            #z_min = corners[0][2]; z_max = corners[1][2]
+            from mpl_toolkits.mplot3d import Axes3D 
+            x, y, z = cell_cent.T
+            fig = plt.figure() 
+            ax = fig.add_subplot(111, projection='3d') 
+            ax.scatter(x,y,z, s=150, color='r', marker='o', alpha=0.1, label='original config')
+            x,y,z = (cell_cent + zoom*u_disp)
+
+            ax.scatter(x,y,z,s=150, color='g', marker='o', alpha=1.0, label='deformed config')
+            ax.axis('off')
+            plt.legend()
+
+        ax.set_aspect('equal')
+
+        if plot_:
+            plt.show(block=False)
+
+        if save_fig:
+            plt.savefig(data_dir)
+            plt.close(fig)
+
+    return disp_cent
 
 
 def print_mesh_stats(mesh):
@@ -71,27 +155,11 @@ def print_mesh_stats(mesh):
     num cells, num vertices, max edge length, min edge length
 
     :mesh: TODO
-    :returns: TODO
-
     """
     print("num cells: %i\nnum vertices: %i\nmax edge length: %4.5f\nmin edge length: %4.5f\n \
           "%(mesh.num_cells(), mesh.num_vertices(), mesh.hmax(), mesh.hmin()))
     pass
 
-def uniform_square_mesh(point1=(0.0, 0.0), point2=(2.0, 1.0), nptsX=20, nptsY=10):
-    """
-    returns a domain descricitized with square mesh 
-    """
-
-    dx = (point2[0] - point1[0])/(nptsX+1)
-    dy = (point2[1] - point1[1])/(nptsY+1)
-    cell_volume = dx*dy
-    #mesh = {}
-
-    #mesh['volum'] = volume
-    #mesh['centroid'] = centroids 
-
-    #return mesh
 
 def rectangle_mesh(point1=Point(0,0), point2=Point(2,1), numptsX=10, numptsY=5):
     """
@@ -142,22 +210,51 @@ def rectangle_mesh_with_hole(point1=Point(0,0), point2=Point(3,1), hole_cent=Poi
     
     return mesh
 
+def tensile_test_bar(numpts = 60, plot_=True):
+
+    outer = mshr.Rectangle(Point(-100, -10), Point(100, 10))
+    barLo = mshr.Rectangle(Point(-30, 6.25), Point(30, 10))
+    barHi = mshr.Rectangle(Point(-30, -10), Point(30, -6.25))
+    c1    = mshr.Circle(Point(-30, -19.5), 13.4)
+    c2    = mshr.Circle(Point(30, -19.5), 13.4)
+    c3    = mshr.Circle(Point(-30, 19.5), 13.4)
+    c4    = mshr.Circle(Point(30, 19.5), 13.4)
+    domain = outer - barLo - barHi - c1 - c2 - c3 -c4
+    
+    mm = mshr.generate_mesh(domain, numpts)
+
+    if plot_:
+        plt.figure()
+        plot(mm, color='k')
+        plt.xlim(-120, 120)
+        plt.ylim(-20, 20)
+        plt.show(block=False)
+    return  mm
+
 def structured_cell_centroids(mesh):
     """
-    creates a structured cell centroids and cell volumes of square lattice
-    using the fenics mesh
+    creates a structured cell centroids and cell volumes of 
+    square or cubic lattice using the fenics mesh by averaging
+    appropriate number of  2D/3D triangles 
 
     input:
     ------
-        mesh : 2D fenics mesh, not crossed topology
+        mesh : 2D/3D fenics mesh, not crossed topology
+    output:
+    ------
+        cell_cents_struct : np.array of cell centroids
+                            for corresponding structured
+                            mesh
     """
+    dim = mesh.topology().dim()
+    stride = fact(dim)
     cents = get_cell_centroids(mesh)
-    num_cells = int(mesh.num_cells()/2)
-    cell_cents_struct = np.zeros((num_cells,2),dtype=float)
+    num_cells = int(mesh.num_cells()/stride)
+    cell_cents_struct = np.zeros((num_cells,dim),dtype=float)
 
     for i in range(num_cells):
-        start = int(2*i)
-        end   = int(2*i)+2
+        start = int(stride*i)
+        end   = int(stride*i)+stride
         cell_cents_struct[i] = np.average(cents[start:end],axis=0)
 
     return cell_cents_struct
@@ -171,11 +268,12 @@ def structured_cell_volumes(mesh):
     ------
         mesh : 2D FEniCS mesh, not corssed topology
     """
-
+    dim = mesh.topology().dim()
+    stride = fact(dim)
     vols = get_cell_volumes(mesh)
-    num_cells = int(mesh.num_cells()/2)
+    num_cells = int(mesh.num_cells()/stride)
     
-    return np.ones(num_cells, dtype=float)*2*vols[0]
+    return np.ones(num_cells, dtype=float)*stride*vols[0]
 
 
 def box_mesh(point1=Point(0,0,0), point2=Point(2,1,1),
@@ -307,7 +405,7 @@ def get_cell_volumes(mesh):
     
     return div_fact*cell_volume
 
-def get_domain_bounding_box(mesh):
+def get_domain_bounding_box(mesh=None, cell_cent=None):
     """
     given a fenics mesh, this function returns the bounding_box that fits around the domain
 
@@ -318,21 +416,41 @@ def get_domain_bounding_box(mesh):
     ------
         corner_min: np.ndim array of corner having minima in space
         corner_max: np.ndim array of corenr having maxima in sapce
-
     """
-    coords = mesh.coordinates()
-    dim = len(coords[0])
+
+    def local_bbox_method(coords):
+       dim = len(coords[0])
+       
+       corner_min = np.zeros(dim ,float)
+       corner_max = np.zeros(dim, float)
+       
+       for d in range(dim):
+           corner_min[d] = min(coords[:,d])
+           corner_max[d] = max(coords[:,d])
+       return np.vstack((corner_min, corner_max))
+
+    
+    if  mesh==None and len(np.shape(cell_cent)) == 0:
+        raise AssertionError("provide either fenics mesh or cell centroid of PD particles")
+    if mesh != None and len(np.shape(cell_cent)) == 0:
+        coords = mesh.coordinates()
+        return local_bbox_method(coords)        
+    if cell_cent.all() and not mesh:
+        coords = cell_cent
+        return local_bbox_method(coords)
+    
+
+def get_deformed_mesh_domain_bbox(cell_cent, dim):
 
     corner_min = np.zeros(dim ,float)
     corner_max = np.zeros(dim, float)
-
     for d in range(dim):
-        corner_min[d] = min(coords[:,d])
-        corner_max[d] = max(coords[:,d])
-    
+        corner_min[d] = min(cell_cent[:,d])
+        corner_max[d] = max(cell_cent[:,d])
+
     return np.vstack((corner_min, corner_max))
 
-def get_peridym_mesh_bounds(mesh, structured_mesh=False):
+def get_peridym_mesh_bounds(mesh, struct_grd=False):
     """
     returns lists of elements and centroids of corresponding elements
     that lie in the peridynamic boundary
@@ -344,14 +462,14 @@ def get_peridym_mesh_bounds(mesh, structured_mesh=False):
     input:
     -----
         mesh : 2D-tri/3D-tet mesh generated by fenics
-        structured_mesh: boolean
+        struct_grd: boolean
     output:
     ------
         ##see comments at the return statement
     returns: TODO
 
     """
-    if(structured_mesh):
+    if(struct_grd):
         cell_cent = structured_cell_centroids(mesh)
         max_edge_len = np.diff(cell_cent[0:2][:,0])
         range_fact   = 2.001*max_edge_len 
@@ -385,9 +503,237 @@ def get_peridym_mesh_bounds(mesh, structured_mesh=False):
         bound_nodes[(2*d+1)] = np.where(cell_cent[:,d] >= bound_range[2*d+1]) # node nums for max bound
 
         bound_cents[(2*d)]   = cell_cent[bound_nodes[2*d][0]] #node centroids for min bound
-        bound_cents[(2*d+1)]   = cell_cent[bound_nodes[2*d+1][0]] #node centroids for min bound
+        bound_cents[(2*d+1)] = cell_cent[bound_nodes[2*d+1][0]] #node centroids for min bound
 
     return bound_nodes, bound_cents #convert list to np array 
+
+def get_peridym_edge_length(cell_cent, struct_grd=False):
+    """
+    given a set of cell centroid beloning to regular (Square/Tri)
+    discretization in 2D/3D, the method returns the edge length
+
+    NOTE: el NOT EQUAL TO centroid distance
+
+    input:
+    ------
+    cell_cent : nd-array of peridynamic cell centroids 
+    struct_grd: boolean, whether the grid is struct(square lattices) unstruct(triangular lattices)
+
+    output:
+    -------
+    el       : nd array of edge length
+
+    """
+    dim = len(cell_cent[0])
+    el = np.zeros(dim, dtype = float)
+
+    if(struct_grd):
+        el_fact = 1.0
+    else:
+        el_fact = 3.0
+
+    for d in range(dim):
+        xx = np.unique(cell_cent[:,d])
+        el[d] = el_fact*np.max(np.abs(np.diff(xx[0:2])))
+
+    return el
+
+def get_modified_boundary_layers(cell_cent, el, num_lyrs, struct_grd):
+    """
+    after adding ghost layers, the boundary layers are 
+    modified and we need the modified BL's to do 
+    further pre- and post-processing
+
+    input:
+    ------
+        cell_cent: np.array of modified cell centroids
+        el       : np array of edge lengths
+        num_lyrs : int, number of lyers desired
+    ouput:
+    ------
+        bound_cents: np.array of cell centroids lying on BL along the 
+                     given dimension
+    """
+    dim = len(el)
+    bound_range = np.zeros(2*dim, dtype=float)
+    bound_nodes = {} #dict to store the node numbers of centroids that lie within bound_range
+    bound_cents  = {} #dict to store the node centroids corresponding to node numbers above
+    
+    if(struct_grd):
+        factor = 1
+        correction = 0
+    else:
+        factor = 2
+        correction = 1
+
+    lyrs = float(num_lyrs-1)+ 0.001
+    
+    for d in range(dim):
+        bound_range[2*d] = factor*np.min(cell_cent[:,d]) + lyrs*el[d]
+        bound_range[2*d+1] = np.max(cell_cent[:,d]) -lyrs*el[d] - el[d]/3*correction
+
+        bound_nodes[2*d] = np.where(cell_cent[:,d] <= bound_range[2*d])
+        bound_nodes[(2*d+1)] = np.where(cell_cent[:,d] >= bound_range[2*d+1])
+
+        bound_cents[2*d]   = cell_cent[bound_nodes[2*d][0]]
+        bound_cents[2*d+1] = cell_cent[bound_nodes[2*d+1][0]]
+
+    return bound_nodes, bound_cents
+
+def compute_modified_extents(cell_cent, el, struct_grd=False):
+    """
+    computes the extents of the new mesh after the addition of 
+    ghost layers of centroids 
+
+    NOTE: if the cell centroids are not modified
+          then this returns the extents same as 
+          method get_domain_bounding_box
+    :cell_cent: TODO
+    :bc_loc: TODO
+    :el: TODO
+    :returns: TODO
+
+    """
+    dim = len(cell_cent[0])
+
+    extents = np.zeros((2, dim), float)
+    min_corners = np.zeros(dim, float)
+    max_corners = np.zeros(dim, float)
+
+    if(struct_grd):
+        shift_fact = 0.5
+    else:
+        shift_fact = 1.0/3.0
+
+    for d in range(dim):
+        min_corners[d] = np.min(cell_cent[:,d])
+        max_corners[d] = np.max(cell_cent[:,d])
+
+        """
+        below is done to avoid round-off error due to
+        substraction of two numbers near to each other
+        
+        This occurs when corners in one of the dimension
+        remains unchanged but we still try to compute 
+        the new extents
+        """
+        extents[0][d] = round(min_corners[d] - shift_fact*el[d], 16)
+        extents[1][d] = round(max_corners[d] + shift_fact*el[d], 16)
+
+    return extents
+
+
+def add_ghost_cells(mesh, bc_loc, num_lyrs,struct_grd=False):
+    """
+    this method adds ghost layer to the mesh 
+    along the edges where bc is intended to be applied 
+    so that equivalent of peridynamic volume boundary
+    condition is on the edge/bounary of the domain 
+
+    bc_loc = [0, 1, 2, 3, 4, 5] (see methd: get_peridym_mesh_bounds
+    for more details)
+    input:
+    ------
+        mesh: FEniCS mesh 
+        bc_loc: array/list (MUST BE SORTED) of integers specifiying the boundary 
+                      locations (see method: get_peridym_mesh_bounds)
+    output:
+    -------
+        cell_ids_ghost : np.array new cell ids  
+        cell_cent_ghost: np.array new cell centroids 
+        cell_vol_ghost : np.array new cell volume
+
+
+extended domain (in '.' around '- & ¦') 
+    .................................
+    .  .                         .  .
+    ...----------3:y_max----------... 
+    .  ¦                         ¦  .
+    .  ¦                         ¦  . 
+    .  ¦                         ¦  .
+    .0:x_min                 1:x_max. 
+    .  ¦                         ¦  .
+    .  ¦                         ¦  .
+    ...¦---------2:y_max---------¦...
+    .  .                         .  .
+    .................................
+
+            all even boundary indices refer to min along the
+            corresponding cardinal direction {0:x_min, 2:y_min, 4:z_min}
+            and similarly all odd indices refer to max along the
+            cardinal direction
+
+            The edges belonging to min has to be extended in -ve
+            cardinal direction and those beloning to max has to be 
+            extended along +ve cardinal direction
+
+    """
+
+    dim = mesh.topology().dim()
+    dim_lst = [dd for dd in range(dim)]
+
+    if(struct_grd):
+        cell_cent = structured_cell_centroids(mesh)
+        cell_vol  = structured_cell_volumes(mesh)
+        dist_fact = 1.0 
+        mul = 1 #for struct grid
+    else:
+        cell_cent = get_cell_centroids(mesh)
+        cell_vol  = get_cell_volumes(mesh)
+        mul = 2 #need this for FEniCS regular triangulations
+
+    el = get_peridym_edge_length(cell_cent, struct_grd)
+    new_cell_cents = cpy.deepcopy(cell_cent)
+
+    for loc in bc_loc:
+        for d in range(dim):
+            #store max of distance along successive layer
+            # as the hpyothetical edge length
+            idxs = [dd for dd in range(dim)]
+            idxs.pop(d)
+
+            if(2*d == loc):
+                _, bound_cents_d = get_modified_boundary_layers(new_cell_cents, el, num_lyrs,struct_grd)
+                curr_cents = bound_cents_d[loc]
+                coord = np.sort(np.unique(curr_cents[:,d]))[::-1]
+                #find out the points where min along d dim occurs
+                for ll in range(mul*num_lyrs):
+                    temp_min_loc = curr_cents[np.ravel(np.argwhere(curr_cents[:,d] == coord[ll]))]
+                    new_min_cents = cpy.deepcopy(temp_min_loc)
+                    new_min_cents[:,d] -= num_lyrs*el[d]
+
+                    #insert the new centroids to maintain the order
+                    #of array of centroids
+                    if(loc==0): #x-axis arrangement
+                        for i, yy in enumerate(new_min_cents[:,idxs]):
+                            idx = np.min(np.where(np.all(new_cell_cents[:,idxs] == yy, axis=1)))
+                            new_cell_cents = np.insert(new_cell_cents, idx, new_min_cents[i], 0)
+                    if(loc==2): #y-axis arrangement
+                        new_cell_cents = np.vstack((new_min_cents, new_cell_cents))
+
+            if(2*d+1 == loc):
+                _, bound_cents_d = get_modified_boundary_layers(new_cell_cents, el, num_lyrs, struct_grd)
+                curr_cents = bound_cents_d[loc]
+                coord = np.sort(np.unique(curr_cents[:,d]))
+                #find out the points where max along d dim occurs
+                for ll in range(mul*num_lyrs):
+                    temp_max_loc = curr_cents[np.ravel(np.where(curr_cents[:,d] == coord[ll]))]
+
+                    new_max_cents = cpy.deepcopy(temp_max_loc)
+                    new_max_cents[:,d] += num_lyrs*el[d]
+
+                    #insert the new centroids to maintain the order
+                    #of array of centroids
+                    if(loc==1): #x-axis arrangement
+                        for i, yy in enumerate(new_max_cents[:,idxs]):
+                            idx = np.max(np.where(np.all(new_cell_cents[:,idxs] == yy, axis=1)))
+                            new_cell_cents = np.insert(new_cell_cents, idx+1, new_max_cents[i],0)
+                    if(loc==3): #y-axis arrangement
+                        new_cell_cents = np.vstack((new_cell_cents, new_max_cents))
+                
+    new_cell_vols = np.ones(len(new_cell_cents), dtype=float)*cell_vol[0]
+
+    return new_cell_cents, new_cell_vols
 
 
 def write_to_vtk(mesh,  displacement=None, file_name="gridfile"):
@@ -459,3 +805,38 @@ def write_to_vtk2D(cents, displacement, file_name):
                     "dispX":dispX, "dispY":dispY})
 
     pass
+    
+def get_colors(num_colors):
+    """
+    creates n distint colors for plts, where n = num_colors
+    source: https://stackoverflow.com/questions/470690/how-to-automatically-generate-n-distinct-colors/4382138#4382138
+    """
+    import colorsys
+    colors = []
+    for i in np.arange(0., 360., 360. / num_colors):
+         hue = i/360.
+         lightness = (50 + np.random.rand() * 10)/100.
+         saturation = (90 + np.random.rand() * 10)/100.
+         colors.append(colorsys.hls_to_rgb(hue, lightness, saturation))
+    return colors
+
+def get_markers(num_markers):
+    """
+    returns list of markers to be used for plt 
+    functions; max markers allowed = 18
+
+    input:
+    ------
+        num_markers: int, number of markers needed
+    output:
+    -------
+        markers : list of distinct plotting markers
+
+    """
+    markers = ['^','o','P','X','*', 'd','<', '>', ',','|', '1','2','3','4','s','p','*','h','+']
+    if(num_markers>18):
+        sys.exit("cannot create more than 18 markers, refactor your code; force exiting")
+
+    return markers[0:num_markers]
+
+

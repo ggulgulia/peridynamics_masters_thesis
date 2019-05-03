@@ -5,6 +5,7 @@ for peridynamic function
 import numpy as np
 import numpy.linalg as la
 import matplotlib.pyplot as plt
+from fenics_mesh_tools import get_colors
 
 def gaussian_infl_fun1(zeta, horizon):
     """
@@ -120,29 +121,25 @@ def plot_1D_influence_functions():
 
     usage: simply call the function and observe the plots
     """
-
-    def omega1(domain, horizon):
-        """
-        1d unit unit_influence function 
-        """
-        return np.ones(len(domain),dtype=float)*(abs(domain)<horizon).astype(float)
     
-    def omega2(domain, horizon, p=1):
+    def omega1(domain, horizon, p=1):
         """
         1d gaussian influence function 
         """
         bnd_len = np.abs(domain)
 
         return np.exp(-(bnd_len/(p*horizon))**2)*(np.abs(domain)<horizon).astype(float)
+        
+    def omega2(domain, horizon, q=0.5):
+        """
+        1d narrow gaussian influence function 
+        """
+        bnd_len = np.abs(domain)
+
+        return np.exp(-(bnd_len/(q*horizon))**2)*(np.abs(domain)<horizon).astype(float)
+    
 
     def omega3(domain, horizon):
-        """
-        1d inverted parabolic influence function 
-        """
-
-        return (abs(domain)/horizon)**2*(abs(domain)<horizon).astype(float)
-
-    def omega4(domain, horizon):
         """
         parabolic influence function 
         """
@@ -152,7 +149,7 @@ def plot_1D_influence_functions():
             val[i] += 1.0
         return val
 
-    def omega5(domain, horizon):
+    def omega4(domain, horizon):
         """
         peridigm++ like parabolic influence function 
         """
@@ -163,22 +160,63 @@ def plot_1D_influence_functions():
             val[i] = 1.0
         return val
 
+    def omega5(domain, horizon):
+        """
+        1d unit unit_influence function 
+        """
+        return np.ones(len(domain),dtype=float)*(abs(domain)<horizon).astype(float)
+    
+    #def omega3(domain, horizon):
+    #    """
+    #    1d inverted parabolic influence function 
+    #    """
+
+    #    return (abs(domain)/horizon)**2*(abs(domain)<horizon).astype(float)
     deltaX  = 0.001
     domain = np.arange(-1.0, 1.0+deltaX, deltaX)
     horizon = 0.5
-    plt.figure()
-    plt.plot(domain, omega1(domain, horizon), linewidth=3.0, label='unit')
-    plt.plot(domain, omega2(domain, horizon), linewidth=3.0, label='exponential')
-    plt.plot(domain, omega3(domain, horizon), linewidth=3.0, label='invert parabola')
-    plt.plot(domain, omega4(domain, horizon), linewidth=3.0, label='parabola')
-    plt.plot(domain, omega5(domain, horizon), linewidth=3.0, label='peridigm parabola')
 
-    plt.legend(loc=2)
-    plt.xlim(-1.0,1.0)
-    plt.ylim(-0.5, 1.5)
-    plt.xlabel("bond length")
-    plt.ylabel("value of influene function")
-    plt.title("Various peridynamic influence functions(tested with horizon="+str(horizon)+")")
+    ### to make plots pretty ###
+    dpi = 3
+    axis_font = {'size': str(int(3*dpi))}
+    title_font = {'size': str(18*dpi)}
+    legend_size = {'size': str(8*dpi)}
+    tick_size = 12*dpi
+    marker_size=100*3.5*dpi
+    
+    colors = get_colors(6)
+    plt.figure()
+    plt.plot(domain, omega1(domain, horizon), color=colors[1], linewidth=3.0, label=r'$\mathbf{\omega}_{1}\langle\xi\rangle$')
+    plt.plot(domain, omega2(domain, horizon), color=colors[2], linewidth=3.0, label=r'$\mathbf{\omega}_{2}\langle\xi\rangle$')
+    plt.plot(domain, omega3(domain, horizon), color=colors[3], linewidth=3.0, label=r'$\mathbf{\omega}_{3}\langle\xi\rangle$')
+    plt.plot(domain, omega4(domain, horizon), color=colors[4], linewidth=3.0, label=r'$\mathbf{\omega}_{4}\langle\xi\rangle$')
+    plt.plot(domain, omega5(domain, horizon), color=colors[5], linewidth=3.0, label=r'$\mathbf{\omega}_{5}\langle\xi\rangle$')
+
+    plt.legend(loc=1,prop = legend_size)
+    plt.xlim(-1.0,1.0); plt.ylim(-0.5, 1.5)
+    plt.xticks(fontsize=16); plt.yticks(fontsize=16) 
+    plt.xlabel(r'bond length $\xi$', fontsize=10*dpi, **axis_font)
+    plt.ylabel(r'influence function $\mathbf{\omega}_{i}\langle\xi\rangle$', fontsize=10*dpi, **axis_font)
+    plt.title("Various peridynamic influence functions")
     plt.show(block=False)
 
     pass
+
+
+def get_influence_function_symbol():
+    """
+    returns latex like math symbol for influence function
+    refer Perdiynamic literature for symbol convention
+    :returns: TODO
+
+    """
+
+    omega1 = r'$\omega_1\langle\xi\rangle$'
+    omega2 = r'$\omega_2\langle\xi\rangle$'
+    omega3 = r'$\omega_3\langle\xi\rangle$'
+    omega4 = r'$\omega_4\langle\xi\rangle$'
+    omega5 = r'$\omega_5\langle\xi\rangle$'
+    omega6 = r'$\omega_6\langle\xi\rangle$'
+    infl_fun_symbols = {'omega1':omega1, 'omega2':omega2, 'omega3':omega3, 'omega4':omega4, 'omega5':omega5, 'omega6':omega6}
+    return infl_fun_symbols
+

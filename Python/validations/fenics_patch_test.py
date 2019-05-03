@@ -1,9 +1,10 @@
 from __future__ import print_function
 from fenics import *
-from fenics_mesh_tools import get_domain_bounding_box 
+from fenics_mesh_tools import get_domain_bounding_box
 from peridynamic_neighbor_data import *
 from peridynamic_materials import *
 import matplotlib.pyplot as plt
+
 
 def get_displaced_cell_centroids(m, u_fe, cell_cent):
     """
@@ -30,13 +31,13 @@ def get_displaced_cell_centroids(m, u_fe, cell_cent):
     return disp_cent, u_disp
 
 
-def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e8):
+def solve_patch_test(mesh, cell_cent, material='steel', plot_ = True, force=25e9):
     """
     solves the case for a 2D steel plate loaded statically under various loads
 
     input:
     ------
-        mesh : FEniCS mesh
+        mesh : 2D FEniCS mesh
         material: 
         plot_: boolean for showing plots of FE solution
         force: value of force we want to apply
@@ -46,9 +47,13 @@ def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e
         disp_cent : centroids of elements after FE solution
         u_disp    : displacement of each centroid
     """
+    print('************************************')
+    print('************************************')
+    print('******SOLVING THE PATCH TEST IN FINITE ELEMENTS********')
     mesh_ext = get_domain_bounding_box(mesh)
+
     L_min = mesh_ext[0][0]; H_min = mesh_ext[0][1]
-    L_max = mesh_ext[1][0]; H_max = mesh_ext[1][1] 
+    L_max = mesh_ext[1][0]; H_max = mesh_ext[1][1]
     
     def eps(v):
         return sym(grad(v))
@@ -58,7 +63,7 @@ def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e
     
     class LeftEdge(SubDomain):
         def inside(self, x, on_boundary):
-            return (on_boundary and abs(x[0] - L_min) < DOLFIN_EPS*1e3)
+            return (on_boundary and abs(x[0]-L_min) < DOLFIN_EPS*1e3)
     
     class RightEdge(SubDomain):
         def inside(self, x, on_boundary):
@@ -67,18 +72,24 @@ def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e
     
     class BottomEdge(SubDomain):
         def inside(self, x, on_boundary):
-            return on_boundary and abs(x[1] - H_min) < DOLFIN_EPS*1e3
+            return on_boundary and abs(x[1]-H_min) < DOLFIN_EPS*1e3
     
     class TopEdge(SubDomain):
         def inside(self, x, on_boundary):
             tol = 1e-6
             return on_boundary and abs(x[1] - H_max) < DOLFIN_EPS*1e3
+   
+    class CornerPoint(SubDomain):
+        def inside(self, x, on_boundary):
+            
+            return near(x[0], 0., DOLFIN_EPS*1e3) and near(x[1], 0., DOLFIN_EPS*1e3)
     
     ## separate edges
     left_edge   = LeftEdge()
     right_edge  = RightEdge()
     bottom_edge = BottomEdge()
     top_edge    = TopEdge()
+    corner_point = CornerPoint()
     
     sub_domains = MeshFunction("size_t", mesh, mesh.topology().dim() - 1)
     sub_domains.set_all(0)
@@ -87,6 +98,7 @@ def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e
     left_edge.mark(sub_domains, 2)
     bottom_edge.mark(sub_domains, 3)
     top_edge.mark(sub_domains, 4)
+    corner_point.mark(sub_domains, 6)
     
     ds = Measure("ds")(subdomain_data=sub_domains)
         
@@ -107,25 +119,35 @@ def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e
     #l = inner(f, v)*dx  
     
     #Neumann Boundary condition for traction force
-    g = inner(Constant((0,force)),v) #
+    g = inner(Constant((force,0)),v) #
     l = g*ds(5)
         
     #Applying bc and solving
     #bc = DirichletBC(V.sub(0), Constant(0.), left_edge)
-    bc = DirichletBC(V, Constant((0., 0.)), left_edge)
+    bc1 = DirichletBC(V.sub(0), Constant(0.), left_edge)
+    bc2 = DirichletBC(V, Constant((0.0, 0.0)), corner_point, method='pointwise')
+    bcs = [bc1, bc2]
+    A = assemble(a)
+    b = assemble(l)
+    for bc in bcs: bc.apply(A,b)
+ 
     u_fe = Function(V, name="Displacement")
-    solve(a == l, u_fe, bc)
-    
+    #solve(a == l, u_fe, bc)
+    solve(A, u_fe.vector(), b)
     disp_cent, u_disp = get_displaced_cell_centroids(mesh, u_fe, cell_cent) 
     
     if plot_ is True:
         fig = plt.figure()
         #plt.subplot(1,2,1)
-        #plot(mesh, color='k', linewidth=1.5, alpha=0.5)
+        plot(mesh, color='k', linewidth=0.5, alpha=0.5)
         #plt.subplot(1,2,2)
-        plot(10*u_fe, mode="displacement")
-        #plt.xlim(L_min-0.5,L_max+0.5)
-        #plt.ylim(H_min-0.5,L_max+0.5)
+        plot(u_fe, mode="displacement")
+        plt.xlim(L_min-0.5,L_max+0.5)
+        plt.ylim(H_min-0.5,H_max+0.5)
         plt.show(block=False)
+
+    print('************************************')
+    print('************************************')
+    print('*********END OF PATCH TEST**********')
 
     return u_fe

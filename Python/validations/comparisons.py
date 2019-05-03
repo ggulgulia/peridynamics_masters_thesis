@@ -1,135 +1,100 @@
-from peridynamic_plane_stress import *
-from fenics_plane_stress import *
-from peridynamic_infl_fun import *
+from testScriptInflFuns import *
+from testScriptHorizons import compare_PD_horizons_with_FE 
+from testScriptMaterials import *
+from testScriptInflFunStrctGrd import compare_PD_infl_funs_with_FE_StrctGrd
+from testScriptHorizonStrctGrd import compare_PD_horizons_with_FE_StrctGrd
+#from testScriptMaterials import *
 
+def run_comparisons():
 
-def compare_PD_horizons_with_FE(horizons, mesh, npts=15, material='steel', plot_=False, force=-5e8, structured_mesh=False):
-    """
-    compares the FE and PD solution for a simple 2D case 
-
-    :horizons: TODO
-    :mesh: TODO
-    :npts: TODO
-    :material: TODO
-    :'plot_: TODO
-    :returns: TODO
-
-    """
     print("*********************************************************")
     print("*********************************************************")
-    print('solving using FEniCS:')
-    disp_cent_FE, u_disp_FE = solve_fenic_bar(mesh,npts,material, plot_=plot_, force=force)
+    print('solving using Finite Elements:')
+    tol = 1e-5 #tolerance for convergence of FE solution
+    _, _, mesh_lst, u_fe_conv, err_norm_lst = fenics_mesh_convergence(tol=tol, plot_=False)
+    print("Number of cells in FEniCS mesh on which the FE solution converged %i" %mesh_lst[-1].num_cells())
+    print("*********************************************************")
+    print("*********************************************************")
 
-    if(structured_mesh):
-        cell_cent = structured_cell_centroids(mesh)
-    else:
-        cell_cent = get_cell_centroids(mesh)
     
-    dim = np.shape(cell_cent)[1]
+
+    pwd = getcwd()
+    today = dttm.now().strftime("%Y%m%d%S")
+    data_dir = path.join(pwd, 'validation_test_on_'+today)
+    hori = path.join(data_dir, 'horizon')
+    omga = path.join(data_dir, 'inflfun')
+    mkdir(data_dir); mkdir(hori); mkdir(omga)
+    fig_cnt = my_fig_num_counter(0)
+
     
-    disp_cent_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
-    u_disp_PD_array = np.zeros((len(horizons), len(cell_cent), dim), dtype=float)
+    unstr_msh_lst, strct_msh_lst = generate_struct_mesh_list_for_pd_tests()
+    ############################################################################
+    ############################ PATCH TEST ###################################
+    #############################################################################
 
-    infl_fun = gaussian_infl_fun2
+    ##################### PATCH TEST : MATERIAL TEST: STRUCT GRID: W/I VOL CORR ##########################
+    cell_cent_top_lst_csp, u_top_fe_conv_lst_csp, disp_cent_PD_array_lst_csp, u_disp_PD_array_lst_csp, abs_error_end_particle_lst_csp, rel_error_end_particle_lst_csp = compare_PD_material_models(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=1e11, vol_corr=True, struct_grd=True, problem='patchTest')
 
-    print("*********************************************************")
-    print("*********************************************************")
-    print('solving using Peridynamics:')
-    for i in range(len(horizons)):
-        _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizons[i], mesh, npts=npts,material=material,
-                                                           omega_fun=infl_fun, plot_=plot_, force=force,structured_mesh=structured_mesh)
 
-        disp_cent_PD_array[i] = disp_cent_i
-        u_disp_PD_array[i]    = u_disp_i 
+    #####  PATCH TEST : HORIZON STUDIES : STRUCT GRID: W/I VOL CORR ########### 
+    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, material='steel', plot_=False, force=1e11, vol_corr=False, struct_grd=True, problem='patchTest')
+
+    #####  PATCH TEST : HORIZON STUDIES : STRUCT GRID: W/O VOL CORR ########### 
+    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, material='steel', plot_=False, force=1e11, vol_corr=True, struct_grd=False, problem='patchTest')
+    #cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=True, struct_grd=True)
     
-    top_els = np.ravel(np.argwhere(cell_cent[:,1] == np.max(cell_cent[:,1])))
+     #####  PATCH TEST : INFLFUN STUDIES : STRUCT GRID: W/I VOL CORR ########### 
+    #cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_infl_funs_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=omga, material='steel', plot_=False, force=5e9, vol_corr=True,  struct_grd=True, problem='patchTest')
+#
+     #####  PATCH TEST : HORIZON STUDIES : STRUCT GRID: W/O VOL CORR ########### 
+    #cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_infl_funs_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=omga, plot_=False, vol_corr=False, struct_grd=True)
+#
+    print("SUCCESSFULLY FINISHED THE STUDIES\nGOODLUCK ANALYZING ERRORS FROM THE TON OF FILES THAT HAVE BEEN WRITTEN\n")
+    ############################################################################
+    ######## TRANSVERSE LOAD CASES ###################
+    #############################################################################
+    #cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_horizons_with_FE(unstr_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=False,  struct_grd=False)
 
-    u_top_fe = u_disp_FE[top_els]
-    cell_cent_top = cell_cent[top_els]
+    #cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_horizons_with_FE(unstr_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=True, struct_grd=False)
+
+#    ##triangular mesh, influence function studies
+#    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_infl_funs_with_FE(unstr_msh_lst, u_fe_conv, fig_cnt, data_path=omga, plot_=False, vol_corr=False,  struct_grd=False)
+#
+#    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_infl_funs_with_FE(unstr_msh_lst, u_fe_conv, fig_cnt, data_path=omga, plot_=False, vol_corr=True, struct_grd=False)
+#
+        
+    ######## the method in the script calls correspondence constitutive response model by default ##########################
+    cell_cent_top_lst_csp, u_top_fe_conv_lst_csp, disp_cent_PD_array_lst_csp, u_disp_PD_array_lst_csp, abs_error_end_particle_lst_csp, rel_error_end_particle_lst_csp = compare_PD_material_models(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=True)
+
+    #####  square mesh, horizon studies 
+    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=False,  struct_grd=True, problem='transverseTraction')
+
+    #cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_horizons_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=hori, plot_=False, vol_corr=True, struct_grd=True)
     
-    plt.figure()
-    plt.plot(cell_cent_top[:,0], u_top_fe[:,1], linewidth=2.0, label='FE Solution')
+    ##square mesh, influence function studies
+#    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst, abs_error_end_particle_lst, rel_error_end_particle_lst = compare_PD_infl_funs_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=omga, plot_=False, vol_corr=False,  struct_grd=True)
+#
+#    cell_cent_top_lst, u_top_fe_conv_lst, disp_cent_PD_array_lst, u_disp_PD_array_lst = compare_PD_infl_funs_with_FE(strct_msh_lst, u_fe_conv, fig_cnt, data_path=omga, plot_=False, vol_corr=True, struct_grd=True)
+#
+    #### Influence function studies with new scripts ####
+    u_disp_PD_array_lst, abs_error_avg_cntlineY_lst, rel_error_avg_cntlineY_lst = compare_PD_infl_funs_with_FE_StrctGrd(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=True)
 
-    for i in range(len(horizons)):
-        u_disp_pd_top = u_disp_PD_array[i][top_els]
-        plt.plot(cell_cent_top[:,0], u_disp_pd_top[:,1], linewidth=2.0, label='PD Solution, delta='+str(horizons[i]))
-
-    plt.legend()
-    plt.title('displacement of top centroids mesh size: %i, hmax: %4.4f, hmin: %4.4f'%(mesh.num_cells(), mesh.hmax(), mesh.hmin()))
-    plt.show(block=False)
-    plt.savefig('FE_vs_PD_displacements')
-
-    return disp_cent_FE, u_disp_FE, disp_cent_PD_array, u_disp_PD_array
-
+    ##### Horizon studies with new scripts ########
+    u_disp_PD_array_lst, abs_error_avg_cntlineY_lst, rel_error_avg_cntlineY_lst = compare_PD_horizons_with_FE_StrctGrd(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=True)
+    print("SUCCESSFULLY FINISHED THE STUDIES\nGOODLUCK ANALYZING ERRORS FROM THE TON OF FILES THAT HAVE BEEN WRITTEN\n")
+    return 
 
 
-def compare_PD_infl_funs_with_FE(horizon, mesh, npts=15, material='steel', plot_=False, force=-5e8, structured_mesh=False):
-    """
-    compares the FE and PD solution for a simple 2D case 
 
-    :horizons: TODO
-    :mesh: TODO
-    :npts: TODO
-    :material: TODO
-    :'plot_: TODO
-    :returns: TODO
 
-    """
-    print("*********************************************************")
-    print("*********************************************************")
-    print('solving using FEniCS:')
-    disp_cent_FE, u_disp_FE = solve_fenic_bar(mesh,npts,material, plot_=plot_, force=force)
 
-    if(structured_mesh):
-        cell_cent = structured_cell_centroids(mesh)
 
-    else:
-        cell_cent = get_cell_centroids(mesh)
-    
-    dim = np.shape(cell_cent)[1]
-    #dictonary of all influence functions
-    infl_fun_dict = {'omega1':gaussian_infl_fun1,
-                      'omega2':gaussian_infl_fun2,
-                      'omega3':parabolic_infl_fun1,
-                      'omega4':parabolic_infl_fun2}
 
-    #horizon = 0.175
-    keys = infl_fun_dict.keys()
 
-    disp_cent_PD_array = {} 
-    u_disp_PD_array = {}
 
-    print("*********************************************************")
-    print("*********************************************************")
-    print('solving using Peridynamics:')
-    tree = QuadTree()
-    extents = get_domain_bounding_box(mesh)
-    tree.put(extents, horizon)
-    nbr_lst = tree_nbr_search(tree.get_linear_tree(), cell_cent, horizon)
-    for kk in keys:
-        infl_fun = infl_fun_dict[kk]
-        _,_, disp_cent_i, u_disp_i = solve_peridynamic_bar(horizon, mesh,nbr_lst=nbr_lst, npts=npts,material=material,omega_fun=infl_fun, plot_=plot_, force=force, structured_mesh=structured_mesh)
+    #### DISCARDED FUNCTIONS ####
+    #### Influence function studies with new scripts ####
+    #u_disp_PD_array_lst, abs_error_avg_cntlineY_lst, rel_error_avg_cntlineY_lst = compare_PD_infl_funs_with_FE_StrctGrd(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=True)
 
-        disp_cent_PD_array[kk] = disp_cent_i
-        u_disp_PD_array[kk]    = u_disp_i 
-        print("*********************************************************")
-        print("*********************************************************")
-    
-    top_els = np.ravel(np.argwhere(cell_cent[:,1] == np.max(cell_cent[:,1])))
-
-    u_top_fe = u_disp_FE[top_els]
-    cell_cent_top = cell_cent[top_els]
-    
-    plt.figure()
-    plt.plot(cell_cent_top[:,0], u_top_fe[:,1], linewidth=2.0, label='FE Solution')
-
-    for kk in keys:
-        u_disp_pd_top = u_disp_PD_array[kk][top_els]
-        plt.plot(cell_cent_top[:,0], u_disp_pd_top[:,1], linewidth=2.0, label='infl_fun: ' + kk)
-
-    plt.legend()
-    plt.title('displacement of top centroids, horizon='+str(horizon))
-    plt.show(block=False)
-    plt.savefig('FE_vs_PD_displacements_delta'+str(horizon)+".png")
-
-    return disp_cent_FE, u_disp_FE, disp_cent_PD_array, u_disp_PD_array
+    ###### Horizon studies with new scripts ########
+    #u_disp_PD_array_lst, abs_error_avg_cntlineY_lst, rel_error_avg_cntlineY_lst = compare_PD_horizons_with_FE_StrctGrd(strct_msh_lst, u_fe_conv, fig_cnt, data_path=None, material='steel', plot_=False, force=-5e8, vol_corr=True, struct_grd=True)

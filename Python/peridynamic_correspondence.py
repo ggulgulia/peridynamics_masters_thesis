@@ -265,7 +265,7 @@ def computeKCorrespondance(horizon, cell_vol, nbr_lst, nbr_beta_lst, bnd_dmg_lst
 
     if correct_zero_energy_modes:
         computeInternalForce = computeInternalForce_correct_zero_energy_mode
-        G = 0.1 #positive constant of order 1, from paper mailed by Dr Silling
+        G = 1 #positive constant of order 1, from paper mailed by Dr Silling
         gamma_corr = 18*G*bulkMod/(math.pi*quad(integrand2, 0, horizon)[0]*horizon**5) #alpha is still missing
         #gamma_corr = 18*G*bulkMod/(math.pi*horizon**5) #alpha is still missing
     else:

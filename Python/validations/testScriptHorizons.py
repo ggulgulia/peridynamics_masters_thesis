@@ -130,10 +130,10 @@ def compare_PD_horizons_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, ma
         # need to select horizon approporiately : min horizon is 2.0001 times max edge length
         #expected particle count in uniform[square/triangle] grid: 648, 900, 1300, 1800
         horizons = np.array([0.11111668, 0.16667224, 0.2222278 , 0.27778336], dtype=float)
-        horizons = np.array([0.11111668, 0.16667224, 0.2222278], dtype=float)
+        #horizons = np.array([0.11111668, 0.16667224, 0.2222278], dtype=float)
         
         ########### delta as fixed ratio of discretization widht #######
-        horizons = np.arange(2,6,1)*el[0]
+        horizons = np.arange(2.001, 6.001,1)*el[0]
                                                                              
         #horizons = np.array([0.166667, 0.251111667555600001])
         #declare empty storage for each horizon in 'horizons' array and curr_mesh  

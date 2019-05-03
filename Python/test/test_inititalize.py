@@ -14,7 +14,7 @@ import mshr
 #m = box_mesh_with_hole(numpts=20)
 #domain = mshr.Rectangle(Point(0,0), Point(3,1))
 #m = mshr.generate_mesh(domain, 30)
-m = RectangleMesh(Point(0,0), Point(2,1), 3, 15)
+m = RectangleMesh(Point(0,0), Point(2,1), 30, 15)
 #m = rectangle_mesh(numptsX=20, numptsY=10)
 #m = rectangle_mesh_with_hole(npts=25)
 
@@ -38,7 +38,7 @@ node_cents_force = get_bound_cell_cents(node_ids_force, cell_cent)
 omega_fun = gaussian_infl_fun2
 E, nu, rho, mu, bulk, gamma = get_steel_properties(dim)
 
-horizon = 3.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
+horizon = 2.001*np.abs(np.diff(cell_cent[0:2][:,0])[0])
 #horizon = 0.3001
 tree = QuadTree()
 tree.put(extents, horizon)

@@ -188,16 +188,16 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     for i, k in enumerate(kk):
         error = abs_error_end_particle_lst[k]
         plt.plot(x_ax, error, linewidth=2, marker = markers[i], color='k', markersize=8, label='N = '+str(k))
-    err_min, err_max = np.min(error), np.max(error)
+    #err_min, err_max = np.min(error), np.max(error)
     plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
     plt.xlim(0, len(infl_fun_lst)+1)
     plt.xlabel('influence function '+r'$\omega_i\langle\xi\rangle$',fontsize=15)
-    plt.ylabel('abs difference', fontsize=16)
+    plt.ylabel('absolute error [m]', fontsize=14)
     ax.set_xticks(x_ax)
     ax.set_xticklabels(xtick_labels, fontsize=14)
+    ax.legend(fancybox=True, framealpha=0.0, loc='upper right', fontsize=12)
     plt.yticks(fontsize=14)
     plt.title("omega tests, absloute error, vol corr= %s"%str_vol_corr)
-    plt.legend(loc='center right', fontsize=16)
     
     
     ### PLOTTING REL ERROR ###
@@ -210,14 +210,15 @@ def compare_PD_infl_funs_with_FE(mesh_lst, u_fe_conv, fig_cnt, data_path=None, m
     plt.xlim(0, len(infl_fun_lst)+1)
     plt.gca().yaxis.set_major_formatter(mtick.FormatStrFormatter('%.1E'))
     plt.xlabel(r'$\omega_i\langle\xi\rangle$', fontsize=16)
-    plt.ylabel('rel difference', fontsize=16)
+    plt.ylabel('relative error [%]', fontsize=14)
     ax.set_xticks(x_ax)
     ax.set_xticklabels(xtick_labels, fontsize=14)
     plt.yticks(fontsize=14)
-    plt.title("omega tests, relerror, vol corr= %s"%str_vol_corr)
-    plt.legend(loc='center right', fontsize=16)
+    ax.legend(fancybox=True, framealpha=0.0, loc='upper right', fontsize=12)
+    #plt.title("omega tests, relerror, vol corr= %s"%str_vol_corr)
     plt.show(block=False)
-    fig_cnt.err_fig_num += 1
+#    fig_cnt.err_fig_num += 1
+
     
     # save the data for the curr_mesh to global lists
     cell_cent_top_lst.append(cell_cent_top) 

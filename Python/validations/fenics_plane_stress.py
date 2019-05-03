@@ -121,11 +121,11 @@ def solve_fenic_bar(mesh, cell_cent,  material='steel', plot_ = False, force=-5e
     if plot_ is True:
         fig = plt.figure()
         #plt.subplot(1,2,1)
-        plot(mesh, color='k', linewidth=1.5, alpha=0.5)
+        #plot(mesh, color='k', linewidth=1.5, alpha=0.5)
         #plt.subplot(1,2,2)
         plot(10*u_fe, mode="displacement")
-        plt.xlim(L_min-0.5,L_max+0.5)
-        plt.ylim(H_min-0.5,L_max+0.5)
+        #plt.xlim(L_min-0.5,L_max+0.5)
+        #plt.ylim(H_min-0.5,L_max+0.5)
         plt.show(block=False)
 
     return u_fe

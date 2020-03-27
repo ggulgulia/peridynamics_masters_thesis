@@ -2,7 +2,20 @@ Peridynamics offers a new methodology for modelling solid mechanics problems usi
 
 This project aims to develop a (linear?) peridynamics solver (and also constites the part of masters thesis of Gajendra supervised by PhD scholar Felix Bott at the Technical University of Munich)
 
-The readme file will be updated on the fly as the project progresses (and we hope it does  evolve to something useful and different and probably better than what already exists out there;) )
+## The code has the following features:
+
+#### Two choices of material model namely 
+* Constitutive material model 
+* Correspondence material model.
+
+#### Choices of influence functions namely 
+* Standard gaussian influence function (Omega_1)
+* Narrow gaussian influence function (Omega_2)
+* Unit-Step influence function (Omega_3)
+* Parabolic influcene function (Omega_4)
+* Peridigm-like parabolic function (Omega_5)
+
+[![Foo](https://github.com/ggulgulia/peridynamics_masters_thesis/blob/ggulgulia-documentation/2DBending.png)]()
 
 ![](explicitFracture.gif)
 ![](2DBending.png)

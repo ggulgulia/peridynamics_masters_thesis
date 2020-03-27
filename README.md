@@ -17,5 +17,10 @@ This project aims to develop a (linear?) peridynamics solver (and also constites
 
 ![](influenceFunctions.png)
 
-![](explicitFracture.gif)
+#### Choices of solution  : static and dynamic (see image/animation below)
+* static bending of a 2D and 3D plate (only a 2D example shown below)
 ![](2DBending.png)
+
+* dynamic fracture of 2D plate
+![](explicitFracture.gif)
+

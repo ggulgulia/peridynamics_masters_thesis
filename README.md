@@ -1,12 +1,12 @@
 Peridynamics offers a new methodology for modelling solid mechanics problems using the idea of interactions of a point with the neigboring points and is a different framework compared to the classical continuum mechanics that is being used most widely. 
 
-This project aims to develop a (linear?) peridynamics solver (and also constites the part of masters thesis of Gajendra supervised by PhD scholar Felix Bott at the Technical University of Munich)
-
+This project demonstrates the usage of Perdiynamics in an academic setting that helps to understand the usage of peridynamics theory of continuum mechanics which is more robust than classical continuum mechanics to deal with problems involving discontinuiteis and inclusions especially in fracture mechanics. 
+ 
 ## The code has the following features:
 
 #### Two choices of material model namely 
-* Constitutive material model 
-* Correspondence material model.
+* Constitutive material model (look at the file peridynamics_stiffness.py)
+* Correspondence material model ((look at the file peridynamics_correspondence.py)
 
 #### Choices of influence functions namely 
 * Standard gaussian influence function (Omega_1)

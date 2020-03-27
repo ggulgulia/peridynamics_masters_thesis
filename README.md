@@ -15,7 +15,7 @@ This project aims to develop a (linear?) peridynamics solver (and also constites
 * Parabolic influcene function (Omega_4)
 * Peridigm-like parabolic function (Omega_5)
 
-[![Foo](https://github.com/ggulgulia/peridynamics_masters_thesis/blob/ggulgulia-documentation/2DBending.png)]()
+![](influenceFunctions.png)
 
 ![](explicitFracture.gif)
 ![](2DBending.png)

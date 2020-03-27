@@ -5,3 +5,4 @@ This project aims to develop a (linear?) peridynamics solver (and also constites
 The readme file will be updated on the fly as the project progresses (and we hope it does  evolve to something useful and different and probably better than what already exists out there;) )
 
 ![](explicitFracture.gif)
+![](2DBending.png)
